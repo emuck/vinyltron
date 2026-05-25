@@ -1,0 +1,21 @@
+[volumio]
+host = "volumio.local"
+port = 3000
+
+[display]
+brightness = 80
+gamma = 2.2
+slowdown_gpio = 2
+rows = 64
+cols = 64
+rotation = 270
+panel_type = ""          # set to "FM6126A" if colors/timing are wrong
+
+[fallback]
+image = "assets/idle.png"
+
+[overlays]
+progress_bar = true
+format_badge = false     # phase 2
+badge_position = "top-right"
+badge_opacity = 0.75
