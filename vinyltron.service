@@ -1,0 +1,16 @@
+[Unit]
+Description=Vinyltron — HUB75 album art display
+After=network.target volumio.service
+Wants=volumio.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/volumio/vinyltron
+ExecStart=/usr/bin/python3 /home/volumio/vinyltron/vinyltron.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

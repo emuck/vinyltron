@@ -59,6 +59,13 @@ class Display:
         self._canvas.SetImage(self._fallback, unsafe=False)
         self._canvas = self._matrix.SwapOnVSync(self._canvas)
 
+    def reconfigure(self, cfg: dict):
+        """Hot-reload brightness, gamma, and fallback image. Matrix geometry requires restart."""
+        d = cfg['display']
+        self._matrix.brightness = d['brightness']
+        self._gamma_lut = _build_gamma_lut(d['gamma'])
+        self._fallback = self._load_fallback(cfg['fallback']['image'])
+
     def clear(self):
         self._canvas.Clear()
         self._canvas = self._matrix.SwapOnVSync(self._canvas)

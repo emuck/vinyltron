@@ -7,9 +7,9 @@
 - [x] Image pipeline: LANCZOS resize → gamma correction → push
 - [x] Graceful reconnect if Volumio restarts (exponential backoff + REST fallback)
 - [x] `config.toml` for host, brightness, gamma, rotation, panel type flag
-- [ ] Fallback image (`assets/idle.png` path wired up; image not yet created)
-- [ ] Run as systemd service (`install.sh` + `vinyltron.service` pending)
-- [ ] SIGHUP config reload (stub in place, not yet implemented)
+- [x] Fallback image (`assets/idle.png`)
+- [x] Run as systemd service (`install.sh` + `vinyltron.service`)
+- [x] SIGHUP config reload (brightness, gamma, fallback image; geometry requires restart)
 
 ## Phase 2 — Overlays + Volumio Plugin
 
