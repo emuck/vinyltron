@@ -25,6 +25,7 @@ log = logging.getLogger('vinyltron')
 
 class Vinyltron:
     def __init__(self, config_path: str = 'config.toml'):
+        self._config_path = config_path
         self._cfg = toml.load(config_path)
         self._display = Display(self._cfg)
         self._client = VolumioClient(
@@ -76,7 +77,13 @@ class Vinyltron:
         sys.exit(0)
 
     def _reload(self, *_):
-        log.info("SIGHUP received — config reload not yet implemented")
+        log.info("SIGHUP received — reloading config")
+        try:
+            self._cfg = toml.load(self._config_path)
+            self._display.reconfigure(self._cfg)
+            log.info("Config reloaded")
+        except Exception as e:
+            log.warning("Config reload failed: %s", e)
 
     def run(self):
         self._display.show_fallback()
