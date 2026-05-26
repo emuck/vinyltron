@@ -51,7 +51,8 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         var s = uiconf.sections;
 
         // Display section
-        s[0].content[0].value = self.config.get('brightness');
+        var brightness = self.config.get('brightness').toString();
+        s[0].content[0].value = {value: brightness, label: brightness + '%'};
         var gamma = self.config.get('gamma');
         s[0].content[1].value = {value: gamma, label: gamma};
         var rotation = self.config.get('rotation');
@@ -79,7 +80,7 @@ ControllerVinyltron.prototype.getConfigurationFiles = function() {
 ControllerVinyltron.prototype.saveConfig = function(data) {
     var self = this;
 
-    var brightness   = parseInt(data['brightness']);
+    var brightness   = parseInt(data['brightness']['value']);
     var gamma        = data['gamma']['value'];
     var rotation     = data['rotation']['value'];
     var progress_bar = data['progress_bar'] === true || data['progress_bar'] === 'true';
