@@ -1,0 +1,6 @@
+{
+    "brightness": {"type": "number", "value": 80},
+    "gamma":      {"type": "string", "value": "2.2"},
+    "progress_bar": {"type": "boolean", "value": true},
+    "format_badge":  {"type": "boolean", "value": false}
+}

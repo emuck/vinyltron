@@ -1,0 +1,66 @@
+{
+    "page": {
+        "label": "Vinyltron Settings"
+    },
+    "sections": [
+        {
+            "id": "section_display",
+            "element": "section",
+            "label": "Display",
+            "icon": "fa-television",
+            "onSave": {
+                "type": "controller",
+                "endpoint": "user_interface/vinyltron",
+                "method": "saveConfig"
+            },
+            "saveButton": {
+                "label": "Save",
+                "data": ["brightness", "gamma", "progress_bar", "format_badge"],
+                "popup": {
+                    "allowClose": true,
+                    "type": "success",
+                    "message": "Settings saved — Vinyltron reloading"
+                }
+            },
+            "content": [
+                {
+                    "id": "brightness",
+                    "element": "slider",
+                    "label": "Brightness",
+                    "min": 10,
+                    "max": 100,
+                    "step": 5,
+                    "value": "",
+                    "doc": "LED panel brightness"
+                },
+                {
+                    "id": "gamma",
+                    "element": "select",
+                    "label": "Gamma",
+                    "value": {},
+                    "options": [
+                        {"value": "1.8", "label": "1.8 — Bright"},
+                        {"value": "2.0", "label": "2.0"},
+                        {"value": "2.2", "label": "2.2 — Default"},
+                        {"value": "2.4", "label": "2.4 — Dark"}
+                    ],
+                    "doc": "Display gamma correction curve"
+                },
+                {
+                    "id": "progress_bar",
+                    "element": "switch",
+                    "label": "Progress Bar",
+                    "value": true,
+                    "doc": "Show playback progress strip at bottom of display (Phase 2)"
+                },
+                {
+                    "id": "format_badge",
+                    "element": "switch",
+                    "label": "Format Badge",
+                    "value": false,
+                    "doc": "Show audio format icon in corner (Phase 2)"
+                }
+            ]
+        }
+    ]
+}
