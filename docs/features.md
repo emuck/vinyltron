@@ -28,27 +28,24 @@ Validation:
 
 ### Configurable Format Text Fonts
 
-Goal: make the current compact format text overlay font-selectable without changing the
-format-label logic. Keep the built-in 3x5 font as the default, then add Tiny5 as an
-optional BDF-backed font for comparison on the 64x64 panel.
+Status: implemented.
 
-Planned implementation:
-- Add a small font abstraction in `display.py` so text fitting, measurement, and drawing
-  do not assume fixed 3x5 glyphs.
-- Keep the existing built-in font as `tom_thumb` and use it as the default/fallback.
-- Add a minimal BDF loader for ASCII glyphs, with Tiny5 loaded from `assets/fonts/Tiny5.bdf`
-  when selected.
-- Add `[overlays] format_font = "tom_thumb"` to `config.toml` and v-conf defaults.
-- Add a Volumio UI select for `Format Font` with `Tom Thumb` and `Tiny5` options.
-- On config reload, re-load the selected font without changing matrix geometry or
-  interrupting the progress bar logic.
+Behavior:
+- `display.py` measures and draws text through a small pixel-font abstraction.
+- The built-in 3x5 font is named `tom_thumb` and remains the default/fallback.
+- Tiny5 is loaded from `assets/fonts/Tiny5.bdf` when selected.
+- `[overlays] format_font = "tom_thumb"` controls the active font.
+- `[overlays] format_font_path = ""` can point to a custom BDF path for future testing.
+- The Volumio UI exposes `Format Font` with `Tom Thumb` and `Tiny5` options.
+- On config reload, the selected font is reloaded without changing matrix geometry or
+  progress bar state.
 
 Validation:
 - Python compile checks for daemon files.
 - JSON validation for plugin config files.
 - `node -c plugin/index.js`.
 - `git diff --check`.
-- Local stub sanity check that both `tom_thumb` and `tiny5` can render the current short
+- Local stub sanity check that `tiny5` can render the current short
   labels (`320K`, `16/44.1`, `24/192`, `DSD512`) within 64 pixels.
 
 ### Startup / Upgrade Overlay Reliability Audit

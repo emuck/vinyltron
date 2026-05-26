@@ -15,7 +15,7 @@
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["brightness", "gamma", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "badge_duration"],
+                "data": ["brightness", "gamma", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "format_font", "badge_duration"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -97,6 +97,17 @@
                     "label": "Format Overlay",
                     "value": false,
                     "doc": "Show compact audio format text at the top of the display"
+                },
+                {
+                    "id": "format_font",
+                    "element": "select",
+                    "label": "Format Font",
+                    "value": {},
+                    "options": [
+                        {"value": "tom_thumb", "label": "Tom Thumb"},
+                        {"value": "tiny5",     "label": "Tiny5"}
+                    ],
+                    "doc": "Pixel font used for the compact format overlay"
                 },
                 {
                     "id": "badge_duration",
