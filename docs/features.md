@@ -2,6 +2,30 @@
 
 ## Next Actions
 
+### Idle Image Upload + Pruner
+
+Goal: allow the Volumio plugin settings screen to upload a replacement idle image while
+keeping the runtime asset simple and bounded. The uploaded original should be treated as
+temporary input only.
+
+Recommended behavior:
+- Keep `[fallback] image = "assets/idle.png"` as the stable daemon path.
+- Add a plugin upload action that accepts a user image, runs it through a small Python
+  pruning script, overwrites `assets/idle.png`, deletes the temporary original, then
+  reloads vinyltron.
+- Store `assets/idle.png` as a pre-gamma 64x64 RGB PNG. Gamma remains a display concern
+  so future gamma changes affect idle art and album art consistently.
+- The pruner should convert to RGB, center-crop to square, resize to 64x64 with LANCZOS,
+  and write a deterministic PNG.
+- Add plugin UI text that makes the overwrite behavior explicit: there is no idle image
+  library, only the current processed idle image.
+
+Validation:
+- Upload a large portrait image and a large landscape image; both produce a 64x64 PNG.
+- Stop playback and confirm the new idle image appears after the fallback debounce.
+- Confirm the original upload is not retained after processing.
+- Confirm `systemctl reload vinyltron` reloads the fallback without a full restart.
+
 ### Configurable Format Text Fonts
 
 Goal: make the current compact format text overlay font-selectable without changing the
@@ -26,6 +50,22 @@ Validation:
 - `git diff --check`.
 - Local stub sanity check that both `tom_thumb` and `tiny5` can render the current short
   labels (`320K`, `16/44.1`, `24/192`, `DSD512`) within 64 pixels.
+
+### Startup / Upgrade Overlay Reliability Audit
+
+Observed behavior after upgrade: progress bar and format text may not appear immediately
+after deploy/reload, but can start working after changing plugin settings and reloading
+again. This needs investigation before treating the overlay startup path as fully stable.
+
+Likely audit points:
+- Confirm v-conf values and `config.toml` remain synchronized after plugin upgrade.
+- Confirm plugin install/update copies the latest `config.json` defaults without clobbering
+  user settings.
+- Confirm `systemctl reload vinyltron` is sent after settings changes and that daemon
+  logs show `SIGHUP received`.
+- Confirm daemon startup reads the deployed `config.toml` from `/home/volumio/vinyltron`
+  and not an older working directory.
+- Add targeted journald logging for overlay enablement at startup/reload if this repeats.
 
 ## Phase 1 — MVP (current)
 
