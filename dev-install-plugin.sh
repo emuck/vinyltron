@@ -17,7 +17,7 @@ echo "Syncing plugin files..."
 rsync -avz --exclude='node_modules' \
   ./plugin/ ${PI_USER}@${PI_HOST}:${PLUGIN_DIR}/
 
-# All remaining setup runs on the Pi
+# Non-sudo: npm install + register in plugins.json (no TTY needed)
 ssh -T ${PI_USER}@${PI_HOST} bash -s << 'ENDSSH'
 set -e
 PLUGIN_DIR=/data/plugins/user_interface/vinyltron
@@ -38,13 +38,11 @@ d.setdefault('user_interface', {})['vinyltron'] = {'enabled': True, 'status': 'S
 open(p, 'w').write(json.dumps(d, indent=4))
 print('Registered.')
 "
-
-echo "Running plugin install.sh..."
-sudo bash "${PLUGIN_DIR}/install.sh"
-
-echo "Restarting Volumio to load plugin..."
-sudo systemctl restart volumio
 ENDSSH
+
+# Sudo steps: plugin install.sh + Volumio restart (TTY required for sudo)
+echo "Running plugin install.sh and restarting Volumio (may prompt for sudo password)..."
+ssh -t ${PI_USER}@${PI_HOST} "sudo bash ${PLUGIN_DIR}/install.sh && sudo systemctl restart volumio"
 
 echo ""
 echo "Done. Wait ~30s for Volumio to restart, then check:"
