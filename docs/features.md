@@ -76,6 +76,53 @@ config without restart.
 commercial album art displays (e.g. TuneShine at $199 — our BOM is ~$67, and we support
 Volumio natively where they don't).
 
+## Phase 4 — Vinyl / Analog Source Detection
+
+Fully automatic artwork display for turntable or any analog source — no user interaction required.
+
+### Hardware
+- USB audio adapter (~$10) for mic/line input — onboard audio is disabled (GPIO 18 conflict)
+- Connect turntable output (after phono preamp) to line in, or use a room microphone
+
+### Detection State Machine
+
+```
+IDLE (silence / below threshold)
+  ↓  audio RMS above threshold for onset_seconds (~8s)
+DETECTING — send 8s clip to recognition API
+  ↓  match found → fetch art from MusicBrainz/CoverArtArchive
+DISPLAYING artwork
+  ↓  silence for silence_seconds (~45s) — needle lifted or between sides
+IDLE → show fallback image
+  ↓  audio returns → new lookup (Side B, or new record)
+DETECTING
+```
+
+Between-track gaps (a few seconds) don't re-trigger because silence threshold is ~45s.
+Side B is detected automatically: silence when flipping → new lookup when Side B starts.
+Surface noise on vinyl is low and constant; music is louder and dynamic — RMS threshold
+separates them cleanly without DSP.
+
+### Implementation
+- `turntable_client.py` — new source module, same `on_state` callback pattern as `volumio_client.py`
+- `[turntable]` section in `config.toml`:
+  ```toml
+  [turntable]
+  enabled = false
+  device = "default"          # USB audio device name
+  onset_seconds = 8           # sustained audio before triggering lookup
+  silence_seconds = 45        # quiet period before returning to idle
+  level_threshold = 500       # RMS level distinguishing music from surface noise
+  api = "acrcloud"            # acrcloud | audd | shazamio
+  api_key = ""
+  api_secret = ""
+  ```
+- Recognition: ACRCloud (recommended — reliable, free tier ~1000/day, plenty for personal use)
+- Art fetch: MusicBrainz / CoverArtArchive (free, strong vinyl catalog coverage)
+
+### UX Goal
+Put needle on record → artwork appears ~10 seconds later. No app interaction required.
+
 ## Phase 3 — Stretch Goals
 
 - [ ] **Brightness by time of day** — dim after 22:00, restore at 08:00
