@@ -23,7 +23,7 @@ fi
 
 # Allow volumio user to control the service without a password
 cat > /etc/sudoers.d/vinyltron <<'EOF'
-volumio ALL=(ALL) NOPASSWD: /bin/systemctl start vinyltron, /bin/systemctl stop vinyltron, /bin/systemctl reload vinyltron
+volumio ALL=(ALL) NOPASSWD: /bin/systemctl start vinyltron, /bin/systemctl stop vinyltron, /bin/systemctl restart vinyltron, /bin/systemctl reload vinyltron
 EOF
 chmod 440 /etc/sudoers.d/vinyltron
 

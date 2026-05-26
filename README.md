@@ -1,8 +1,7 @@
 # vinyltron
 
-Real-time album art display for a home audio system. A 64×64 HUB75 RGB LED matrix
-driven by a Raspberry Pi 3B. Launched with Volumio 3.x as the source; designed to
-support additional sources (Roon, Spotify, etc.) over time.
+Real-time album art display for a home audio system. A 64x64 HUB75 RGB LED matrix
+driven by a Raspberry Pi 3B. Volumio 3.x is the first source integration.
 
 ## Hardware
 
@@ -33,7 +32,13 @@ Volumio pushState (Socket.io)
                                                64×64 HUB75E panel
 ```
 
-**Image pipeline:** fetch albumart → LANCZOS resize to 64×64 → gamma correction → push frame to matrix.
+**Image pipeline:** Volumio state -> fetch album art -> LANCZOS resize to 64x64 ->
+gamma correction -> optional overlays -> push frame to matrix.
+
+Optional overlays:
+- Bottom progress bar, driven from Volumio `seek` and `duration`.
+- Compact format text at the top-left, shown once per album and cleared after a
+  configurable duration.
 
 ## Pi 3B Configuration
 
@@ -48,9 +53,9 @@ Volumio pushState (Socket.io)
 | 1 | Bill of Materials | ✅ Complete |
 | — | Hardware assembled, display verified end-to-end | ✅ Complete |
 | — | Core daemon (album art display, Socket.io, reconnect) | ✅ Working |
-| — | Adafruit Bonnet #3211 (level shifting / flicker fix) | 🚚 On order |
-| 2 | systemd service, idle image, SIGHUP reload | 🔲 In progress |
-| 3 | Overlays (progress bar, format badge) + Volumio plugin | 🔲 Pending |
+| — | Adafruit Bonnet #3211 (level shifting / flicker fix) | Planned hardware fix |
+| 2 | systemd service, idle image, SIGHUP reload | Working |
+| 3 | Overlays (progress bar, format text) + Volumio plugin | Working |
 
 ## Docs
 

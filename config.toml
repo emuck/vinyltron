@@ -16,7 +16,12 @@ panel_type = ""          # set to "FM6126A" if colors/timing are wrong
 image = "assets/idle.png"
 
 [overlays]
-progress_bar = true
-format_badge = false     # phase 2
-badge_position = "top-right"
-badge_opacity = 0.75
+progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar
+progress_bar_height = 0
+progress_bar_foreground = [255, 255, 255]
+progress_bar_background = [] # empty = use album art as the track background
+format_badge = false       # compact format text overlay
+badge_duration = 10
+# Future analog-source/badge placement options:
+# badge_position = "top-right"
+# badge_opacity = 0.75
