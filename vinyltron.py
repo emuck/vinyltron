@@ -34,12 +34,16 @@ class Vinyltron:
             on_state=self._on_state,
         )
         self._current_albumart: Optional[str] = None
+        self._display_on: bool = True
         self._running = True
         signal.signal(signal.SIGTERM, self._shutdown)
         signal.signal(signal.SIGINT, self._shutdown)
         signal.signal(signal.SIGHUP, self._reload)
 
     def _on_state(self, state: Dict):
+        if not self._display_on:
+            return
+
         status = state.get('status', 'stop')
         albumart = state.get('albumart', '')
 
@@ -80,8 +84,18 @@ class Vinyltron:
         log.info("SIGHUP received — reloading config")
         try:
             self._cfg = toml.load(self._config_path)
+            was_on = self._display_on
+            self._display_on = self._cfg['display'].get('display_on', True)
             self._display.reconfigure(self._cfg)
-            log.info("Config reloaded")
+            if not self._display_on:
+                self._display.clear()
+                log.info("Display off")
+            elif not was_on:
+                self._current_albumart = None  # force re-fetch on next state
+                self._client.request_state()
+                log.info("Display on")
+            else:
+                log.info("Config reloaded")
         except Exception as e:
             log.warning("Config reload failed: %s", e)
 
