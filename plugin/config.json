@@ -2,7 +2,11 @@
     "brightness":   {"type": "number",  "value": 80},
     "gamma":        {"type": "string",  "value": "2.2"},
     "rotation":     {"type": "string",  "value": "270"},
-    "progress_bar": {"type": "boolean", "value": true},
+    "progress_bar": {"type": "boolean", "value": false},
+    "progress_bar_height": {"type": "number", "value": 0},
+    "progress_bar_foreground": {"type": "string", "value": "255,255,255"},
+    "progress_bar_background": {"type": "string", "value": ""},
     "format_badge": {"type": "boolean", "value": false},
+    "badge_duration": {"type": "number", "value": 10},
     "display_on":   {"type": "boolean", "value": true}
 }

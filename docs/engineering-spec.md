@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Voluma is a Linux daemon running on a Raspberry Pi 3B alongside Volumio 3.x. It subscribes
+Vinyltron is a Linux daemon running on a Raspberry Pi 3B alongside Volumio 3.x. It subscribes
 to Volumio's Socket.io `pushState` event stream for real-time track change notifications,
 fetches album art, processes it through an image pipeline, and pushes frames to a 64×64
 HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
@@ -101,16 +101,28 @@ Pi GND pin ──► Panel GND (common ground required)
 - Reconnect loop with exponential backoff
 - Albumart URL normalization: prepend `http://volumio.local` to relative `/albumart` paths
 
-**`display.py`** — Image pipeline
-1. Fetch albumart via HTTP (cached by URL to avoid redundant fetches)
-2. LANCZOS resize to 64×64
-3. Gamma correction via 768-entry LUT (configurable, default γ=2.2)
-4. Push to matrix via rgbmatrix Python bindings (`SetImage(unsafe=False)` for 3.7 compat)
+**`display.py`** — Image pipeline and frame compositing
+1. LANCZOS resize to 64×64
+2. Gamma correction via 768-entry LUT (configurable, default γ=2.2)
+3. Cache the last processed full-frame image so overlays can redraw without refetching art
+4. Composite optional progress and format-text overlays on a copy of the cached image
+5. Push to matrix via rgbmatrix Python bindings (`SetImage(unsafe=False)` for 3.7 compat)
 
 **`vinyltron.py`** — Orchestrator daemon
 - Wires volumio_client → display
-- Handles state: playing / paused / stopped → show art or fallback
-- Manages graceful shutdown (SIGTERM)
+- Fetches album art via HTTP and discards stale async fetch results when tracks change quickly
+- Handles state: playing / paused → show art; stopped → fallback
+- Debounces stopped/non-play states for 1.5 seconds so Volumio's transient between-track
+  stop events do not flash the idle image or clear album identity
+- Tracks album identity separately from track identity so format text is shown once per album
+- Derives compact format labels from Volumio fields, e.g. `320K`, `16/44.1`, `24/192`, `DSD512`
+- Schedules progress updates at LED-column boundaries instead of polling Volumio every second
+- Manages graceful shutdown (SIGTERM/SIGINT) and hot config reload (SIGHUP)
+
+**Volumio plugin** — Settings bridge
+- Native Volumio plugin writes v-conf settings and patches `/home/volumio/vinyltron/config.toml`
+- Display settings are applied with `systemctl reload vinyltron`
+- Rotation requires `systemctl restart vinyltron`
 
 ### Volumio pushState Payload (relevant fields)
 ```json
@@ -141,11 +153,32 @@ slowdown_gpio = 2        # Pi 3B = 2, Pi 5 = 4
 rows = 64
 cols = 64
 rotation = 270           # Rotate:270 corrects panel orientation; change if remounted
+display_on = true
 panel_type = ""          # set to "FM6126A" if colors/timing are wrong
 
 [fallback]
 image = "assets/idle.png"
+
+[overlays]
+progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar
+progress_bar_height = 0
+progress_bar_foreground = [255, 255, 255]
+progress_bar_background = [] # empty = use album art as the track background
+format_badge = false       # compact format text overlay
+badge_duration = 10
 ```
+
+### Format Label Rules
+
+The format overlay intentionally stays short enough for a 64-pixel-wide display:
+
+| Volumio fields | Display |
+|---|---|
+| Spotify / `spop`, `samplerate="320 kbps"` | `320K` in green |
+| Lossless 16-bit / 44.1 kHz | `16/44.1` in white |
+| Lossless 24-bit / 192 kHz | `24/192` in white |
+| DSD 2.82 / 5.64 / 11.28 / 22.58 MHz | `DSD64` / `DSD128` / `DSD256` / `DSD512` in magenta |
+| MP3 with bitrate | `MP3 256K` style compact lossy label in cyan |
 
 ## rpi-rgb-led-matrix Build
 

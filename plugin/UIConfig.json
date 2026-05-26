@@ -6,20 +6,20 @@
         {
             "id": "section_display",
             "element": "section",
-            "label": "Display",
+            "label": "Display — updates instantly",
             "icon": "fa-television",
             "onSave": {
                 "type": "controller",
                 "endpoint": "user_interface/vinyltron",
-                "method": "saveConfig"
+                "method": "saveDisplay"
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["brightness", "gamma", "rotation", "progress_bar", "format_badge"],
+                "data": ["brightness", "gamma", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "badge_duration"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
-                    "message": "Settings saved — Vinyltron restarting"
+                    "message": "Display settings updated"
                 }
             },
             "content": [
@@ -56,6 +56,85 @@
                     "doc": "Display gamma correction curve"
                 },
                 {
+                    "id": "progress_bar_height",
+                    "element": "input",
+                    "label": "Progress Height",
+                    "value": {},
+                    "min": 0,
+                    "max": 64,
+                    "doc": "Height of the progress strip in pixels. Set to 0 to disable. Valid range: 0-64."
+                },
+                {
+                    "id": "progress_bar_foreground",
+                    "element": "select",
+                    "label": "Progress Fill",
+                    "value": {},
+                    "options": [
+                        {"value": "255,255,255", "label": "White"},
+                        {"value": "255,160,0",   "label": "Amber"},
+                        {"value": "0,220,80",    "label": "Green"},
+                        {"value": "0,255,255",   "label": "Cyan"}
+                    ],
+                    "doc": "Filled portion color"
+                },
+                {
+                    "id": "progress_bar_background",
+                    "element": "select",
+                    "label": "Progress Track",
+                    "value": {},
+                    "options": [
+                        {"value": "",            "label": "Album Art"},
+                        {"value": "0,0,0",       "label": "Black"},
+                        {"value": "32,32,32",    "label": "Dim Gray"},
+                        {"value": "0,32,32",     "label": "Deep Cyan"},
+                        {"value": "32,20,0",     "label": "Deep Amber"}
+                    ],
+                    "doc": "Unfilled portion color"
+                },
+                {
+                    "id": "format_badge",
+                    "element": "switch",
+                    "label": "Format Overlay",
+                    "value": false,
+                    "doc": "Show compact audio format text at the top of the display"
+                },
+                {
+                    "id": "badge_duration",
+                    "element": "select",
+                    "label": "Format Duration",
+                    "value": {},
+                    "options": [
+                        {"value": "5",  "label": "5 seconds"},
+                        {"value": "10", "label": "10 seconds"},
+                        {"value": "15", "label": "15 seconds"},
+                        {"value": "20", "label": "20 seconds"},
+                        {"value": "30", "label": "30 seconds"}
+                    ],
+                    "doc": "How long the format badge remains visible after a new track starts"
+                }
+            ]
+        },
+        {
+            "id": "section_hardware",
+            "element": "section",
+            "label": "Hardware — requires restart",
+            "icon": "fa-refresh",
+            "onSave": {
+                "type": "controller",
+                "endpoint": "user_interface/vinyltron",
+                "method": "saveHardware"
+            },
+            "saveButton": {
+                "label": "Save & Restart",
+                "data": ["rotation"],
+                "popup": {
+                    "allowClose": true,
+                    "type": "success",
+                    "message": "Vinyltron restarting — display back in a few seconds"
+                }
+            },
+            "content": [
+                {
                     "id": "rotation",
                     "element": "select",
                     "label": "Rotation",
@@ -66,28 +145,14 @@
                         {"value": "180", "label": "180°"},
                         {"value": "270", "label": "270°"}
                     ],
-                    "doc": "Rotate to match panel mounting orientation. Requires restart."
-                },
-                {
-                    "id": "progress_bar",
-                    "element": "switch",
-                    "label": "Progress Bar",
-                    "value": true,
-                    "doc": "Show playback progress strip at bottom of display (Phase 2)"
-                },
-                {
-                    "id": "format_badge",
-                    "element": "switch",
-                    "label": "Format Badge",
-                    "value": false,
-                    "doc": "Show audio format icon in corner (Phase 2)"
+                    "doc": "Rotate to match panel mounting orientation"
                 }
             ]
         },
         {
             "id": "section_power",
             "element": "section",
-            "label": "Power",
+            "label": "Power — updates instantly",
             "icon": "fa-power-off",
             "onSave": {
                 "type": "controller",

@@ -94,10 +94,76 @@ Expected: prints current playback state. Start playing something in Volumio firs
 ## 5. End-to-End Test
 
 - [x] Deploy via `./deploy.sh` from Mac
-- [x] Start vinyltron: `sudo python3 /home/volumio/vinyltron/vinyltron.py`
+- [x] Start vinyltron manually: `sudo python3 /home/volumio/vinyltron/vinyltron.py`
+- [x] Start vinyltron as a service: `sudo systemctl start vinyltron`
 - [x] Play a track in Volumio — album art appears within 2 seconds
 - [x] Skip track — art updates without restart
 - [x] Volumio Socket.io disconnect — vinyltron reconnects automatically
-- [ ] Pause — fallback image shown (untested)
-- [ ] Stop — fallback image shown (untested)
-- [ ] Reboot Pi — vinyltron starts after Volumio automatically (requires systemd service)
+- [ ] Pause — art remains visible and progress stops advancing
+- [ ] Stop — fallback image shown after the 1.5 second fallback debounce
+- [ ] Reboot Pi — vinyltron starts after Volumio automatically
+
+Useful service commands:
+```bash
+sudo systemctl restart vinyltron
+sudo systemctl reload vinyltron
+journalctl -u vinyltron -f
+```
+
+---
+
+## 6. Overlay Test
+
+### Format Text
+
+Enable in `config.toml` or through the Volumio plugin:
+```toml
+[overlays]
+format_badge = true
+badge_duration = 10
+```
+
+Expected:
+- A compact format label appears at the top-left after the first track of an album starts.
+- The label clears after `badge_duration` seconds.
+- Track changes within the same album do not briefly show the fallback image and do not
+  re-show the label.
+- Volumio transient stop events between tracks log `scheduling fallback`, then get
+  cancelled by the next play/pause state before the idle image appears.
+- New albums re-show the label.
+
+Known examples from Volumio logs:
+- `service='spop' trackType='spotify' codec='ogg' samplerate='320 kbps'` -> `320K`, green
+- `trackType='m4a' samplerate='44.1 kHz' bitdepth='16 bit'` -> `16/44.1`, white
+- `trackType='flac' samplerate='192 kHz' bitdepth='24 bit'` -> `24/192`, white
+- `trackType='dsf' samplerate='2.82 MHz' bitdepth='1 bit'` -> `DSD64`, magenta
+- `trackType='dsf' samplerate='22.58 MHz' bitdepth='1 bit'` -> `DSD512`, magenta
+
+### Progress Bar
+
+Enable with a nonzero height:
+```toml
+[overlays]
+progress_bar_height = 3
+progress_bar_foreground = [255, 255, 255]
+progress_bar_background = [] # empty means leave the album art as the unfilled track
+```
+
+Expected:
+- Filled width is `seek / duration * 64`.
+- Updates happen at the next LED-column boundary, so long tracks update less frequently
+  and short tracks update more frequently.
+- `progress_bar_height = 0` disables the bar.
+
+---
+
+## 7. Plugin Settings Test
+
+From Volumio Settings -> Plugins -> Vinyltron:
+- Display settings save with `systemctl reload vinyltron`.
+- Rotation saves with `systemctl restart vinyltron`.
+- `Progress Height` accepts typed values. Negative values clamp to 0, floats truncate,
+  values above 64 clamp to 64.
+- `Progress Track = Album Art` stores an empty TOML array and leaves unfilled pixels as
+  the cached album art.
+- `Format Duration` persists as `badge_duration`.
