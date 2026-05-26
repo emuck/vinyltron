@@ -1,0 +1,22 @@
+{
+    "name": "vinyltron",
+    "version": "0.1.0",
+    "description": "64×64 HUB75 LED matrix album art display",
+    "main": "index.js",
+    "scripts": {},
+    "volumio_info": {
+        "prettyName": "Vinyltron",
+        "plugin_type": "user_interface",
+        "icon": "fa-television",
+        "architectures": [{"platform": "raspberry", "model": "pi3", "os": "buster"}],
+        "details": "Real-time album art on a 64×64 HUB75E LED matrix, driven by Volumio pushState.",
+        "changelog": "0.1.0: Initial release"
+    },
+    "author": "Martin Raumann",
+    "license": "MIT",
+    "dependencies": {
+        "fs-extra": "^7.0.1",
+        "kew": "^0.7.0",
+        "v-conf": "^1.4.0"
+    }
+}
