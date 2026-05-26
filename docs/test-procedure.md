@@ -167,3 +167,31 @@ From Volumio Settings -> Plugins -> Vinyltron:
 - `Progress Track = Album Art` stores an empty TOML array and leaves unfilled pixels as
   the cached album art.
 - `Format Duration` persists as `badge_duration`.
+
+---
+
+## 8. Known Follow-Up Checks
+
+### Overlay Startup After Upgrade
+
+Observed once: immediately after upgrade, the progress bar and format text did not appear.
+After changing plugin settings and reloading, overlays eventually started again.
+
+If this repeats, capture:
+```bash
+journalctl -u vinyltron -b --no-pager | tail -120
+cat /home/volumio/vinyltron/config.toml
+```
+
+Check for:
+- `SIGHUP received` after plugin settings are saved.
+- `[overlays] format_badge`, `badge_duration`, and `progress_bar_height` values in
+  `/home/volumio/vinyltron/config.toml`.
+- `Volumio format:` and `Format overlay:` log lines on new albums.
+- Whether the daemon was restarted or only reloaded after deploy.
+
+### Future Idle Image Upload
+
+When implemented, verify that plugin upload overwrites only `assets/idle.png`, stores it
+as a 64x64 RGB PNG, deletes the temporary original upload, and reloads vinyltron so the
+new idle image appears on the next real stop/fallback state.
