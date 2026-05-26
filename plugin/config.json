@@ -1,6 +1,8 @@
 {
-    "brightness": {"type": "number", "value": 80},
-    "gamma":      {"type": "string", "value": "2.2"},
+    "brightness":   {"type": "number",  "value": 80},
+    "gamma":        {"type": "string",  "value": "2.2"},
+    "rotation":     {"type": "string",  "value": "270"},
     "progress_bar": {"type": "boolean", "value": true},
-    "format_badge":  {"type": "boolean", "value": false}
+    "format_badge": {"type": "boolean", "value": false},
+    "display_on":   {"type": "boolean", "value": true}
 }

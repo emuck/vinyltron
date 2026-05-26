@@ -77,6 +77,12 @@ class VolumioClient:
         except Exception as e:
             log.debug("REST fallback failed: %s", e)
 
+    def request_state(self):
+        try:
+            self._sio.emit('getState', '')
+        except Exception:
+            pass
+
     def start(self):
         self._thread = threading.Thread(target=self._run, daemon=True, name="volumio-client")
         self._thread.start()
