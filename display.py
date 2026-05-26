@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from typing import Dict, NamedTuple, Optional, Tuple
 
@@ -8,6 +9,20 @@ sys.path.insert(0, '/home/volumio/rpi-rgb-led-matrix/bindings/python')
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 
 log = logging.getLogger(__name__)
+
+
+class Glyph(NamedTuple):
+    rows: Tuple[int, ...]
+    width: int
+    height: int
+    advance: int
+
+
+class PixelFont(NamedTuple):
+    name: str
+    glyphs: Dict[str, Glyph]
+    height: int
+    trim_right: int = 1
 
 
 FONT_3X5: Dict[str, Tuple[int, ...]] = {
@@ -54,6 +69,118 @@ FONT_3X5: Dict[str, Tuple[int, ...]] = {
 }
 
 
+def _builtin_font() -> PixelFont:
+    glyphs = {}
+    for char, rows in FONT_3X5.items():
+        normalized_rows = []
+        for row in rows:
+            normalized = 0
+            for x in range(3):
+                if row & (1 << (2 - x)):
+                    normalized |= 1 << x
+            normalized_rows.append(normalized)
+        glyphs[char] = Glyph(rows=tuple(normalized_rows), width=3, height=5, advance=4)
+    return PixelFont(name='tom_thumb', glyphs=glyphs, height=5, trim_right=1)
+
+
+def _load_bdf_font(path: str, name: str) -> PixelFont:
+    glyphs = {}
+    current = None
+    in_bitmap = False
+    bitmap = []
+    font_ascent = None
+    font_descent = None
+    cap_height = None
+
+    with open(path, 'r', encoding='ascii', errors='ignore') as f:
+        for raw_line in f:
+            line = raw_line.strip()
+            if not line:
+                continue
+            parts = line.split()
+
+            if parts[0] == 'FONT_ASCENT' and len(parts) > 1:
+                font_ascent = int(parts[1])
+            elif parts[0] == 'FONT_DESCENT' and len(parts) > 1:
+                font_descent = int(parts[1])
+            elif parts[0] == 'CAP_HEIGHT' and len(parts) > 1:
+                cap_height = int(parts[1])
+            elif parts[0] == 'STARTCHAR':
+                current = {
+                    'encoding': None,
+                    'advance': 0,
+                    'bbx': (0, 0, 0, 0),
+                }
+                bitmap = []
+                in_bitmap = False
+            elif current is not None and parts[0] == 'ENCODING' and len(parts) > 1:
+                current['encoding'] = int(parts[1])
+            elif current is not None and parts[0] == 'DWIDTH' and len(parts) > 1:
+                current['advance'] = int(parts[1])
+            elif current is not None and parts[0] == 'BBX' and len(parts) >= 5:
+                current['bbx'] = tuple(int(part) for part in parts[1:5])
+            elif current is not None and parts[0] == 'BITMAP':
+                in_bitmap = True
+            elif current is not None and parts[0] == 'ENDCHAR':
+                encoding = current['encoding']
+                if encoding is not None and 32 <= encoding <= 126:
+                    glyph = _bdf_glyph(current, bitmap, font_ascent)
+                    glyphs[chr(encoding)] = glyph
+                current = None
+                in_bitmap = False
+            elif current is not None and in_bitmap:
+                bitmap.append(line)
+
+    if ' ' not in glyphs:
+        glyphs[' '] = Glyph(rows=tuple(), width=0, height=0, advance=3)
+    if not glyphs:
+        raise ValueError("BDF font contains no ASCII glyphs")
+
+    height_candidates = [glyph.height for glyph in glyphs.values()]
+    if cap_height:
+        height = max(cap_height, max(height_candidates))
+    elif font_ascent is not None and font_descent is not None:
+        height = font_ascent + font_descent
+    else:
+        height = max(height_candidates)
+    return PixelFont(name=name, glyphs=glyphs, height=height, trim_right=1)
+
+
+def _bdf_glyph(current, bitmap, font_ascent) -> Glyph:
+    width, height, x_offset, y_offset = current['bbx']
+    advance = current['advance'] or width + 1
+    if width <= 0 or height <= 0:
+        return Glyph(rows=tuple(), width=0, height=0, advance=max(1, advance))
+
+    if font_ascent is None:
+        top_padding = 0
+        glyph_height = height
+    else:
+        top_padding = max(0, font_ascent - y_offset - height)
+        glyph_height = max(height + top_padding, font_ascent)
+
+    rows = [0] * glyph_height
+    for src_y, hex_row in enumerate(bitmap[:height]):
+        bits = int(hex_row, 16) if hex_row else 0
+        total_bits = len(hex_row) * 4
+        dst_y = top_padding + src_y
+        row = 0
+        for x in range(width):
+            if bits & (1 << (total_bits - 1 - x)):
+                dst_x = x + max(0, x_offset)
+                if 0 <= dst_x < max(width + max(0, x_offset), advance):
+                    row |= 1 << dst_x
+        if 0 <= dst_y < len(rows):
+            rows[dst_y] = row
+
+    return Glyph(
+        rows=tuple(rows),
+        width=max(width + max(0, x_offset), advance),
+        height=glyph_height,
+        advance=max(1, advance),
+    )
+
+
 class TextOverlay(NamedTuple):
     text: str
     color_rgb: Tuple[int, int, int]
@@ -93,9 +220,35 @@ class Display:
         self._size = (d['cols'], d['rows'])
         self._gamma_lut = _build_gamma_lut(d['gamma'])
         self._fallback = self._load_fallback(cfg['fallback']['image'])
+        self._text_font = self._load_text_font(cfg)
         self._current_image = Image.new('RGB', self._size, (0, 0, 0))
         self._text_overlay = None
         self._progress_overlay = None
+
+    def _load_text_font(self, cfg: dict) -> PixelFont:
+        overlays = cfg.get('overlays', {})
+        font_name = str(overlays.get('format_font', 'tom_thumb')).strip().lower()
+        if font_name in ('tom_thumb', 'default', ''):
+            return _builtin_font()
+
+        if font_name == 'tiny5':
+            path = overlays.get('format_font_path') or 'assets/fonts/Tiny5.bdf'
+        else:
+            path = overlays.get('format_font_path')
+
+        if not path:
+            log.warning("No BDF path configured for format font %s; using tom_thumb", font_name)
+            return _builtin_font()
+
+        try:
+            if not os.path.exists(path):
+                raise IOError("font file not found")
+            font = _load_bdf_font(path, font_name)
+            log.info("Loaded format font %s from %s", font.name, path)
+            return font
+        except Exception as e:
+            log.warning("Could not load format font %s from %s: %s; using tom_thumb", font_name, path, e)
+            return _builtin_font()
 
     def _load_fallback(self, path: str) -> Image.Image:
         try:
@@ -164,23 +317,24 @@ class Display:
         pixels = img.load()
         x0, y0 = 2, 2
         text_width = self._text_width(overlay.text)
+        font = self._text_font
 
-        for y in range(y0 - 1, y0 + 6):
+        for y in range(y0 - 1, y0 + font.height + 2):
             for x in range(x0 - 1, min(self._size[0], x0 + text_width + 1)):
                 if 0 <= x < self._size[0] and 0 <= y < self._size[1]:
                     pixels[x, y] = (0, 0, 0)
 
         cursor = x0
         for char in overlay.text:
-            glyph = FONT_3X5.get(char, FONT_3X5[' '])
-            for y, row in enumerate(glyph):
-                for x in range(3):
-                    if row & (1 << (2 - x)):
+            glyph = font.glyphs.get(char, font.glyphs[' '])
+            for y, row in enumerate(glyph.rows):
+                for x in range(glyph.width):
+                    if row & (1 << x):
                         px = cursor + x
                         py = y0 + y
                         if 0 <= px < self._size[0] and 0 <= py < self._size[1]:
                             pixels[px, py] = overlay.color_rgb
-            cursor += 4
+            cursor += glyph.advance
 
     def _draw_progress(self, img: Image.Image, overlay):
         pixels = img.load()
@@ -201,6 +355,7 @@ class Display:
         self._matrix.brightness = d['brightness']
         self._gamma_lut = _build_gamma_lut(d['gamma'])
         self._fallback = self._load_fallback(cfg['fallback']['image'])
+        self._text_font = self._load_text_font(cfg)
 
     def clear(self):
         self._canvas.Clear()
@@ -210,7 +365,7 @@ class Display:
         self._progress_overlay = None
 
     def _fit_text(self, text: str) -> str:
-        text = ''.join(ch for ch in text.upper() if ch in FONT_3X5)
+        text = ''.join(ch for ch in text.upper() if ch in self._text_font.glyphs)
         while text and self._text_width(text) > self._size[0] - 4:
             text = text[:-1]
         return text
@@ -218,4 +373,5 @@ class Display:
     def _text_width(self, text: str) -> int:
         if not text:
             return 0
-        return len(text) * 4 - 1
+        width = sum(self._text_font.glyphs.get(char, self._text_font.glyphs[' ']).advance for char in text)
+        return max(0, width - self._text_font.trim_right)

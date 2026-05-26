@@ -64,8 +64,10 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         if (progress_bar_background === undefined || progress_bar_background === null) progress_bar_background = '';
         s[0].content[4].value = {value: progress_bar_background, label: self._labelForProgressColor(progress_bar_background)};
         s[0].content[5].value = self.config.get('format_badge');
+        var format_font = self.config.get('format_font') || 'tom_thumb';
+        s[0].content[6].value = {value: format_font, label: self._labelForFormatFont(format_font)};
         var badge_duration = (self.config.get('badge_duration') || 10).toString();
-        s[0].content[6].value = {value: badge_duration, label: badge_duration + ' seconds'};
+        s[0].content[7].value = {value: badge_duration, label: badge_duration + ' seconds'};
 
         // Section 1: Hardware (rotation)
         var rotation = self.config.get('rotation');
@@ -98,6 +100,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     var progress_bar_foreground = data['progress_bar_foreground'] ? data['progress_bar_foreground']['value'] : '255,255,255';
     var progress_bar_background = data['progress_bar_background'] ? data['progress_bar_background']['value'] : '';
     var format_badge = data['format_badge'] === true || data['format_badge'] === 'true';
+    var format_font = data['format_font'] ? data['format_font']['value'] : 'tom_thumb';
     var badge_duration = data['badge_duration'] ? parseInt(data['badge_duration']['value']) : 10;
     if (isNaN(progress_bar_height)) progress_bar_height = 0;
     progress_bar_height = Math.max(0, Math.min(64, progress_bar_height));
@@ -111,6 +114,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     self.config.set('progress_bar_foreground', progress_bar_foreground);
     self.config.set('progress_bar_background', progress_bar_background);
     self.config.set('format_badge', format_badge);
+    self.config.set('format_font', format_font);
     self.config.set('badge_duration', badge_duration);
 
     self._patchConfigToml({brightness: brightness, gamma: gamma,
@@ -119,6 +123,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
                            progress_bar_foreground: progress_bar_foreground,
                            progress_bar_background: progress_bar_background,
                            format_badge: format_badge,
+                           format_font: format_font,
                            badge_duration: badge_duration});
 
     exec('/usr/bin/sudo /bin/systemctl reload vinyltron', function(error) {
@@ -173,7 +178,8 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.progress_bar_foreground !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_foreground', this._tomlRgb(fields.progress_bar_foreground), 'progress_bar_height');
         if (fields.progress_bar_background !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_background', this._tomlRgb(fields.progress_bar_background), 'progress_bar_foreground');
         if (fields.format_badge !== undefined) content = this._patchTomlInSection(content, 'overlays', 'format_badge', fields.format_badge, 'progress_bar_background');
-        if (fields.badge_duration !== undefined) content = this._patchTomlInSection(content, 'overlays', 'badge_duration', fields.badge_duration, 'format_badge');
+        if (fields.format_font !== undefined) content = this._patchTomlInSection(content, 'overlays', 'format_font', this._tomlString(fields.format_font), 'format_badge');
+        if (fields.badge_duration !== undefined) content = this._patchTomlInSection(content, 'overlays', 'badge_duration', fields.badge_duration, 'format_font');
 
         fs.writeFileSync(CONFIG_TOML, content, 'utf8');
     } catch (e) {
@@ -227,6 +233,11 @@ ControllerVinyltron.prototype._tomlRgb = function(value) {
     return '[' + parts.slice(0, 3).join(', ') + ']';
 };
 
+ControllerVinyltron.prototype._tomlString = function(value) {
+    var text = (value === undefined || value === null) ? '' : value.toString();
+    return '"' + text.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+};
+
 ControllerVinyltron.prototype._labelForProgressColor = function(value) {
     var labels = {
         '': 'Album Art',
@@ -238,6 +249,14 @@ ControllerVinyltron.prototype._labelForProgressColor = function(value) {
         '32,32,32': 'Dim Gray',
         '0,32,32': 'Deep Cyan',
         '32,20,0': 'Deep Amber'
+    };
+    return labels[value] || value;
+};
+
+ControllerVinyltron.prototype._labelForFormatFont = function(value) {
+    var labels = {
+        'tom_thumb': 'Tom Thumb',
+        'tiny5': 'Tiny5'
     };
     return labels[value] || value;
 };

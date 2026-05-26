@@ -94,6 +94,7 @@ Expected: prints current playback state. Start playing something in Volumio firs
 ## 5. End-to-End Test
 
 - [x] Deploy via `./deploy.sh` from Mac
+- [x] Reinstall/update plugin UI via `./dev-install-plugin.sh` from Mac when plugin files change
 - [x] Start vinyltron manually: `sudo python3 /home/volumio/vinyltron/vinyltron.py`
 - [x] Start vinyltron as a service: `sudo systemctl start vinyltron`
 - [x] Play a track in Volumio — album art appears within 2 seconds
@@ -120,6 +121,7 @@ Enable in `config.toml` or through the Volumio plugin:
 ```toml
 [overlays]
 format_badge = true
+format_font = "tom_thumb" # or "tiny5"
 badge_duration = 10
 ```
 
@@ -131,6 +133,8 @@ Expected:
 - Volumio transient stop events between tracks log `scheduling fallback`, then get
   cancelled by the next play/pause state before the idle image appears.
 - New albums re-show the label.
+- Changing `Format Font` in the plugin reloads the daemon and affects the next rendered
+  format label.
 
 Known examples from Volumio logs:
 - `service='spop' trackType='spotify' codec='ogg' samplerate='320 kbps'` -> `320K`, green
@@ -138,6 +142,12 @@ Known examples from Volumio logs:
 - `trackType='flac' samplerate='192 kHz' bitdepth='24 bit'` -> `24/192`, white
 - `trackType='dsf' samplerate='2.82 MHz' bitdepth='1 bit'` -> `DSD64`, magenta
 - `trackType='dsf' samplerate='22.58 MHz' bitdepth='1 bit'` -> `DSD512`, magenta
+
+Tiny5 smoke test:
+- Select `Format Font = Tiny5` in the plugin.
+- Save display settings.
+- Confirm journald logs `Loaded format font tiny5`.
+- Start a new album and verify the format label is legible and still fits at the top-left.
 
 ### Progress Bar
 
