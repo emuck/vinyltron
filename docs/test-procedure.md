@@ -137,6 +137,8 @@ Expected:
 - Volumio transient stop events between tracks log `scheduling fallback`, then get
   cancelled by the next play/pause state before the idle image appears.
 - New albums re-show the label.
+- If album art cannot be fetched for an active track, the idle/fallback image is used as
+  the temporary base image and the format label still appears for a new album.
 - Changing `Format Font` in the plugin reloads the daemon and affects the next rendered
   format label.
 
@@ -225,6 +227,8 @@ Check for:
 - `[overlays] format_badge`, `badge_duration`, and `progress_bar_height` values in
   `/home/volumio/vinyltron/config.toml`.
 - `Volumio format:` and `Format overlay:` log lines on new albums.
+- `Album art unavailable; showing fallback for current track` followed by `Format overlay:`
+  when Volumio returns invalid album art for an active track.
 - Whether the daemon was restarted or only reloaded after deploy.
 
 ### Idle Image Troubleshooting

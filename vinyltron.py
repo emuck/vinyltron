@@ -177,13 +177,24 @@ class Vinyltron:
                 self._show_format_badge(state)
         else:
             with self._state_lock:
-                if seq == self._state_seq:
-                    self._pending_track_key = None
+                if seq != self._state_seq or track_key != self._pending_track_key:
+                    return
+                self._current_albumart = albumart
+                self._current_album_key = album_key
+                self._current_track_key = track_key
+                self._pending_track_key = None
             with self._overlay_lock:
                 self._cancel_overlay_locked()
-                self._cancel_progress_locked()
+                self._cancel_progress_locked(clear_visible=album_changed)
                 self._badge_visible = False
                 self._display.show_fallback()
+            log.info("Album art unavailable; showing fallback for current track")
+            with self._state_lock:
+                if seq != self._state_seq or track_key != self._current_track_key:
+                    return
+            self._sync_progress_from_state(state)
+            if album_changed:
+                self._show_format_badge(state)
 
     def _show_format_badge(self, state: Dict):
         if not self._cfg.get('overlays', {}).get('format_badge', False):
