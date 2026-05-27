@@ -21,8 +21,8 @@ progress_bar_height = 0
 progress_bar_foreground = [255, 255, 255]
 progress_bar_background = [] # empty = use album art as the track background
 format_badge = false       # compact format text overlay
-format_font = "tom_thumb"  # tom_thumb | tiny5
-format_font_path = ""      # optional custom BDF path; tiny5 defaults to assets/fonts/Tiny5.bdf
+format_font = "tom_thumb"  # tom_thumb | tiny5 | spleen
+format_font_path = ""      # optional custom BDF path; built-in choices have default paths
 badge_duration = 10
 # Future analog-source/badge placement options:
 # badge_position = "top-right"

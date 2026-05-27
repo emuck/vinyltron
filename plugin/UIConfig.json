@@ -105,7 +105,8 @@
                     "value": {},
                     "options": [
                         {"value": "tom_thumb", "label": "Tom Thumb"},
-                        {"value": "tiny5",     "label": "Tiny5"}
+                        {"value": "tiny5",     "label": "Tiny5"},
+                        {"value": "spleen",    "label": "Spleen 5x8"}
                     ],
                     "doc": "Pixel font used for the compact format overlay"
                 },

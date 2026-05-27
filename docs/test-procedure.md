@@ -121,7 +121,7 @@ Enable in `config.toml` or through the Volumio plugin:
 ```toml
 [overlays]
 format_badge = true
-format_font = "tom_thumb" # or "tiny5"
+format_font = "tom_thumb" # or "tiny5" / "spleen"
 badge_duration = 10
 ```
 
@@ -143,11 +143,12 @@ Known examples from Volumio logs:
 - `trackType='dsf' samplerate='2.82 MHz' bitdepth='1 bit'` -> `DSD64`, magenta
 - `trackType='dsf' samplerate='22.58 MHz' bitdepth='1 bit'` -> `DSD512`, magenta
 
-Tiny5 smoke test:
+Font smoke test:
 - Select `Format Font = Tiny5` in the plugin.
 - Save display settings.
 - Confirm journald logs `Loaded format font tiny5`.
 - Start a new album and verify the format label is legible and still fits at the top-left.
+- Repeat with `Format Font = Spleen 5x8` and confirm journald logs `Loaded format font spleen`.
 
 ### Progress Bar
 
@@ -195,6 +196,7 @@ cat /home/volumio/vinyltron/config.toml
 
 Check for:
 - `SIGHUP received` after plugin settings are saved.
+- `Config startup:` and `Config reload:` lines showing expected overlay values.
 - `[overlays] format_badge`, `badge_duration`, and `progress_bar_height` values in
   `/home/volumio/vinyltron/config.toml`.
 - `Volumio format:` and `Format overlay:` log lines on new albums.

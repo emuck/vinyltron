@@ -87,6 +87,7 @@ class Vinyltron:
         self._progress_playing = False
         self._progress_last_update = time.monotonic()
         self._running = True
+        self._log_runtime_config("startup")
         signal.signal(signal.SIGTERM, self._shutdown)
         signal.signal(signal.SIGINT, self._shutdown)
         signal.signal(signal.SIGHUP, self._reload)
@@ -218,7 +219,10 @@ class Vinyltron:
     def _format_label(self, state: Dict, category: str) -> str:
         if category == 'spotify':
             bitrate = self._bitrate_label(state.get('bitrate')) or self._bitrate_label(state.get('samplerate'))
-            return bitrate or 'SPOTIFY'
+            codec = self._normalized(state.get('codec')).upper()
+            if codec and bitrate:
+                return "%s %s" % (codec, bitrate)
+            return bitrate or codec or 'SPOTIFY'
         if category == 'dsd':
             return self._dsd_label(state) or 'DSD'
 
@@ -527,6 +531,31 @@ class Vinyltron:
         except Exception:
             return default
 
+    def _log_runtime_config(self, source: str):
+        display = self._cfg.get('display', {})
+        overlays = self._cfg.get('overlays', {})
+        fallback = self._cfg.get('fallback', {})
+        log.info(
+            (
+                "Config %s: display_on=%r brightness=%r gamma=%r rotation=%r "
+                "fallback=%r progress_height=%r progress_foreground=%r "
+                "progress_background=%r format_badge=%r format_font=%r "
+                "badge_duration=%r"
+            ),
+            source,
+            display.get('display_on', True),
+            display.get('brightness'),
+            display.get('gamma'),
+            display.get('rotation'),
+            fallback.get('image'),
+            overlays.get('progress_bar_height'),
+            overlays.get('progress_bar_foreground'),
+            overlays.get('progress_bar_background'),
+            overlays.get('format_badge'),
+            overlays.get('format_font', 'tom_thumb'),
+            overlays.get('badge_duration'),
+        )
+
     def _log_format_state(self, state: Dict):
         log.info(
             "Volumio format: service=%r trackType=%r codec=%r bitrate=%r samplerate=%r bitdepth=%r",
@@ -566,6 +595,7 @@ class Vinyltron:
         log.info("SIGHUP received — reloading config")
         try:
             self._cfg = toml.load(self._config_path)
+            self._log_runtime_config("reload")
             was_on = self._display_on
             self._display_on = self._cfg['display'].get('display_on', True)
             new_format_badge = self._cfg.get('overlays', {}).get('format_badge', False)
