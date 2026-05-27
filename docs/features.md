@@ -29,27 +29,36 @@ Publication path to investigate:
 
 ### Idle Image Upload + Pruner
 
+Status: implemented as folder-based selection/randomization instead of direct upload.
+
 Goal: allow the Volumio plugin settings screen to upload a replacement idle image while
 keeping the runtime asset simple and bounded. The uploaded original should be treated as
 temporary input only.
 
-Recommended behavior:
+Implemented behavior:
 - Keep `[fallback] image = "assets/idle.png"` as the stable daemon path.
-- Add a plugin upload action that accepts a user image, runs it through a small Python
-  pruning script, overwrites `assets/idle.png`, deletes the temporary original, then
-  reloads vinyltron.
-- Store `assets/idle.png` as a pre-gamma 64x64 RGB PNG. Gamma remains a display concern
-  so future gamma changes affect idle art and album art consistently.
-- The pruner should convert to RGB, center-crop to square, resize to 64x64 with LANCZOS,
-  and write a deterministic PNG.
-- Add plugin UI text that makes the overwrite behavior explicit: there is no idle image
-  library, only the current processed idle image.
+- Add `[fallback] image_folder = "/data/INTERNAL/Vinyltron/idle-images"`.
+- Add `[fallback] mode = "single"` with modes `single`, `selected`, and `random_folder`.
+- Add `[fallback] selected_image = ""` as a basename inside `image_folder`.
+- Plugin settings expose Idle Mode, Idle Folder, and a dynamically populated Idle Image
+  dropdown from supported image files in the folder.
+- Built-in idle mode uses `assets/idle.png`; random-folder mode only uses images from
+  `image_folder`, so the built-in image is not part of the random pool unless copied there.
+- Folder images are loaded only when a real fallback occurs after debounce, then converted
+  to RGB, center-cropped to square, resized to 64x64 with LANCZOS, gamma-corrected, and
+  shown. The source images are not overwritten.
+- If selected/random images are missing, invalid, or corrupt, the daemon falls back to
+  `assets/idle.png`.
+- Plugin install creates `/data/INTERNAL/Vinyltron/idle-images` and makes it writable by
+  the `volumio` user.
 
 Validation:
-- Upload a large portrait image and a large landscape image; both produce a 64x64 PNG.
-- Stop playback and confirm the new idle image appears after the fallback debounce.
-- Confirm the original upload is not retained after processing.
-- Confirm `systemctl reload vinyltron` reloads the fallback without a full restart.
+- Copy a large portrait image and a large landscape image into the idle folder.
+- Confirm both appear in the plugin Idle Image dropdown.
+- Select one image and confirm it appears after the fallback debounce.
+- Select random-folder mode and confirm real stop/fallback events choose from folder images.
+- Confirm corrupt/unsupported files are ignored or skipped without blocking fallback.
+- Confirm `systemctl reload vinyltron` reloads idle settings without a full restart.
 
 ### Configurable Format Text Fonts
 

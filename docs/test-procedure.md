@@ -111,6 +111,11 @@ sudo systemctl reload vinyltron
 journalctl -u vinyltron -f
 ```
 
+Development deployment note: `./deploy.sh` currently syncs local `config.toml` to the Pi.
+After deploy, re-save the Volumio plugin settings if progress or format overlays look
+disabled. The runtime log should show `progress_height > 0` and `format_badge=True` when
+those overlays are enabled.
+
 ---
 
 ## 6. Overlay Test
@@ -172,12 +177,33 @@ Expected:
 
 From Volumio Settings -> Plugins -> Vinyltron:
 - Display settings save with `systemctl reload vinyltron`.
+- Idle image settings save with `systemctl reload vinyltron`.
 - Rotation saves with `systemctl restart vinyltron`.
 - `Progress Height` accepts typed values. Negative values clamp to 0, floats truncate,
   values above 64 clamp to 64.
 - `Progress Track = Album Art` stores an empty TOML array and leaves unfilled pixels as
   the cached album art.
 - `Format Duration` persists as `badge_duration`.
+
+### Idle Image Folder Test
+
+Default folder:
+```bash
+/data/INTERNAL/Vinyltron/idle-images
+```
+
+Expected:
+- Plugin install creates the folder and makes it writable by `volumio`.
+- Copying `.jpg`, `.jpeg`, `.png`, `.bmp`, `.gif`, or `.webp` files into the folder makes
+  them appear in the `Idle Image` dropdown after reopening the plugin settings page.
+- `Idle Mode = Built-in Idle Image` uses `assets/idle.png`.
+- `Idle Mode = Selected Folder Image` uses the selected filename.
+- `Idle Mode = Random Folder Image` chooses a random valid image each time the real
+  fallback state is entered after debounce.
+- The built-in `assets/idle.png` is not included in random-folder mode unless a copy is
+  also placed in `/data/INTERNAL/Vinyltron/idle-images`.
+- Portrait and landscape images are center-cropped to square and rendered as 64x64.
+- Empty folders, missing selected files, and corrupt files fall back to `assets/idle.png`.
 
 ---
 
@@ -202,8 +228,16 @@ Check for:
 - `Volumio format:` and `Format overlay:` log lines on new albums.
 - Whether the daemon was restarted or only reloaded after deploy.
 
-### Future Idle Image Upload
+### Idle Image Troubleshooting
 
-When implemented, verify that plugin upload overwrites only `assets/idle.png`, stores it
-as a 64x64 RGB PNG, deletes the temporary original upload, and reloads vinyltron so the
-new idle image appears on the next real stop/fallback state.
+If idle images do not appear, capture:
+```bash
+ls -la /data/INTERNAL/Vinyltron/idle-images
+journalctl -u vinyltron -b --no-pager | tail -120
+```
+
+Check for:
+- `Config startup:` or `Config reload:` showing expected `fallback_mode`,
+  `fallback_folder`, and `fallback_selected` values.
+- `Loaded idle image ...` when fallback is shown.
+- `Could not load idle image ...` warnings for corrupt or unreadable files.

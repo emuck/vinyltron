@@ -6,6 +6,11 @@ set -e
 
 VINYLTRON_DIR=/home/volumio/vinyltron
 SERVICE=vinyltron
+IDLE_IMAGE_DIR=/data/INTERNAL/Vinyltron/idle-images
+
+echo "Creating idle image folder..."
+mkdir -p "$IDLE_IMAGE_DIR"
+chown -R volumio:volumio /data/INTERNAL/Vinyltron
 
 # Install Python dependencies
 if [ -f "$VINYLTRON_DIR/requirements.txt" ]; then

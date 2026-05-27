@@ -127,6 +127,57 @@
             ]
         },
         {
+            "id": "section_idle",
+            "element": "section",
+            "label": "Idle Image — updates instantly",
+            "icon": "fa-picture-o",
+            "onSave": {
+                "type": "controller",
+                "endpoint": "user_interface/vinyltron",
+                "method": "saveIdle"
+            },
+            "saveButton": {
+                "label": "Save",
+                "data": ["fallback_mode", "fallback_image_folder", "fallback_selected_image"],
+                "popup": {
+                    "allowClose": true,
+                    "type": "success",
+                    "message": "Idle image settings updated"
+                }
+            },
+            "content": [
+                {
+                    "id": "fallback_mode",
+                    "element": "select",
+                    "label": "Idle Mode",
+                    "value": {},
+                    "options": [
+                        {"value": "single",        "label": "Built-in Idle Image"},
+                        {"value": "selected",      "label": "Selected Folder Image"},
+                        {"value": "random_folder", "label": "Random Folder Image"}
+                    ],
+                    "doc": "Controls which image is shown when playback is stopped"
+                },
+                {
+                    "id": "fallback_image_folder",
+                    "element": "input",
+                    "label": "Idle Folder",
+                    "value": "",
+                    "doc": "Copy images into this folder via the Volumio network share or SCP"
+                },
+                {
+                    "id": "fallback_selected_image",
+                    "element": "select",
+                    "label": "Idle Image",
+                    "value": {},
+                    "options": [
+                        {"value": "", "label": "No image found"}
+                    ],
+                    "doc": "Image filename used when Idle Mode is Selected Folder Image"
+                }
+            ]
+        },
+        {
             "id": "section_hardware",
             "element": "section",
             "label": "Hardware — requires restart",
