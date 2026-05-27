@@ -111,6 +111,8 @@ Pi GND pin ──► Panel GND (common ground required)
 **`vinyltron.py`** — Orchestrator daemon
 - Wires volumio_client → display
 - Fetches album art via HTTP and discards stale async fetch results when tracks change quickly
+- Uses the configured fallback image as the active-track base image if Volumio returns
+  invalid or unavailable album art, then reapplies progress and format overlays
 - Handles state: playing / paused → show art; stopped → fallback
 - Debounces stopped/non-play states for 1.5 seconds so Volumio's transient between-track
   stop events do not flash the idle image or clear album identity
