@@ -23,6 +23,8 @@ logging.getLogger('socketio').setLevel(logging.WARNING)
 logging.getLogger('engineio').setLevel(logging.WARNING)
 log = logging.getLogger('vinyltron')
 
+VERSION_PATH = 'VERSION'
+
 
 FORMAT_COLORS = {
     'mp3': (0, 255, 255),
@@ -62,6 +64,7 @@ class Vinyltron:
     def __init__(self, config_path: str = 'config.toml'):
         self._config_path = config_path
         self._cfg = toml.load(config_path)
+        self._version = self._load_version()
         self._display = Display(self._cfg)
         self._client = VolumioClient(
             host=self._cfg['volumio']['host'],
@@ -87,6 +90,7 @@ class Vinyltron:
         self._progress_playing = False
         self._progress_last_update = time.monotonic()
         self._running = True
+        log.info("Vinyltron version %s", self._version)
         self._log_runtime_config("startup")
         signal.signal(signal.SIGTERM, self._shutdown)
         signal.signal(signal.SIGINT, self._shutdown)
@@ -530,6 +534,13 @@ class Vinyltron:
             return tuple(max(0, min(255, part)) for part in parts)
         except Exception:
             return default
+
+    def _load_version(self) -> str:
+        try:
+            with open(VERSION_PATH, 'r') as f:
+                return f.read().strip() or 'unknown'
+        except Exception:
+            return 'unknown'
 
     def _log_runtime_config(self, source: str):
         display = self._cfg.get('display', {})

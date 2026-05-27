@@ -63,3 +63,5 @@ Optional overlays:
 - [Bill of Materials](docs/bom.md)
 - [Features & Roadmap](docs/features.md)
 - [Test Procedure](docs/test-procedure.md)
+- [Release Process](docs/release.md)
+- [Changelog](CHANGELOG.md)
