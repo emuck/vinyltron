@@ -186,6 +186,7 @@ The format overlay intentionally stays short enough for a 64-pixel-wide display:
 | Lossless 24-bit / 192 kHz | `24/192` in white |
 | DSD 2.82 / 5.64 / 11.28 / 22.58 MHz | `DSD64` / `DSD128` / `DSD256` / `DSD512` in magenta |
 | MP3 with bitrate | `MP3 256K` style compact lossy label in cyan |
+| MP3 without bitrate | `MP3`; reported MP3 bit depth is ignored because bitrate is the useful lossy-quality field |
 
 ### Format Text Fonts
 

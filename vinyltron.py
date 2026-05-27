@@ -250,8 +250,10 @@ class Vinyltron:
         bitrate = self._bitrate_label(state.get('bitrate'))
         bitdepth = self._bitdepth_label(state.get('bitdepth'))
         sample_rate = self._sample_rate_label(state.get('samplerate'))
-        if bitrate and category == 'mp3':
-            return "%s %s" % (track_type, bitrate)
+        if category == 'mp3':
+            if bitrate:
+                return "%s %s" % (track_type, bitrate)
+            return track_type
         if bitdepth and sample_rate and category == 'lossless':
             return "%s/%s" % (bitdepth, sample_rate)
         if bitdepth:
