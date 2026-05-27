@@ -2,6 +2,17 @@
 
 ## Next Actions
 
+### Release / Revision Tracking
+
+Status: implemented.
+
+Behavior:
+- `VERSION` is the daemon version and is logged at startup.
+- `plugin/package.json` owns the Volumio plugin package version.
+- `CHANGELOG.md` records user-facing changes.
+- `docs/release.md` defines the release checklist and tag format.
+- Git tags should use `vinyltron-vX.Y.Z` because Vinyltron lives inside a larger repo.
+
 ### Volumio Ecosystem Packaging Goal
 
 Goal: make Vinyltron installable as a normal Volumio plugin without a separate developer
