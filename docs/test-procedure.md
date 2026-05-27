@@ -144,6 +144,7 @@ Expected:
 
 Known examples from Volumio logs:
 - `service='spop' trackType='spotify' codec='ogg' samplerate='320 kbps'` -> `320K`, green
+- `trackType='mp3' samplerate='44.1 kHz' bitdepth='24 bit'` -> `MP3`, cyan
 - `trackType='m4a' samplerate='44.1 kHz' bitdepth='16 bit'` -> `16/44.1`, white
 - `trackType='flac' samplerate='192 kHz' bitdepth='24 bit'` -> `24/192`, white
 - `trackType='dsf' samplerate='2.82 MHz' bitdepth='1 bit'` -> `DSD64`, magenta
