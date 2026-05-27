@@ -538,9 +538,9 @@ class Vinyltron:
         log.info(
             (
                 "Config %s: display_on=%r brightness=%r gamma=%r rotation=%r "
-                "fallback=%r progress_height=%r progress_foreground=%r "
-                "progress_background=%r format_badge=%r format_font=%r "
-                "badge_duration=%r"
+                "fallback=%r fallback_mode=%r fallback_folder=%r "
+                "fallback_selected=%r progress_height=%r progress_foreground=%r "
+                "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
             ),
             source,
             display.get('display_on', True),
@@ -548,6 +548,9 @@ class Vinyltron:
             display.get('gamma'),
             display.get('rotation'),
             fallback.get('image'),
+            fallback.get('mode', 'single'),
+            fallback.get('image_folder'),
+            fallback.get('selected_image'),
             overlays.get('progress_bar_height'),
             overlays.get('progress_bar_foreground'),
             overlays.get('progress_bar_background'),

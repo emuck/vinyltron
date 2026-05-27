@@ -14,6 +14,9 @@ panel_type = ""          # set to "FM6126A" if colors/timing are wrong
 
 [fallback]
 image = "assets/idle.png"
+image_folder = "/data/INTERNAL/Vinyltron/idle-images"
+mode = "single"          # single | selected | random_folder
+selected_image = ""      # basename inside image_folder
 
 [overlays]
 progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar

@@ -1,14 +1,17 @@
 import logging
 import os
+import random
 import sys
-from typing import Dict, NamedTuple, Optional, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 sys.path.insert(0, '/home/volumio/rpi-rgb-led-matrix/bindings/python')
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 
 log = logging.getLogger(__name__)
+
+IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')
 
 
 class Glyph(NamedTuple):
@@ -219,7 +222,8 @@ class Display:
         self._canvas = self._matrix.CreateFrameCanvas()
         self._size = (d['cols'], d['rows'])
         self._gamma_lut = _build_gamma_lut(d['gamma'])
-        self._fallback = self._load_fallback(cfg['fallback']['image'])
+        self._fallback_cfg = cfg.get('fallback', {})
+        self._fallback = self._load_fallback(self._fallback_cfg.get('image', 'assets/idle.png'))
         self._text_font = self._load_text_font(cfg)
         self._current_image = Image.new('RGB', self._size, (0, 0, 0))
         self._text_overlay = None
@@ -254,16 +258,31 @@ class Display:
 
     def _load_fallback(self, path: str) -> Image.Image:
         try:
-            img = Image.open(path).convert('RGB')
+            img = self._open_source_image(path)
             return self._process(img)
         except Exception as e:
             log.warning("Could not load fallback image %s: %s — using blank", path, e)
             return Image.new('RGB', self._size, (0, 0, 0))
 
+    def _open_source_image(self, path: str) -> Image.Image:
+        img = Image.open(path)
+        img = ImageOps.exif_transpose(img)
+        return img.convert('RGB')
+
     def _process(self, img: Image.Image) -> Image.Image:
+        img = self._center_crop_square(img)
         img = img.resize(self._size, Image.LANCZOS)
         img = img.point(self._gamma_lut)
         return img
+
+    def _center_crop_square(self, img: Image.Image) -> Image.Image:
+        width, height = img.size
+        side = min(width, height)
+        if side <= 0:
+            return img
+        left = int((width - side) / 2)
+        top = int((height - side) / 2)
+        return img.crop((left, top, left + side, top + side))
 
     def show_image(self, img: Image.Image):
         processed = self._process(img)
@@ -271,10 +290,70 @@ class Display:
         self._render()
 
     def show_fallback(self):
-        self._current_image = self._fallback.copy()
+        self._current_image = self._select_fallback_image()
         self._text_overlay = None
         self._progress_overlay = None
         self._render()
+
+    def _select_fallback_image(self) -> Image.Image:
+        mode = str(self._fallback_cfg.get('mode', 'single')).strip().lower()
+        if mode == 'selected':
+            img = self._load_selected_fallback()
+            if img is not None:
+                return img
+        elif mode == 'random_folder':
+            img = self._load_random_fallback()
+            if img is not None:
+                return img
+        return self._fallback.copy()
+
+    def _load_selected_fallback(self) -> Optional[Image.Image]:
+        folder = self._fallback_folder()
+        filename = os.path.basename(str(self._fallback_cfg.get('selected_image', '')).strip())
+        if not folder or not filename:
+            return None
+        return self._load_folder_fallback(os.path.join(folder, filename))
+
+    def _load_random_fallback(self) -> Optional[Image.Image]:
+        files = self._fallback_files()
+        random.shuffle(files)
+        for path in files:
+            img = self._load_folder_fallback(path)
+            if img is not None:
+                return img
+        return None
+
+    def _load_folder_fallback(self, path: str) -> Optional[Image.Image]:
+        try:
+            img = self._open_source_image(path)
+            log.info("Loaded idle image %s", path)
+            return self._process(img)
+        except Exception as e:
+            log.warning("Could not load idle image %s: %s", path, e)
+            return None
+
+    def _fallback_folder(self) -> Optional[str]:
+        folder = str(self._fallback_cfg.get('image_folder', '')).strip()
+        if not folder or not os.path.isdir(folder):
+            return None
+        return folder
+
+    def _fallback_files(self) -> List[str]:
+        folder = self._fallback_folder()
+        if not folder:
+            return []
+        try:
+            return [
+                os.path.join(folder, name)
+                for name in os.listdir(folder)
+                if self._is_supported_image_name(name) and os.path.isfile(os.path.join(folder, name))
+            ]
+        except Exception as e:
+            log.warning("Could not scan idle image folder %s: %s", folder, e)
+            return []
+
+    def _is_supported_image_name(self, name: str) -> bool:
+        return not name.startswith('.') and name.lower().endswith(IMAGE_EXTENSIONS)
 
     def show_text(self, text: str, color_rgb: Tuple[int, int, int]):
         self._text_overlay = TextOverlay(self._fit_text(text), color_rgb)
@@ -356,7 +435,8 @@ class Display:
         d = cfg['display']
         self._matrix.brightness = d['brightness']
         self._gamma_lut = _build_gamma_lut(d['gamma'])
-        self._fallback = self._load_fallback(cfg['fallback']['image'])
+        self._fallback_cfg = cfg.get('fallback', {})
+        self._fallback = self._load_fallback(self._fallback_cfg.get('image', 'assets/idle.png'))
         self._text_font = self._load_text_font(cfg)
 
     def clear(self):

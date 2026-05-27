@@ -158,6 +158,9 @@ panel_type = ""          # set to "FM6126A" if colors/timing are wrong
 
 [fallback]
 image = "assets/idle.png"
+image_folder = "/data/INTERNAL/Vinyltron/idle-images"
+mode = "single"          # single | selected | random_folder
+selected_image = ""      # basename inside image_folder
 
 [overlays]
 progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar
@@ -189,6 +192,21 @@ also supports BDF fonts for quick visual experiments. `tiny5` loads
 `assets/fonts/Tiny5.bdf`; `spleen` loads `assets/fonts/spleen-5x8.bdf`. If the selected
 BDF fails to load, `display.py` logs a warning and falls back to `tom_thumb` so display
 startup is not blocked by font issues.
+
+### Idle Images
+
+Fallback image behavior is controlled by `[fallback]`:
+
+| Mode | Behavior |
+|---|---|
+| `single` | Use `assets/idle.png`. |
+| `selected` | Load `image_folder / selected_image`; fall back to `assets/idle.png` on error. |
+| `random_folder` | Pick a random supported image from `image_folder` at real fallback time. |
+
+Folder images are not modified on disk. `display.py` opens them on demand, applies EXIF
+transpose, converts to RGB, center-crops to square, resizes to 64x64, applies the active
+gamma LUT, and renders them. Random selection happens only when the fallback state is
+entered after debounce, not on every render.
 
 ## rpi-rgb-led-matrix Build
 

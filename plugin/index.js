@@ -3,8 +3,11 @@
 var libQ = require('kew');
 var fs = require('fs-extra');
 var exec = require('child_process').exec;
+var path = require('path');
 
 var CONFIG_TOML = '/home/volumio/vinyltron/config.toml';
+var DEFAULT_IDLE_FOLDER = '/data/INTERNAL/Vinyltron/idle-images';
+var IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'];
 
 module.exports = ControllerVinyltron;
 
@@ -69,12 +72,25 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         var badge_duration = (self.config.get('badge_duration') || 10).toString();
         s[0].content[7].value = {value: badge_duration, label: badge_duration + ' seconds'};
 
-        // Section 1: Hardware (rotation)
-        var rotation = self.config.get('rotation');
-        s[1].content[0].value = {value: rotation, label: rotation + '°'};
+        // Section 1: Idle image
+        var fallback_mode = self.config.get('fallback_mode') || 'single';
+        var fallback_image_folder = self.config.get('fallback_image_folder') || DEFAULT_IDLE_FOLDER;
+        var fallback_selected_image = self.config.get('fallback_selected_image') || '';
+        var idle_options = self._idleImageOptions(fallback_image_folder);
+        s[1].content[0].value = {value: fallback_mode, label: self._labelForFallbackMode(fallback_mode)};
+        s[1].content[1].value = fallback_image_folder;
+        s[1].content[2].options = idle_options;
+        s[1].content[2].value = {
+            value: fallback_selected_image,
+            label: self._labelForIdleImage(fallback_selected_image, idle_options)
+        };
 
-        // Section 2: Power (display_on)
-        s[2].content[0].value = self.config.get('display_on');
+        // Section 2: Hardware (rotation)
+        var rotation = self.config.get('rotation');
+        s[2].content[0].value = {value: rotation, label: rotation + '°'};
+
+        // Section 3: Power (display_on)
+        s[3].content[0].value = self.config.get('display_on');
 
         defer.resolve(uiconf);
     } catch (e) {
@@ -87,6 +103,44 @@ ControllerVinyltron.prototype.getUIConfig = function() {
 
 ControllerVinyltron.prototype.getConfigurationFiles = function() {
     return ['config.json'];
+};
+
+// Save idle image settings — hot via SIGHUP, no restart needed
+ControllerVinyltron.prototype.saveIdle = function(data) {
+    var self = this;
+
+    var fallback_mode = data['fallback_mode'] ? data['fallback_mode']['value'] : 'single';
+    var fallback_image_folder = data['fallback_image_folder'] && data['fallback_image_folder']['value'] !== undefined ? data['fallback_image_folder']['value'] : data['fallback_image_folder'];
+    var fallback_selected_image = data['fallback_selected_image'] ? data['fallback_selected_image']['value'] : '';
+
+    fallback_mode = self._validFallbackMode(fallback_mode);
+    fallback_image_folder = fallback_image_folder || DEFAULT_IDLE_FOLDER;
+    fallback_selected_image = self._sanitizeFilename(fallback_selected_image);
+
+    fs.ensureDirSync(fallback_image_folder);
+
+    self.config.set('fallback_mode', fallback_mode);
+    self.config.set('fallback_image_folder', fallback_image_folder);
+    self.config.set('fallback_selected_image', fallback_selected_image);
+
+    self.logger.info('Vinyltron: saving idle settings: ' + JSON.stringify({
+        fallback_mode: fallback_mode,
+        fallback_image_folder: fallback_image_folder,
+        fallback_selected_image: fallback_selected_image
+    }));
+
+    self._patchConfigToml({
+        fallback_mode: fallback_mode,
+        fallback_image_folder: fallback_image_folder,
+        fallback_selected_image: fallback_selected_image
+    });
+
+    exec('/usr/bin/sudo /bin/systemctl reload vinyltron', function(error) {
+        if (error) self.logger.error('Vinyltron: reload failed: ' + error);
+        else self.logger.info('Vinyltron: reload requested after idle settings save');
+    });
+
+    return libQ.resolve();
 };
 
 // Save display settings — hot via SIGHUP, no restart needed
@@ -190,6 +244,9 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.gamma !== undefined) content = this._patchTomlInSection(content, 'display', 'gamma', fields.gamma);
         if (fields.rotation !== undefined) content = this._patchTomlInSection(content, 'display', 'rotation', parseInt(fields.rotation));
         if (fields.display_on !== undefined) content = this._patchTomlInSection(content, 'display', 'display_on', fields.display_on);
+        if (fields.fallback_image_folder !== undefined) content = this._patchTomlInSection(content, 'fallback', 'image_folder', this._tomlString(fields.fallback_image_folder), 'image');
+        if (fields.fallback_mode !== undefined) content = this._patchTomlInSection(content, 'fallback', 'mode', this._tomlString(fields.fallback_mode), 'image_folder');
+        if (fields.fallback_selected_image !== undefined) content = this._patchTomlInSection(content, 'fallback', 'selected_image', this._tomlString(fields.fallback_selected_image), 'mode');
         if (fields.progress_bar !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar', fields.progress_bar);
         if (fields.progress_bar_height !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_height', fields.progress_bar_height, 'progress_bar');
         if (fields.progress_bar_foreground !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_foreground', this._tomlRgb(fields.progress_bar_foreground), 'progress_bar_height');
@@ -238,6 +295,52 @@ ControllerVinyltron.prototype._patchTomlInSection = function(content, section, k
     }
 
     return before + body + after;
+};
+
+ControllerVinyltron.prototype._idleImageOptions = function(folder) {
+    var options = [];
+    try {
+        var files = fs.readdirSync(folder).filter(function(name) {
+            var ext = path.extname(name).toLowerCase();
+            return name[0] !== '.' && IMAGE_EXTENSIONS.indexOf(ext) !== -1 && fs.statSync(path.join(folder, name)).isFile();
+        }).sort();
+        options = files.map(function(name) {
+            return {value: name, label: name};
+        });
+    } catch (e) {
+        this.logger.warn('Vinyltron: could not scan idle image folder ' + folder + ': ' + e);
+    }
+
+    if (options.length === 0) {
+        options.push({value: '', label: 'No image found'});
+    }
+    return options;
+};
+
+ControllerVinyltron.prototype._sanitizeFilename = function(value) {
+    if (!value) return '';
+    return path.basename(value.toString());
+};
+
+ControllerVinyltron.prototype._validFallbackMode = function(value) {
+    if (value === 'selected' || value === 'random_folder') return value;
+    return 'single';
+};
+
+ControllerVinyltron.prototype._labelForFallbackMode = function(value) {
+    var labels = {
+        'single': 'Built-in Idle Image',
+        'selected': 'Selected Folder Image',
+        'random_folder': 'Random Folder Image'
+    };
+    return labels[value] || labels['single'];
+};
+
+ControllerVinyltron.prototype._labelForIdleImage = function(value, options) {
+    for (var i = 0; i < options.length; i++) {
+        if (options[i].value === value) return options[i].label;
+    }
+    return value || 'No image found';
 };
 
 ControllerVinyltron.prototype._tomlRgb = function(value) {
