@@ -165,7 +165,7 @@ progress_bar_height = 0
 progress_bar_foreground = [255, 255, 255]
 progress_bar_background = [] # empty = use album art as the track background
 format_badge = false       # compact format text overlay
-format_font = "tom_thumb"  # tom_thumb | tiny5
+format_font = "tom_thumb"  # tom_thumb | tiny5 | spleen
 format_font_path = ""      # optional custom BDF path
 badge_duration = 10
 ```
@@ -185,9 +185,10 @@ The format overlay intentionally stays short enough for a 64-pixel-wide display:
 ### Format Text Fonts
 
 The default format overlay font is the built-in `tom_thumb` 3x5 pixel font. The daemon
-also supports BDF fonts for quick visual experiments; `tiny5` loads
-`assets/fonts/Tiny5.bdf`. If the selected BDF fails to load, `display.py` logs a warning
-and falls back to `tom_thumb` so display startup is not blocked by font issues.
+also supports BDF fonts for quick visual experiments. `tiny5` loads
+`assets/fonts/Tiny5.bdf`; `spleen` loads `assets/fonts/spleen-5x8.bdf`. If the selected
+BDF fails to load, `display.py` logs a warning and falls back to `tom_thumb` so display
+startup is not blocked by font issues.
 
 ## rpi-rgb-led-matrix Build
 

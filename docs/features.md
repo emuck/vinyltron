@@ -2,6 +2,31 @@
 
 ## Next Actions
 
+### Volumio Ecosystem Packaging Goal
+
+Goal: make Vinyltron installable as a normal Volumio plugin without a separate developer
+deploy flow.
+
+Target architecture:
+- Plugin package owns installation end-to-end: daemon files, assets, Python requirements,
+  systemd service, and Volumio settings UI.
+- `plugin/install.sh` copies daemon files to `/home/volumio/vinyltron`, installs Python
+  dependencies, installs/enables `vinyltron.service`, and writes the minimal sudoers
+  rules needed for start/stop/reload/restart.
+- Plugin settings patch `/home/volumio/vinyltron/config.toml` and reload or restart the
+  daemon as appropriate.
+- End users should not need `deploy.sh`; that remains a development helper only.
+- Plugin metadata should be cleaned up for public submission, including package fields,
+  descriptions, install behavior, uninstall behavior, and no committed `node_modules`.
+
+Publication path to investigate:
+- Current Volumio plugin source flow uses the Bookworm plugin source repository and
+  `volumio plugin submit` for review/beta promotion.
+- Older Volumio 3 plugin sources are effectively maintenance-only, so decide whether this
+  targets Volumio 3 local install first, Volumio 4 public submission, or both.
+- Before submission, add a fresh install test on a clean Volumio image and an upgrade test
+  over an existing local install.
+
 ### Idle Image Upload + Pruner
 
 Goal: allow the Volumio plugin settings screen to upload a replacement idle image while
@@ -34,9 +59,10 @@ Behavior:
 - `display.py` measures and draws text through a small pixel-font abstraction.
 - The built-in 3x5 font is named `tom_thumb` and remains the default/fallback.
 - Tiny5 is loaded from `assets/fonts/Tiny5.bdf` when selected.
+- Spleen 5x8 is loaded from `assets/fonts/spleen-5x8.bdf` when selected.
 - `[overlays] format_font = "tom_thumb"` controls the active font.
 - `[overlays] format_font_path = ""` can point to a custom BDF path for future testing.
-- The Volumio UI exposes `Format Font` with `Tom Thumb` and `Tiny5` options.
+- The Volumio UI exposes `Format Font` with `Tom Thumb`, `Tiny5`, and `Spleen 5x8` options.
 - On config reload, the selected font is reloaded without changing matrix geometry or
   progress bar state.
 
@@ -45,7 +71,7 @@ Validation:
 - JSON validation for plugin config files.
 - `node -c plugin/index.js`.
 - `git diff --check`.
-- Local stub sanity check that `tiny5` can render the current short
+- Local stub sanity check that `tiny5` and `spleen` can render the current short
   labels (`320K`, `16/44.1`, `24/192`, `DSD512`) within 64 pixels.
 
 ### Startup / Upgrade Overlay Reliability Audit
@@ -54,7 +80,7 @@ Observed behavior after upgrade: progress bar and format text may not appear imm
 after deploy/reload, but can start working after changing plugin settings and reloading
 again. This needs investigation before treating the overlay startup path as fully stable.
 
-Likely audit points:
+Audit points:
 - Confirm v-conf values and `config.toml` remain synchronized after plugin upgrade.
 - Confirm plugin install/update copies the latest `config.json` defaults without clobbering
   user settings.
@@ -62,7 +88,8 @@ Likely audit points:
   logs show `SIGHUP received`.
 - Confirm daemon startup reads the deployed `config.toml` from `/home/volumio/vinyltron`
   and not an older working directory.
-- Add targeted journald logging for overlay enablement at startup/reload if this repeats.
+- Targeted logging now records daemon startup/reload config snapshots and plugin save/reload
+  actions; use those logs to compare v-conf, patched TOML, and daemon runtime state.
 
 ## Phase 1 — MVP (current)
 

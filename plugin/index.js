@@ -117,6 +117,18 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     self.config.set('format_font', format_font);
     self.config.set('badge_duration', badge_duration);
 
+    self.logger.info('Vinyltron: saving display settings: ' + JSON.stringify({
+        brightness: brightness,
+        gamma: gamma,
+        progress_bar: progress_bar,
+        progress_bar_height: progress_bar_height,
+        progress_bar_foreground: progress_bar_foreground,
+        progress_bar_background: progress_bar_background,
+        format_badge: format_badge,
+        format_font: format_font,
+        badge_duration: badge_duration
+    }));
+
     self._patchConfigToml({brightness: brightness, gamma: gamma,
                            progress_bar: progress_bar,
                            progress_bar_height: progress_bar_height,
@@ -128,6 +140,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
 
     exec('/usr/bin/sudo /bin/systemctl reload vinyltron', function(error) {
         if (error) self.logger.error('Vinyltron: reload failed: ' + error);
+        else self.logger.info('Vinyltron: reload requested after display settings save');
     });
 
     return libQ.resolve();
@@ -139,10 +152,12 @@ ControllerVinyltron.prototype.saveHardware = function(data) {
 
     var rotation = data['rotation']['value'];
     self.config.set('rotation', rotation);
+    self.logger.info('Vinyltron: saving hardware settings: ' + JSON.stringify({rotation: rotation}));
     self._patchConfigToml({rotation: rotation});
 
     exec('/usr/bin/sudo /bin/systemctl restart vinyltron', function(error) {
         if (error) self.logger.error('Vinyltron: restart failed: ' + error);
+        else self.logger.info('Vinyltron: restart requested after hardware settings save');
     });
 
     return libQ.resolve();
@@ -154,10 +169,12 @@ ControllerVinyltron.prototype.toggleDisplay = function(data) {
 
     var display_on = data['display_on'] === true || data['display_on'] === 'true';
     self.config.set('display_on', display_on);
+    self.logger.info('Vinyltron: saving power setting: ' + JSON.stringify({display_on: display_on}));
     self._patchConfigToml({display_on: display_on});
 
     exec('/usr/bin/sudo /bin/systemctl reload vinyltron', function(error) {
         if (error) self.logger.error('Vinyltron: reload failed: ' + error);
+        else self.logger.info('Vinyltron: reload requested after power setting save');
     });
 
     return libQ.resolve();
@@ -182,6 +199,7 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.badge_duration !== undefined) content = this._patchTomlInSection(content, 'overlays', 'badge_duration', fields.badge_duration, 'format_font');
 
         fs.writeFileSync(CONFIG_TOML, content, 'utf8');
+        self.logger.info('Vinyltron: updated config.toml fields: ' + Object.keys(fields).join(', '));
     } catch (e) {
         self.logger.error('Vinyltron: failed to update config.toml: ' + e);
     }
@@ -256,7 +274,8 @@ ControllerVinyltron.prototype._labelForProgressColor = function(value) {
 ControllerVinyltron.prototype._labelForFormatFont = function(value) {
     var labels = {
         'tom_thumb': 'Tom Thumb',
-        'tiny5': 'Tiny5'
+        'tiny5': 'Tiny5',
+        'spleen': 'Spleen 5x8'
     };
     return labels[value] || value;
 };

@@ -233,6 +233,8 @@ class Display:
 
         if font_name == 'tiny5':
             path = overlays.get('format_font_path') or 'assets/fonts/Tiny5.bdf'
+        elif font_name == 'spleen':
+            path = overlays.get('format_font_path') or 'assets/fonts/spleen-5x8.bdf'
         else:
             path = overlays.get('format_font_path')
 
