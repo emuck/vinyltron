@@ -111,10 +111,9 @@ sudo systemctl reload vinyltron
 journalctl -u vinyltron -f
 ```
 
-Development deployment note: `./deploy.sh` currently syncs local `config.toml` to the Pi.
-After deploy, re-save the Volumio plugin settings if progress or format overlays look
-disabled. The runtime log should show `progress_height > 0` and `format_badge=True` when
-those overlays are enabled.
+Development deployment note: `./deploy.sh` preserves the Pi's runtime `config.toml` by
+default so plugin-controlled settings are not reset. Use `./deploy.sh --with-config` only
+when intentionally replacing the remote config with the repo default.
 
 ---
 
