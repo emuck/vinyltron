@@ -26,17 +26,22 @@ rsync -avz --exclude='node_modules' \
 
 echo "Syncing daemon runtime files..."
 ssh -T ${PI_USER}@${PI_HOST} "mkdir -p ${DAEMON_DIR}"
-rsync -avz \
+rsync -avz --delete \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
   --exclude='.DS_Store' \
+  --exclude='.git/' \
+  --exclude='.gitignore' \
+  --exclude='dist/' \
   --exclude='docs/' \
   --exclude='rpi-rgb-led-matrix/' \
   --exclude='deploy.sh' \
   --exclude='dev-install-plugin.sh' \
   --exclude='install.sh' \
   --exclude='plugin/' \
+  --exclude='test_matrix.py' \
   --exclude='tools/' \
+  --exclude='vinyltron.service' \
   --exclude='*.md' \
   ./ ${PI_USER}@${PI_HOST}:${DAEMON_DIR}/
 
