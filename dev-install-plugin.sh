@@ -70,7 +70,14 @@ ENDSSH
 
 # Sudo steps: plugin install.sh + Volumio restart (TTY required for sudo)
 echo "Running plugin install.sh and restarting Volumio (may prompt for sudo password)..."
-ssh -t ${PI_USER}@${PI_HOST} "sudo bash ${PLUGIN_DIR}/install.sh && sudo systemctl restart volumio"
+if [ -n "${VINYLTRON_DEV_SUDO_PASSWORD:-}" ]; then
+  ssh -T ${PI_USER}@${PI_HOST} "sudo -S -p '' bash ${PLUGIN_DIR}/install.sh && sudo -S -p '' systemctl restart volumio" << ENDSSH
+${VINYLTRON_DEV_SUDO_PASSWORD}
+${VINYLTRON_DEV_SUDO_PASSWORD}
+ENDSSH
+else
+  ssh -t ${PI_USER}@${PI_HOST} "sudo bash ${PLUGIN_DIR}/install.sh && sudo systemctl restart volumio"
+fi
 
 echo ""
 echo "Done. Wait ~30s for Volumio to restart, then check:"
