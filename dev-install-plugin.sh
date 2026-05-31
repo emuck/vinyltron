@@ -13,7 +13,7 @@ DAEMON_DIR=${PLUGIN_DIR}/vinyltron
 echo "=== Vinyltron plugin dev-install ==="
 echo "Target: ${PI_USER}@${PI_HOST}"
 
-if ! ssh -o BatchMode=yes -o ConnectTimeout=5 ${PI_USER}@${PI_HOST} true 2>/dev/null; then
+if ! ssh -o ConnectTimeout=5 ${PI_USER}@${PI_HOST} true; then
   echo "ERROR: cannot SSH to ${PI_USER}@${PI_HOST}"
   echo "Pass the Pi IP or reachable hostname, for example: ./dev-install-plugin.sh 192.168.1.42"
   exit 1
