@@ -25,6 +25,7 @@ ControllerVinyltron.prototype.onVolumioStart = function() {
     this.config = new (require('v-conf'))();
     this.config.loadFile(configFile);
     this._ensureDaemonConfig();
+    this._syncVConfFromToml();
     return libQ.resolve();
 };
 
@@ -137,6 +138,39 @@ ControllerVinyltron.prototype._service = function(action, reason) {
         defer.resolve();
     });
     return defer.promise;
+};
+
+ControllerVinyltron.prototype._syncVConfFromToml = function() {
+    try {
+        var content = fs.readFileSync(CONFIG_TOML, 'utf8');
+        var mappings = [
+            ['display', 'brightness', 'brightness', 'number'],
+            ['display', 'gamma', 'gamma', 'string'],
+            ['display', 'rotation', 'rotation', 'string'],
+            ['display', 'display_on', 'display_on', 'boolean'],
+            ['fallback', 'mode', 'fallback_mode', 'string'],
+            ['fallback', 'image_folder', 'fallback_image_folder', 'string'],
+            ['fallback', 'selected_image', 'fallback_selected_image', 'string'],
+            ['overlays', 'progress_bar', 'progress_bar', 'boolean'],
+            ['overlays', 'progress_bar_height', 'progress_bar_height', 'number'],
+            ['overlays', 'progress_bar_foreground', 'progress_bar_foreground', 'rgb'],
+            ['overlays', 'progress_bar_background', 'progress_bar_background', 'rgb'],
+            ['overlays', 'format_badge', 'format_badge', 'boolean'],
+            ['overlays', 'format_font', 'format_font', 'string'],
+            ['overlays', 'badge_duration', 'badge_duration', 'number']
+        ];
+
+        for (var i = 0; i < mappings.length; i++) {
+            var m = mappings[i];
+            var raw = this._tomlValue(content, m[0], m[1]);
+            if (raw !== null) {
+                this.config.set(m[2], this._coerceTomlValue(raw, m[3]));
+            }
+        }
+        this.logger.info('Vinyltron: synchronized plugin settings from ' + CONFIG_TOML);
+    } catch (e) {
+        this.logger.error('Vinyltron: failed to synchronize plugin settings from TOML: ' + e);
+    }
 };
 
 // Save idle image settings — hot via SIGHUP, no restart needed
@@ -317,6 +351,41 @@ ControllerVinyltron.prototype._patchTomlInSection = function(content, section, k
     }
 
     return before + body + after;
+};
+
+ControllerVinyltron.prototype._tomlValue = function(content, section, key) {
+    var sectionRe = new RegExp('^\\[' + section + '\\]\\s*$', 'm');
+    var sectionMatch = sectionRe.exec(content);
+    if (!sectionMatch) return null;
+
+    var bodyStart = sectionMatch.index + sectionMatch[0].length;
+    var nextSection = content.slice(bodyStart).search(/\n\[[^\]]+\]\s*/);
+    var sectionEnd = nextSection === -1 ? content.length : bodyStart + nextSection;
+    var body = content.slice(bodyStart, sectionEnd);
+    var keyRe = new RegExp('^\\s*' + key + '\\s*=\\s*(.*?)\\s*(?:#.*)?$', 'm');
+    var keyMatch = keyRe.exec(body);
+    return keyMatch ? keyMatch[1].trim() : null;
+};
+
+ControllerVinyltron.prototype._coerceTomlValue = function(value, type) {
+    if (type === 'boolean') return value === 'true';
+    if (type === 'number') {
+        var number = parseFloat(value);
+        return isNaN(number) ? 0 : number;
+    }
+    if (type === 'rgb') {
+        if (value === '[]') return '';
+        var rgb = /^\[(.*)\]$/.exec(value);
+        if (!rgb) return '';
+        return rgb[1].split(',').map(function(part) {
+            return parseInt(part.trim());
+        }).filter(function(part) {
+            return !isNaN(part);
+        }).slice(0, 3).join(',');
+    }
+    var stringMatch = /^"(.*)"$/.exec(value);
+    if (stringMatch) return stringMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    return value;
 };
 
 ControllerVinyltron.prototype._idleImageOptions = function(folder) {
