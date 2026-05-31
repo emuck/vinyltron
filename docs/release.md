@@ -26,7 +26,9 @@ Keep these in sync for every release:
    python3 -m json.tool plugin/UIConfig.json
    python3 -m json.tool plugin/config.json
    node -c plugin/index.js
+   bash -n plugin/install.sh plugin/uninstall.sh dev-install-plugin.sh tools/build-volumio-plugin.sh
    python3 -c "import tomllib; tomllib.load(open('config.toml','rb')); print('config.toml OK')"
+   ./tools/build-volumio-plugin.sh
    git diff --check
    ```
 7. Commit the release changes.
@@ -44,3 +46,11 @@ Volumio plugin source repository flow. The current Bookworm plugin source repo r
 version bump in `package.json` for every plugin update and a new submission / pull request.
 
 Do not commit generated plugin zip files or `node_modules`.
+
+For a release-style local package that includes `node_modules`, run:
+```bash
+./tools/build-volumio-plugin.sh --with-node-modules
+```
+
+The default build omits `node_modules` so package layout can be validated without network
+access.

@@ -93,9 +93,11 @@ Expected: prints current playback state. Start playing something in Volumio firs
 
 ## 5. End-to-End Test
 
-- [x] Deploy via `./deploy.sh` from Mac
-- [x] Reinstall/update plugin UI via `./dev-install-plugin.sh` from Mac when plugin files change
-- [x] Start vinyltron manually: `sudo python3 /home/volumio/vinyltron/vinyltron.py`
+- [x] Deploy via `./deploy.sh` from Mac for daemon-only development
+- [x] Reinstall/update plugin and bundled daemon via `./dev-install-plugin.sh` from Mac
+- [x] Build plugin zip with `./tools/build-volumio-plugin.sh`
+- [x] Start vinyltron manually from the plugin-owned daemon path if needed:
+  `sudo python3 /data/plugins/user_interface/vinyltron/vinyltron/vinyltron.py /data/configuration/user_interface/vinyltron/config.toml`
 - [x] Start vinyltron as a service: `sudo systemctl start vinyltron`
 - [x] Play a track in Volumio — album art appears within 2 seconds
 - [x] Skip track — art updates without restart
@@ -111,8 +113,10 @@ sudo systemctl reload vinyltron
 journalctl -u vinyltron -f
 ```
 
-Development deployment note: `./deploy.sh` preserves the Pi's runtime `config.toml` by
-default so plugin-controlled settings are not reset. Use `./deploy.sh --with-config` only
+Development deployment note: `./deploy.sh` preserves the legacy Pi runtime `config.toml`
+by default. The plugin-owned install path uses
+`/data/configuration/user_interface/vinyltron/config.toml`; use `./dev-install-plugin.sh`
+when changing plugin-owned daemon files.
 when intentionally replacing the remote config with the repo default.
 
 ---
@@ -220,14 +224,14 @@ After changing plugin settings and reloading, overlays eventually started again.
 If this repeats, capture:
 ```bash
 journalctl -u vinyltron -b --no-pager | tail -120
-cat /home/volumio/vinyltron/config.toml
+cat /data/configuration/user_interface/vinyltron/config.toml
 ```
 
 Check for:
 - `SIGHUP received` after plugin settings are saved.
 - `Config startup:` and `Config reload:` lines showing expected overlay values.
 - `[overlays] format_badge`, `badge_duration`, and `progress_bar_height` values in
-  `/home/volumio/vinyltron/config.toml`.
+  `/data/configuration/user_interface/vinyltron/config.toml`.
 - `Volumio format:` and `Format overlay:` log lines on new albums.
 - `Album art unavailable; showing fallback for current track` followed by `Format overlay:`
   when Volumio returns invalid album art for an active track.

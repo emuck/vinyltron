@@ -21,14 +21,17 @@ deploy flow.
 Target architecture:
 - Plugin package owns installation end-to-end: daemon files, assets, Python requirements,
   systemd service, and Volumio settings UI.
-- `plugin/install.sh` copies daemon files to `/home/volumio/vinyltron`, installs Python
-  dependencies, installs/enables `vinyltron.service`, and writes the minimal sudoers
-  rules needed for start/stop/reload/restart.
-- Plugin settings patch `/home/volumio/vinyltron/config.toml` and reload or restart the
-  daemon as appropriate.
+- Plugin package bundles daemon files under the plugin directory at
+  `/data/plugins/user_interface/vinyltron/vinyltron`.
+- `plugin/install.sh` installs Python dependencies, creates/enables `vinyltron.service`,
+  migrates an existing legacy config if present, and writes the minimal sudoers rules
+  needed for start/stop/reload/restart.
+- Plugin settings patch `/data/configuration/user_interface/vinyltron/config.toml` and
+  reload or restart the daemon as appropriate.
 - End users should not need `deploy.sh`; that remains a development helper only.
 - Plugin metadata should be cleaned up for public submission, including package fields,
-  descriptions, install behavior, uninstall behavior, and no committed `node_modules`.
+  descriptions, install behavior, uninstall behavior, and release packaging with
+  `node_modules` included only in generated artifacts.
 
 Publication path to investigate:
 - Current Volumio plugin source flow uses the Bookworm plugin source repository and
@@ -106,8 +109,9 @@ Audit points:
   user settings.
 - Confirm `systemctl reload vinyltron` is sent after settings changes and that daemon
   logs show `SIGHUP received`.
-- Confirm daemon startup reads the deployed `config.toml` from `/home/volumio/vinyltron`
-  and not an older working directory.
+- Confirm daemon startup reads persistent config from
+  `/data/configuration/user_interface/vinyltron/config.toml` and not an older working
+  directory.
 - Targeted logging now records daemon startup/reload config snapshots and plugin save/reload
   actions; use those logs to compare v-conf, patched TOML, and daemon runtime state.
 
