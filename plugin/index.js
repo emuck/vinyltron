@@ -9,6 +9,7 @@ var CONFIG_TOML = '/data/configuration/user_interface/vinyltron/config.toml';
 var BUNDLED_CONFIG_TOML = __dirname + '/vinyltron/config.toml';
 var DEFAULT_IDLE_FOLDER = '/data/INTERNAL/Vinyltron/idle-images';
 var IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'];
+var SYSTEMCTL = '/usr/bin/sudo /bin/systemctl';
 
 module.exports = ControllerVinyltron;
 
@@ -28,21 +29,21 @@ ControllerVinyltron.prototype.onVolumioStart = function() {
 };
 
 ControllerVinyltron.prototype.onStart = function() {
-    var self = this;
-    var defer = libQ.defer();
-    exec('/usr/bin/sudo /bin/systemctl start vinyltron', function(error) {
-        if (error) self.logger.error('Vinyltron: start failed: ' + error);
-        defer.resolve();
-    });
-    return defer.promise;
+    return this._service('start', 'plugin start');
 };
 
 ControllerVinyltron.prototype.onStop = function() {
+    return this._service('stop', 'plugin stop');
+};
+
+ControllerVinyltron.prototype.getAdditionalConf = function() {
     var self = this;
     var defer = libQ.defer();
-    exec('/usr/bin/sudo /bin/systemctl stop vinyltron', function(error) {
-        if (error) self.logger.error('Vinyltron: stop failed: ' + error);
-        defer.resolve();
+    exec(SYSTEMCTL + ' is-active vinyltron', function(error, stdout) {
+        defer.resolve({
+            service_active: !error && stdout && stdout.trim() === 'active',
+            config_path: CONFIG_TOML
+        });
     });
     return defer.promise;
 };
@@ -118,6 +119,26 @@ ControllerVinyltron.prototype._ensureDaemonConfig = function() {
     }
 };
 
+ControllerVinyltron.prototype._service = function(action, reason) {
+    var self = this;
+    var defer = libQ.defer();
+    var allowed = ['start', 'stop', 'restart', 'reload'];
+    if (allowed.indexOf(action) === -1) {
+        defer.reject(new Error('Unsupported service action: ' + action));
+        return defer.promise;
+    }
+
+    exec(SYSTEMCTL + ' ' + action + ' vinyltron', function(error) {
+        if (error) {
+            self.logger.error('Vinyltron: service ' + action + ' failed after ' + reason + ': ' + error);
+        } else {
+            self.logger.info('Vinyltron: service ' + action + ' requested after ' + reason);
+        }
+        defer.resolve();
+    });
+    return defer.promise;
+};
+
 // Save idle image settings — hot via SIGHUP, no restart needed
 ControllerVinyltron.prototype.saveIdle = function(data) {
     var self = this;
@@ -148,10 +169,7 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
         fallback_selected_image: fallback_selected_image
     });
 
-    exec('/usr/bin/sudo /bin/systemctl reload vinyltron', function(error) {
-        if (error) self.logger.error('Vinyltron: reload failed: ' + error);
-        else self.logger.info('Vinyltron: reload requested after idle settings save');
-    });
+    self._service('reload', 'idle settings save');
 
     return libQ.resolve();
 };
@@ -205,10 +223,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
                            format_font: format_font,
                            badge_duration: badge_duration});
 
-    exec('/usr/bin/sudo /bin/systemctl reload vinyltron', function(error) {
-        if (error) self.logger.error('Vinyltron: reload failed: ' + error);
-        else self.logger.info('Vinyltron: reload requested after display settings save');
-    });
+    self._service('reload', 'display settings save');
 
     return libQ.resolve();
 };
@@ -222,10 +237,7 @@ ControllerVinyltron.prototype.saveHardware = function(data) {
     self.logger.info('Vinyltron: saving hardware settings: ' + JSON.stringify({rotation: rotation}));
     self._patchConfigToml({rotation: rotation});
 
-    exec('/usr/bin/sudo /bin/systemctl restart vinyltron', function(error) {
-        if (error) self.logger.error('Vinyltron: restart failed: ' + error);
-        else self.logger.info('Vinyltron: restart requested after hardware settings save');
-    });
+    self._service('restart', 'hardware settings save');
 
     return libQ.resolve();
 };
@@ -239,10 +251,7 @@ ControllerVinyltron.prototype.toggleDisplay = function(data) {
     self.logger.info('Vinyltron: saving power setting: ' + JSON.stringify({display_on: display_on}));
     self._patchConfigToml({display_on: display_on});
 
-    exec('/usr/bin/sudo /bin/systemctl reload vinyltron', function(error) {
-        if (error) self.logger.error('Vinyltron: reload failed: ' + error);
-        else self.logger.info('Vinyltron: reload requested after power setting save');
-    });
+    self._service('reload', 'power setting save');
 
     return libQ.resolve();
 };
