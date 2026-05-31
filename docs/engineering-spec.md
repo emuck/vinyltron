@@ -122,7 +122,10 @@ Pi GND pin ──► Panel GND (common ground required)
 - Manages graceful shutdown (SIGTERM/SIGINT) and hot config reload (SIGHUP)
 
 **Volumio plugin** — Settings bridge
-- Native Volumio plugin writes v-conf settings and patches `/home/volumio/vinyltron/config.toml`
+- Native Volumio plugin writes v-conf settings and patches
+  `/data/configuration/user_interface/vinyltron/config.toml`
+- The plugin package bundles the Python daemon under
+  `/data/plugins/user_interface/vinyltron/vinyltron`
 - Display settings are applied with `systemctl reload vinyltron`
 - Rotation requires `systemctl restart vinyltron`
 
