@@ -26,7 +26,7 @@ Keep these in sync for every release:
    python3 -m json.tool plugin/UIConfig.json
    python3 -m json.tool plugin/config.json
    node -c plugin/index.js
-   bash -n plugin/install.sh plugin/uninstall.sh dev-install-plugin.sh tools/build-volumio-plugin.sh
+   bash -n plugin/install.sh plugin/uninstall.sh dev-install-plugin.sh tools/build-volumio-plugin.sh tools/install-volumio-plugin-zip.sh
    python3 -c "import tomllib; tomllib.load(open('config.toml','rb')); print('config.toml OK')"
    ./tools/build-volumio-plugin.sh
    git diff --check
@@ -53,4 +53,7 @@ For a release-style local package that includes `node_modules`, run:
 ```
 
 The default build omits `node_modules` so package layout can be validated without network
-access.
+access. The release-style package should be tested through Volumio's plugin installer:
+```bash
+./tools/install-volumio-plugin-zip.sh volumio.local dist/vinyltron.zip
+```

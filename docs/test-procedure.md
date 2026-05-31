@@ -96,6 +96,8 @@ Expected: prints current playback state. Start playing something in Volumio firs
 - [x] Deploy via `./deploy.sh` from Mac for daemon-only development
 - [x] Reinstall/update plugin and bundled daemon via `./dev-install-plugin.sh` from Mac
 - [x] Build plugin zip with `./tools/build-volumio-plugin.sh`
+- [ ] Build release-style plugin zip with `./tools/build-volumio-plugin.sh --with-node-modules`
+- [ ] Install generated zip through Volumio CLI with `./tools/install-volumio-plugin-zip.sh`
 - [x] Start vinyltron manually from the plugin-owned daemon path if needed:
   `sudo python3 /data/plugins/user_interface/vinyltron/vinyltron/vinyltron.py /data/configuration/user_interface/vinyltron/config.toml`
 - [x] Start vinyltron as a service: `sudo systemctl start vinyltron`
