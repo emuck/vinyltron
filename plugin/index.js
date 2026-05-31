@@ -5,7 +5,8 @@ var fs = require('fs-extra');
 var exec = require('child_process').exec;
 var path = require('path');
 
-var CONFIG_TOML = '/home/volumio/vinyltron/config.toml';
+var CONFIG_TOML = '/data/configuration/user_interface/vinyltron/config.toml';
+var BUNDLED_CONFIG_TOML = __dirname + '/vinyltron/config.toml';
 var DEFAULT_IDLE_FOLDER = '/data/INTERNAL/Vinyltron/idle-images';
 var IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'];
 
@@ -22,6 +23,7 @@ ControllerVinyltron.prototype.onVolumioStart = function() {
     var configFile = this.commandRouter.pluginManager.getConfigurationFile(this.context, 'config.json');
     this.config = new (require('v-conf'))();
     this.config.loadFile(configFile);
+    this._ensureDaemonConfig();
     return libQ.resolve();
 };
 
@@ -103,6 +105,17 @@ ControllerVinyltron.prototype.getUIConfig = function() {
 
 ControllerVinyltron.prototype.getConfigurationFiles = function() {
     return ['config.json'];
+};
+
+ControllerVinyltron.prototype._ensureDaemonConfig = function() {
+    try {
+        if (fs.existsSync(CONFIG_TOML)) return;
+        fs.ensureDirSync(path.dirname(CONFIG_TOML));
+        fs.copySync(BUNDLED_CONFIG_TOML, CONFIG_TOML);
+        this.logger.info('Vinyltron: created daemon config at ' + CONFIG_TOML);
+    } catch (e) {
+        this.logger.error('Vinyltron: failed to create daemon config: ' + e);
+    }
 };
 
 // Save idle image settings — hot via SIGHUP, no restart needed

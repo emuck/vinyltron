@@ -1,16 +1,36 @@
 #!/bin/bash
 # Called by Volumio after plugin zip is extracted.
-# Assumes vinyltron Python daemon is already deployed to /home/volumio/vinyltron/
 
 set -e
 
-VINYLTRON_DIR=/home/volumio/vinyltron
+PLUGIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+VINYLTRON_DIR="$PLUGIN_DIR/vinyltron"
+LEGACY_DIR=/home/volumio/vinyltron
+CONFIG_DIR=/data/configuration/user_interface/vinyltron
+CONFIG_TOML="$CONFIG_DIR/config.toml"
 SERVICE=vinyltron
 IDLE_IMAGE_DIR=/data/INTERNAL/Vinyltron/idle-images
+
+if [ ! -f "$VINYLTRON_DIR/vinyltron.py" ]; then
+    echo "ERROR: bundled Vinyltron daemon not found at $VINYLTRON_DIR"
+    exit 1
+fi
 
 echo "Creating idle image folder..."
 mkdir -p "$IDLE_IMAGE_DIR"
 chown -R volumio:volumio /data/INTERNAL/Vinyltron
+
+echo "Preparing Vinyltron configuration..."
+mkdir -p "$CONFIG_DIR"
+if [ ! -f "$CONFIG_TOML" ]; then
+    if [ -f "$LEGACY_DIR/config.toml" ]; then
+        echo "Migrating existing config.toml from $LEGACY_DIR"
+        cp "$LEGACY_DIR/config.toml" "$CONFIG_TOML"
+    else
+        cp "$VINYLTRON_DIR/config.toml" "$CONFIG_TOML"
+    fi
+fi
+chown -R volumio:volumio "$CONFIG_DIR"
 
 # Install Python dependencies
 if [ -f "$VINYLTRON_DIR/requirements.txt" ]; then
@@ -19,12 +39,28 @@ if [ -f "$VINYLTRON_DIR/requirements.txt" ]; then
 fi
 
 # Install and enable systemd service
-if [ -f "$VINYLTRON_DIR/vinyltron.service" ]; then
-    echo "Installing systemd service..."
-    cp "$VINYLTRON_DIR/vinyltron.service" /etc/systemd/system/
-    systemctl daemon-reload
-    systemctl enable $SERVICE
-fi
+echo "Installing systemd service..."
+cat > /etc/systemd/system/vinyltron.service <<EOF
+[Unit]
+Description=Vinyltron — HUB75 album art display
+After=network.target volumio.service
+Wants=volumio.service
+
+[Service]
+Type=simple
+WorkingDirectory=$VINYLTRON_DIR
+ExecStart=/usr/bin/python3 $VINYLTRON_DIR/vinyltron.py $CONFIG_TOML
+ExecReload=/bin/kill -HUP \$MAINPID
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+systemctl enable $SERVICE
 
 # Allow volumio user to control the service without a password
 cat > /etc/sudoers.d/vinyltron <<'EOF'

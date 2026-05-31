@@ -8,6 +8,7 @@ set -e
 PI_HOST=${1:-volumio.local}
 PI_USER=volumio
 PLUGIN_DIR=/data/plugins/user_interface/vinyltron
+DAEMON_DIR=${PLUGIN_DIR}/vinyltron
 
 echo "=== Vinyltron plugin dev-install ==="
 echo "Target: ${PI_USER}@${PI_HOST}"
@@ -16,6 +17,22 @@ echo "Target: ${PI_USER}@${PI_HOST}"
 echo "Syncing plugin files..."
 rsync -avz --exclude='node_modules' \
   ./plugin/ ${PI_USER}@${PI_HOST}:${PLUGIN_DIR}/
+
+echo "Syncing daemon runtime files..."
+ssh -T ${PI_USER}@${PI_HOST} "mkdir -p ${DAEMON_DIR}"
+rsync -avz \
+  --exclude='__pycache__' \
+  --exclude='*.pyc' \
+  --exclude='.DS_Store' \
+  --exclude='docs/' \
+  --exclude='rpi-rgb-led-matrix/' \
+  --exclude='deploy.sh' \
+  --exclude='dev-install-plugin.sh' \
+  --exclude='install.sh' \
+  --exclude='plugin/' \
+  --exclude='tools/' \
+  --exclude='*.md' \
+  ./ ${PI_USER}@${PI_HOST}:${DAEMON_DIR}/
 
 # Non-sudo: npm install + register in plugins.json (no TTY needed)
 ssh -T ${PI_USER}@${PI_HOST} bash -s << 'ENDSSH'

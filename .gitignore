@@ -1,1 +1,6 @@
 rpi-rgb-led-matrix/
+dist/
+plugin/node_modules/
+__pycache__/
+*.pyc
+.DS_Store
