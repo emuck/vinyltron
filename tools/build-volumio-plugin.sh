@@ -1,8 +1,14 @@
 #!/bin/bash
 # Build a Volumio-compatible Vinyltron plugin zip.
 # The zip root contains plugin files; the Python daemon is bundled in ./vinyltron/.
+# Usage: ./tools/build-volumio-plugin.sh [--with-node-modules]
 
 set -e
+
+WITH_NODE_MODULES=false
+if [ "${1:-}" = "--with-node-modules" ]; then
+  WITH_NODE_MODULES=true
+fi
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PLUGIN_DIR="$ROOT_DIR/plugin"
@@ -24,6 +30,7 @@ rsync -av \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
   --exclude='.DS_Store' \
+  --exclude='.gitignore' \
   --exclude='docs/' \
   --exclude='rpi-rgb-led-matrix/' \
   --exclude='deploy.sh' \
@@ -33,11 +40,17 @@ rsync -av \
   --exclude='tools/' \
   --exclude='dist/' \
   --exclude='*.md' \
+  --exclude='test_matrix.py' \
+  --exclude='vinyltron.service' \
   "$ROOT_DIR"/ "$STAGE_DIR/vinyltron"/
 
-echo "Installing Node dependencies into package..."
 cd "$STAGE_DIR"
-npm install --production --silent
+if [ "$WITH_NODE_MODULES" = true ]; then
+  echo "Installing Node dependencies into package..."
+  npm install --production --silent
+else
+  echo "Skipping node_modules. Use --with-node-modules for a release-style package."
+fi
 
 echo "Creating $ZIP_PATH..."
 zip -qr "$ZIP_PATH" .
