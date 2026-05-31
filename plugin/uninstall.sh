@@ -1,6 +1,6 @@
 #!/bin/bash
 # Called by Volumio when the plugin is uninstalled.
-# Python daemon files in /home/volumio/vinyltron/ are left in place.
+# User config and idle images are preserved under /data.
 
 /bin/systemctl stop vinyltron || true
 /bin/systemctl disable vinyltron || true
