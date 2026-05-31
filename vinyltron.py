@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import signal
+import socket
 import sys
 import threading
 import time
@@ -58,6 +59,9 @@ TRACK_TYPE_CATEGORIES = {
 
 
 FALLBACK_DELAY_SECONDS = 1.5
+MPD_HOST = '127.0.0.1'
+MPD_PORT = 6600
+MPD_TIMEOUT_SECONDS = 0.75
 
 
 class Vinyltron:
@@ -251,6 +255,8 @@ class Vinyltron:
         bitdepth = self._bitdepth_label(state.get('bitdepth'))
         sample_rate = self._sample_rate_label(state.get('samplerate'))
         if category == 'mp3':
+            if not bitrate:
+                bitrate = self._mpd_bitrate_label(state)
             if bitrate:
                 return "%s %s" % (track_type, bitrate)
             return track_type
@@ -272,6 +278,38 @@ class Vinyltron:
         if not digits:
             return None
         return "%sK" % digits
+
+    def _mpd_bitrate_label(self, state: Dict) -> Optional[str]:
+        if self._normalized(state.get('service')) != 'mpd':
+            return None
+
+        bitrate = self._mpd_status_value('bitrate')
+        label = self._bitrate_label(bitrate)
+        if label:
+            log.info("MPD bitrate fallback: bitrate=%s label=%r", bitrate, label)
+        return label
+
+    def _mpd_status_value(self, key: str) -> Optional[str]:
+        prefix = "%s:" % key
+        try:
+            with socket.create_connection((MPD_HOST, MPD_PORT), timeout=MPD_TIMEOUT_SECONDS) as sock:
+                sock.settimeout(MPD_TIMEOUT_SECONDS)
+                sock.sendall(b"status\nclose\n")
+                chunks = []
+                while True:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+            text = b"".join(chunks).decode('utf-8', 'replace')
+        except Exception as e:
+            log.warning("MPD status lookup failed: %s", e)
+            return None
+
+        for line in text.splitlines():
+            if line.startswith(prefix):
+                return line[len(prefix):].strip()
+        return None
 
     def _bitdepth_label(self, bitdepth) -> Optional[str]:
         if bitdepth is None:

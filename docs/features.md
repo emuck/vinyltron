@@ -165,7 +165,9 @@ metadata is rich enough to show more useful information in very few characters.
 
 Format detection uses Volumio `pushState` fields: `service`, `trackType`, `codec`,
 `bitrate`, `samplerate`, and `bitdepth`. The daemon logs the raw fields to journald so
-new services can be classified from real observations.
+new services can be classified from real observations. For MPD tracks where Volumio omits
+bitrate, Vinyltron asks MPD for its current `status` bitrate before falling back to the
+generic MP3 label.
 
 ### 2c — Volumio Plugin (settings integration)
 
