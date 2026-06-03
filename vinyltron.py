@@ -600,7 +600,8 @@ class Vinyltron:
         log.info(
             (
                 "Config %s: display_on=%r brightness=%r gamma=%r rotation=%r "
-                "hardware_mapping=%r disable_hardware_pulsing=%r "
+                "hardware_mapping=%r disable_hardware_pulsing=%r slowdown_gpio=%r "
+                "limit_refresh_rate_hz=%r "
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
                 "fallback_selected=%r progress_height=%r progress_foreground=%r "
                 "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
@@ -612,6 +613,8 @@ class Vinyltron:
             display.get('rotation'),
             display.get('hardware_mapping', 'adafruit-hat'),
             display.get('disable_hardware_pulsing', False),
+            display.get('slowdown_gpio'),
+            display.get('limit_refresh_rate_hz', 0),
             fallback.get('image'),
             fallback.get('mode', 'single'),
             fallback.get('image_folder'),
