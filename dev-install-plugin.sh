@@ -26,9 +26,13 @@ rsync -avz --exclude='node_modules' \
 
 echo "Syncing daemon runtime files..."
 ssh -T ${PI_USER}@${PI_HOST} "mkdir -p ${DAEMON_DIR}"
+if [ -n "${VINYLTRON_DEV_SUDO_PASSWORD:-}" ]; then
+  ssh -T ${PI_USER}@${PI_HOST} "printf '%s\n' '${VINYLTRON_DEV_SUDO_PASSWORD}' | sudo -S -p '' rm -rf ${DAEMON_DIR}/__pycache__ 2>/dev/null || true"
+else
+  ssh -t ${PI_USER}@${PI_HOST} "sudo rm -rf ${DAEMON_DIR}/__pycache__" || true
+fi
 rsync -avz --delete --delete-excluded \
-  --filter='protect __pycache__/***' \
-  --filter='hide __pycache__/***' \
+  --exclude='__pycache__/' \
   --exclude='*.pyc' \
   --exclude='.DS_Store' \
   --exclude='.git/' \
