@@ -16,6 +16,7 @@ HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
   **Adafruit Bonnet (#3211)** with 74AHCT245 level shifters (VIH ~2.0V) is the definitive fix — on order.
 - GPIO speed: `opts.gpio_slowdown = 2` with the bonnet; `4` caused more horizontal flicker in testing
 - Bonnet refresh limiting: `opts.limit_refresh_rate_hz = 120` reduced horizontal static substantially
+- Bonnet quality/PWM mode: bridge `GPIO4` to `GPIO18` and use `hardware_mapping = "adafruit-hat-pwm"` for cleaner OE timing
 - **PWM conflict**: GPIO 18 (PWM0) used for matrix OE# — onboard audio must be disabled
   (`dtparam=audio=off` in `/boot/config.txt`, confirmed surviving reboot)
 - CPU isolation: `isolcpus=3` added to `/boot/cmdline.txt` for better matrix timing
@@ -39,12 +40,19 @@ HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
 
 ### Bonnet Configuration (production)
 
-When Bonnet #3211 is installed, update `display.py`:
+With Bonnet #3211 installed in quality/PWM mode:
 ```python
-opts.hardware_mapping = 'adafruit-hat'   # was 'regular'
-opts.disable_hardware_pulsing = False    # Bonnet handles PWM properly
+opts.hardware_mapping = 'adafruit-hat-pwm'
+opts.disable_hardware_pulsing = False
+opts.limit_refresh_rate_hz = 120
 ```
-With the Bonnet, OE# is routed off GPIO 18, so `dtparam=audio=off` is no longer required.
+This requires:
+
+- `E` bridged to `8` for the 64x64 HUB75E panel
+- quality jumper wire from `GPIO4` to `GPIO18`
+- `dtparam=audio=off` kept in `/boot/config.txt`; GPIO18 is reserved for matrix PWM timing
+
+Without the quality jumper, use `hardware_mapping = 'adafruit-hat'`.
 
 ### GPIO Wiring (direct to Pi — development only, causes flicker)
 
@@ -72,12 +80,11 @@ Using seengreat wiki Table 2-1 — matches hzeller "regular" default mapping:
 
 **With Bonnet (production):**
 ```
-Wall ──► 5V 4A PSU ──► Bonnet barrel jack (2.1mm, center positive)
-                              │
-                              ├──► Pi 5V rail (via GPIO header, replaces micro-USB)
-                              └──► Panel VCC/GND (via Bonnet screw terminals + power harness)
+Pi USB-C PSU ──► Pi + Waveshare display
+5V 4A matrix PSU ──► Panel/bonnet matrix 5V input
+Bonnet/ribbon ──► HUB75 data/control with shared ground
 ```
-Single PSU powers everything through the Bonnet.
+Do not rely on Pi USB-C back-powering the matrix. The matrix must draw from the dedicated 5V rail; grounds remain common through the bonnet/ribbon/power wiring.
 
 **Direct GPIO (development, no Bonnet):**
 ```
@@ -160,6 +167,8 @@ limit_refresh_rate_hz = 120
 rows = 64
 cols = 64
 rotation = 270           # Rotate:270 corrects panel orientation; change if remounted
+hardware_mapping = "adafruit-hat-pwm"
+disable_hardware_pulsing = false
 display_on = true
 panel_type = ""          # set to "FM6126A" if colors/timing are wrong
 

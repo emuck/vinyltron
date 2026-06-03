@@ -611,7 +611,7 @@ class Vinyltron:
             display.get('brightness'),
             display.get('gamma'),
             display.get('rotation'),
-            display.get('hardware_mapping', 'adafruit-hat'),
+            display.get('hardware_mapping', 'adafruit-hat-pwm'),
             display.get('disable_hardware_pulsing', False),
             display.get('slowdown_gpio'),
             display.get('limit_refresh_rate_hz', 0),
