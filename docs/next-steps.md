@@ -79,10 +79,10 @@ The config keys are:
 ```toml
 hardware_mapping = "adafruit-hat-pwm"
 disable_hardware_pulsing = false
-limit_refresh_rate_hz = 120
+limit_refresh_rate_hz = 0
 ```
 
-This requires the bonnet quality jumper wire between `GPIO4` and `GPIO18`. Without that wire, use `hardware_mapping = "adafruit-hat"`.
+This requires the bonnet quality jumper wire between `GPIO4` and `GPIO18`. Without that wire, use `hardware_mapping = "adafruit-hat"`. `limit_refresh_rate_hz = 0` leaves the matrix driver uncapped; use values around `90-140` if a panel shows flicker or refresh hiccups.
 
 Do not tune this while the Pi is showing the lightning bolt. First get power stable, then test the matrix with the `rpi-rgb-led-matrix` demo using the bonnet mapping:
 
@@ -110,7 +110,7 @@ Current bonnet finding: `--led-limit-refresh=120` reduced the horizontal static 
 
 Once the demo works through the bonnet, deploy the plugin again and restart `vinyltron`. If reverting to bonnet wiring without the quality jumper, set `hardware_mapping = "adafruit-hat"`. If reverting to direct GPIO wiring later, set `hardware_mapping = "regular"` and `disable_hardware_pulsing = true`.
 
-The Volumio plugin exposes Matrix Mapping and Refresh Limit under Hardware. Saving these settings restarts `vinyltron` because the RGB matrix options are only applied during matrix initialization.
+The Volumio plugin exposes Matrix Mapping and Refresh Limit under Hardware. Refresh Limit accepts any nonnegative integer; `0` means uncapped. Saving these settings restarts `vinyltron` because the RGB matrix options are only applied during matrix initialization.
 
 ## Plugin Work Still To Do
 

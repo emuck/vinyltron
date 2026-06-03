@@ -95,10 +95,11 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         var hardware_mapping = self.config.get('hardware_mapping') || 'adafruit-hat-pwm';
         s[2].content[1].value = {value: hardware_mapping, label: self._labelForHardwareMapping(hardware_mapping)};
         var limit_refresh_rate_hz = self.config.get('limit_refresh_rate_hz');
-        if (limit_refresh_rate_hz === undefined || limit_refresh_rate_hz === null) limit_refresh_rate_hz = 120;
+        if (limit_refresh_rate_hz === undefined || limit_refresh_rate_hz === null) limit_refresh_rate_hz = 0;
         limit_refresh_rate_hz = parseInt(limit_refresh_rate_hz);
-        if (isNaN(limit_refresh_rate_hz)) limit_refresh_rate_hz = 120;
-        s[2].content[2].value = {value: limit_refresh_rate_hz.toString(), label: self._labelForRefreshLimit(limit_refresh_rate_hz)};
+        if (isNaN(limit_refresh_rate_hz)) limit_refresh_rate_hz = 0;
+        limit_refresh_rate_hz = self._validRefreshLimit(limit_refresh_rate_hz);
+        s[2].content[2].value = limit_refresh_rate_hz.toString();
 
         // Section 3: Power (display_on)
         s[3].content[0].value = self.config.get('display_on');
@@ -277,9 +278,9 @@ ControllerVinyltron.prototype.saveHardware = function(data) {
 
     var rotation = data['rotation']['value'];
     var hardware_mapping = data['hardware_mapping'] ? data['hardware_mapping']['value'] : 'adafruit-hat-pwm';
-    var limit_refresh_rate_hz = data['limit_refresh_rate_hz'] ? parseInt(data['limit_refresh_rate_hz']['value']) : 120;
+    var limit_refresh_rate_hz_value = data['limit_refresh_rate_hz'] && data['limit_refresh_rate_hz']['value'] !== undefined ? data['limit_refresh_rate_hz']['value'] : data['limit_refresh_rate_hz'];
+    var limit_refresh_rate_hz = limit_refresh_rate_hz_value !== undefined ? parseInt(limit_refresh_rate_hz_value) : 0;
     hardware_mapping = self._validHardwareMapping(hardware_mapping);
-    if (isNaN(limit_refresh_rate_hz)) limit_refresh_rate_hz = 120;
     limit_refresh_rate_hz = self._validRefreshLimit(limit_refresh_rate_hz);
     var disable_hardware_pulsing = hardware_mapping === 'regular';
 
@@ -455,11 +456,9 @@ ControllerVinyltron.prototype._validHardwareMapping = function(value) {
 };
 
 ControllerVinyltron.prototype._validRefreshLimit = function(value) {
-    var allowed = [0, 90, 100, 120, 140, 180, 240];
-    for (var i = 0; i < allowed.length; i++) {
-        if (value === allowed[i]) return value;
-    }
-    return 120;
+    value = parseInt(value);
+    if (isNaN(value) || value < 0) return 0;
+    return value;
 };
 
 ControllerVinyltron.prototype._labelForFallbackMode = function(value) {
@@ -525,8 +524,4 @@ ControllerVinyltron.prototype._labelForHardwareMapping = function(value) {
         'regular': 'Direct GPIO'
     };
     return labels[value] || labels['adafruit-hat-pwm'];
-};
-
-ControllerVinyltron.prototype._labelForRefreshLimit = function(value) {
-    return value === 0 ? 'Uncapped' : value + ' Hz';
 };

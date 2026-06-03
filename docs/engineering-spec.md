@@ -15,7 +15,7 @@ HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
   (0.7×5V = 3.5V) of the panel's row driver ICs. Not software-tunable.
   **Adafruit Bonnet (#3211)** with 74AHCT245 level shifters (VIH ~2.0V) is the definitive fix — on order.
 - GPIO speed: `opts.gpio_slowdown = 2` with the bonnet; `4` caused more horizontal flicker in testing
-- Bonnet refresh limiting: `opts.limit_refresh_rate_hz = 120` reduced horizontal static substantially
+- Bonnet refresh limiting: `opts.limit_refresh_rate_hz = 120` reduced horizontal static substantially during testing; packaged default is `0` for uncapped driver behavior
 - Bonnet quality/PWM mode: bridge `GPIO4` to `GPIO18` and use `hardware_mapping = "adafruit-hat-pwm"` for cleaner OE timing
 - **PWM conflict**: GPIO 18 (PWM0) used for matrix OE# — onboard audio must be disabled
   (`dtparam=audio=off` in `/boot/config.txt`, confirmed surviving reboot)
@@ -44,7 +44,7 @@ With Bonnet #3211 installed in quality/PWM mode:
 ```python
 opts.hardware_mapping = 'adafruit-hat-pwm'
 opts.disable_hardware_pulsing = False
-opts.limit_refresh_rate_hz = 120
+opts.limit_refresh_rate_hz = 0  # uncapped by default; try 90-140 if flicker/hiccups appear
 ```
 This requires:
 
@@ -163,7 +163,7 @@ port = 3000
 brightness = 80          # 0-100
 gamma = 2.2
 slowdown_gpio = 2        # Bonnet test value; 4 caused more horizontal flicker on current panel
-limit_refresh_rate_hz = 120
+limit_refresh_rate_hz = 0      # 0 = uncapped; 90-140 is a practical tuning range
 rows = 64
 cols = 64
 rotation = 270           # Rotate:270 corrects panel orientation; change if remounted
