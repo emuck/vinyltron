@@ -79,6 +79,7 @@ The config keys are:
 ```toml
 hardware_mapping = "adafruit-hat"
 disable_hardware_pulsing = false
+limit_refresh_rate_hz = 120
 ```
 
 Do not tune this while the Pi is showing the lightning bolt. First get power stable, then test the matrix with the `rpi-rgb-led-matrix` demo using the bonnet mapping:
@@ -89,6 +90,7 @@ sudo examples-api-use/demo \
   --led-rows=64 --led-cols=64 \
   --led-gpio-mapping=adafruit-hat \
   --led-slowdown-gpio=2 \
+  --led-limit-refresh=120 \
   --led-brightness=20
 ```
 
@@ -101,6 +103,8 @@ If the panel is still blank:
 5. Confirm the Waveshare display is not occupying or blocking the same GPIO pins.
 6. Try `--led-slowdown-gpio=4` as a comparison only; on this panel it caused more horizontal flicker.
 7. If the panel is FM6126A-based, add `--led-panel-type=FM6126A`.
+
+Current bonnet finding: `--led-limit-refresh=120` reduced the horizontal static substantially. It did not eliminate every flicker artifact, but it changed the symptom from TV-like snow to occasional flicker.
 
 Once the demo works through the bonnet, deploy the plugin again and restart `vinyltron`. If reverting to direct GPIO wiring later, set `hardware_mapping = "regular"` and `disable_hardware_pulsing = true`.
 

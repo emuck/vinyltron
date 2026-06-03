@@ -210,6 +210,8 @@ class Display:
         opts.cols = d['cols']
         opts.brightness = d['brightness']
         opts.gpio_slowdown = d['slowdown_gpio']
+        if d.get('limit_refresh_rate_hz'):
+            opts.limit_refresh_rate_hz = d['limit_refresh_rate_hz']
         if d.get('pwm_bits'):
             opts.pwm_bits = d['pwm_bits']
         opts.hardware_mapping = d.get('hardware_mapping', 'adafruit-hat')
