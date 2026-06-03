@@ -6,7 +6,7 @@ port = 3000
 brightness = 80
 gamma = 2.2
 slowdown_gpio = 2
-limit_refresh_rate_hz = 120 # stabilizes bonnet refresh; demo equivalent: --led-limit-refresh=120
+limit_refresh_rate_hz = 0 # 0 = uncapped; tune if a panel shows flicker or refresh hiccups
 rows = 64
 cols = 64
 rotation = 270

@@ -224,19 +224,10 @@
                 },
                 {
                     "id": "limit_refresh_rate_hz",
-                    "element": "select",
-                    "label": "Refresh Limit",
-                    "value": {},
-                    "options": [
-                        {"value": "0",   "label": "Uncapped"},
-                        {"value": "90",  "label": "90 Hz"},
-                        {"value": "100", "label": "100 Hz"},
-                        {"value": "120", "label": "120 Hz"},
-                        {"value": "140", "label": "140 Hz"},
-                        {"value": "180", "label": "180 Hz"},
-                        {"value": "240", "label": "240 Hz"}
-                    ],
-                    "doc": "Caps the HUB75 scan refresh rate. 120 Hz is the current stable bonnet baseline."
+                    "element": "input",
+                    "label": "Refresh Limit (Hz)",
+                    "value": "0",
+                    "doc": "Caps the HUB75 scan refresh rate. 0 is uncapped. 90-140 Hz is a useful tuning range; 120 Hz reduced flicker on the test bonnet setup."
                 }
             ]
         },
