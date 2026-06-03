@@ -67,20 +67,22 @@ After the lightning bolt is gone:
 
 ## Blank Matrix With Bonnet
 
-The current code now defaults to Adafruit RGB Matrix Bonnet style wiring:
+The current code defaults to the Adafruit RGB Matrix Bonnet quality/PWM wiring:
 
 ```python
-opts.hardware_mapping = d.get('hardware_mapping', 'adafruit-hat')
+opts.hardware_mapping = d.get('hardware_mapping', 'adafruit-hat-pwm')
 opts.disable_hardware_pulsing = d.get('disable_hardware_pulsing', False)
 ```
 
 The config keys are:
 
 ```toml
-hardware_mapping = "adafruit-hat"
+hardware_mapping = "adafruit-hat-pwm"
 disable_hardware_pulsing = false
 limit_refresh_rate_hz = 120
 ```
+
+This requires the bonnet quality jumper wire between `GPIO4` and `GPIO18`. Without that wire, use `hardware_mapping = "adafruit-hat"`.
 
 Do not tune this while the Pi is showing the lightning bolt. First get power stable, then test the matrix with the `rpi-rgb-led-matrix` demo using the bonnet mapping:
 
@@ -88,7 +90,7 @@ Do not tune this while the Pi is showing the lightning bolt. First get power sta
 cd ~/rpi-rgb-led-matrix
 sudo examples-api-use/demo \
   --led-rows=64 --led-cols=64 \
-  --led-gpio-mapping=adafruit-hat \
+  --led-gpio-mapping=adafruit-hat-pwm \
   --led-slowdown-gpio=2 \
   --led-limit-refresh=120 \
   --led-brightness=20
@@ -106,7 +108,7 @@ If the panel is still blank:
 
 Current bonnet finding: `--led-limit-refresh=120` reduced the horizontal static substantially. It did not eliminate every flicker artifact, but it changed the symptom from TV-like snow to occasional flicker.
 
-Once the demo works through the bonnet, deploy the plugin again and restart `vinyltron`. If reverting to direct GPIO wiring later, set `hardware_mapping = "regular"` and `disable_hardware_pulsing = true`.
+Once the demo works through the bonnet, deploy the plugin again and restart `vinyltron`. If reverting to bonnet wiring without the quality jumper, set `hardware_mapping = "adafruit-hat"`. If reverting to direct GPIO wiring later, set `hardware_mapping = "regular"` and `disable_hardware_pulsing = true`.
 
 ## Plugin Work Still To Do
 

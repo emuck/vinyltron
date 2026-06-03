@@ -214,7 +214,7 @@ class Display:
             opts.limit_refresh_rate_hz = d['limit_refresh_rate_hz']
         if d.get('pwm_bits'):
             opts.pwm_bits = d['pwm_bits']
-        opts.hardware_mapping = d.get('hardware_mapping', 'adafruit-hat')
+        opts.hardware_mapping = d.get('hardware_mapping', 'adafruit-hat-pwm')
         opts.disable_hardware_pulsing = d.get('disable_hardware_pulsing', False)
         opts.pixel_mapper_config = f"Rotate:{d['rotation']}"
         if d.get('panel_type'):
