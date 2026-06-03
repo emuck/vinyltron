@@ -110,6 +110,8 @@ Current bonnet finding: `--led-limit-refresh=120` reduced the horizontal static 
 
 Once the demo works through the bonnet, deploy the plugin again and restart `vinyltron`. If reverting to bonnet wiring without the quality jumper, set `hardware_mapping = "adafruit-hat"`. If reverting to direct GPIO wiring later, set `hardware_mapping = "regular"` and `disable_hardware_pulsing = true`.
 
+The Volumio plugin exposes Matrix Mapping and Refresh Limit under Hardware. Saving these settings restarts `vinyltron` because the RGB matrix options are only applied during matrix initialization.
+
 ## Plugin Work Still To Do
 
 1. Confirm the plugin appears and can be enabled/disabled from Volumio's plugin UI.
