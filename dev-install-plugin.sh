@@ -27,6 +27,7 @@ rsync -avz --exclude='node_modules' \
 echo "Syncing daemon runtime files..."
 ssh -T ${PI_USER}@${PI_HOST} "mkdir -p ${DAEMON_DIR}"
 rsync -avz --delete --delete-excluded \
+  --filter='protect __pycache__/' \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
   --exclude='.DS_Store' \
