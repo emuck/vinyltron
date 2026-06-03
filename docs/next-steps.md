@@ -99,7 +99,7 @@ If the panel is still blank:
 3. Confirm the panel power connector is seated and polarity is correct.
 4. Confirm the bonnet is not shifted by one row or column on the Pi GPIO header.
 5. Confirm the Waveshare display is not occupying or blocking the same GPIO pins.
-6. Try the demo with `--led-slowdown-gpio=4` if running on Raspberry Pi 5.
+6. Try `--led-slowdown-gpio=4` as a comparison only; on this panel it caused more horizontal flicker.
 7. If the panel is FM6126A-based, add `--led-panel-type=FM6126A`.
 
 Once the demo works through the bonnet, deploy the plugin again and restart `vinyltron`. If reverting to direct GPIO wiring later, set `hardware_mapping = "regular"` and `disable_hardware_pulsing = true`.

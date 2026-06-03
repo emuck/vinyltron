@@ -14,7 +14,7 @@ HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
   (confirmed 2026-05-23). Root cause: Pi 3B GPIO (3.3V) is below the 5V CMOS VIH threshold
   (0.7×5V = 3.5V) of the panel's row driver ICs. Not software-tunable.
   **Adafruit Bonnet (#3211)** with 74AHCT245 level shifters (VIH ~2.0V) is the definitive fix — on order.
-- GPIO speed: `opts.gpio_slowdown = 2` required in Python; `--led-slowdown-gpio=2` in C demos
+- GPIO speed: `opts.gpio_slowdown = 2` with the bonnet; `4` caused more horizontal flicker in testing
 - **PWM conflict**: GPIO 18 (PWM0) used for matrix OE# — onboard audio must be disabled
   (`dtparam=audio=off` in `/boot/config.txt`, confirmed surviving reboot)
 - CPU isolation: `isolcpus=3` added to `/boot/cmdline.txt` for better matrix timing
@@ -154,7 +154,7 @@ port = 3000
 [display]
 brightness = 80          # 0-100
 gamma = 2.2
-slowdown_gpio = 2        # Pi 3B = 2, Pi 5 = 4
+slowdown_gpio = 2        # Bonnet test value; 4 caused more horizontal flicker on current panel
 rows = 64
 cols = 64
 rotation = 270           # Rotate:270 corrects panel orientation; change if remounted
