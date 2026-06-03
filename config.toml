@@ -10,6 +10,8 @@ rows = 64
 cols = 64
 rotation = 270
 display_on = true
+hardware_mapping = "adafruit-hat" # use "regular" only for direct GPIO wiring
+disable_hardware_pulsing = false   # true was required for direct GPIO; bonnet handles PWM
 panel_type = ""          # set to "FM6126A" if colors/timing are wrong
 
 [fallback]

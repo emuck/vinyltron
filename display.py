@@ -212,8 +212,8 @@ class Display:
         opts.gpio_slowdown = d['slowdown_gpio']
         if d.get('pwm_bits'):
             opts.pwm_bits = d['pwm_bits']
-        opts.hardware_mapping = 'regular'
-        opts.disable_hardware_pulsing = True
+        opts.hardware_mapping = d.get('hardware_mapping', 'adafruit-hat')
+        opts.disable_hardware_pulsing = d.get('disable_hardware_pulsing', False)
         opts.pixel_mapper_config = f"Rotate:{d['rotation']}"
         if d.get('panel_type'):
             opts.panel_type = d['panel_type']
