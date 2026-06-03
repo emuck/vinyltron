@@ -92,6 +92,13 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         // Section 2: Hardware (rotation)
         var rotation = self.config.get('rotation');
         s[2].content[0].value = {value: rotation, label: rotation + '°'};
+        var hardware_mapping = self.config.get('hardware_mapping') || 'adafruit-hat-pwm';
+        s[2].content[1].value = {value: hardware_mapping, label: self._labelForHardwareMapping(hardware_mapping)};
+        var limit_refresh_rate_hz = self.config.get('limit_refresh_rate_hz');
+        if (limit_refresh_rate_hz === undefined || limit_refresh_rate_hz === null) limit_refresh_rate_hz = 120;
+        limit_refresh_rate_hz = parseInt(limit_refresh_rate_hz);
+        if (isNaN(limit_refresh_rate_hz)) limit_refresh_rate_hz = 120;
+        s[2].content[2].value = {value: limit_refresh_rate_hz.toString(), label: self._labelForRefreshLimit(limit_refresh_rate_hz)};
 
         // Section 3: Power (display_on)
         s[3].content[0].value = self.config.get('display_on');
@@ -147,6 +154,8 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['display', 'brightness', 'brightness', 'number'],
             ['display', 'gamma', 'gamma', 'string'],
             ['display', 'rotation', 'rotation', 'string'],
+            ['display', 'hardware_mapping', 'hardware_mapping', 'string'],
+            ['display', 'limit_refresh_rate_hz', 'limit_refresh_rate_hz', 'number'],
             ['display', 'display_on', 'display_on', 'boolean'],
             ['fallback', 'mode', 'fallback_mode', 'string'],
             ['fallback', 'image_folder', 'fallback_image_folder', 'string'],
@@ -267,9 +276,28 @@ ControllerVinyltron.prototype.saveHardware = function(data) {
     var self = this;
 
     var rotation = data['rotation']['value'];
+    var hardware_mapping = data['hardware_mapping'] ? data['hardware_mapping']['value'] : 'adafruit-hat-pwm';
+    var limit_refresh_rate_hz = data['limit_refresh_rate_hz'] ? parseInt(data['limit_refresh_rate_hz']['value']) : 120;
+    hardware_mapping = self._validHardwareMapping(hardware_mapping);
+    if (isNaN(limit_refresh_rate_hz)) limit_refresh_rate_hz = 120;
+    limit_refresh_rate_hz = self._validRefreshLimit(limit_refresh_rate_hz);
+    var disable_hardware_pulsing = hardware_mapping === 'regular';
+
     self.config.set('rotation', rotation);
-    self.logger.info('Vinyltron: saving hardware settings: ' + JSON.stringify({rotation: rotation}));
-    self._patchConfigToml({rotation: rotation});
+    self.config.set('hardware_mapping', hardware_mapping);
+    self.config.set('limit_refresh_rate_hz', limit_refresh_rate_hz);
+    self.logger.info('Vinyltron: saving hardware settings: ' + JSON.stringify({
+        rotation: rotation,
+        hardware_mapping: hardware_mapping,
+        disable_hardware_pulsing: disable_hardware_pulsing,
+        limit_refresh_rate_hz: limit_refresh_rate_hz
+    }));
+    self._patchConfigToml({
+        rotation: rotation,
+        hardware_mapping: hardware_mapping,
+        disable_hardware_pulsing: disable_hardware_pulsing,
+        limit_refresh_rate_hz: limit_refresh_rate_hz
+    });
 
     self._service('restart', 'hardware settings save');
 
@@ -299,6 +327,9 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.brightness !== undefined) content = this._patchTomlInSection(content, 'display', 'brightness', fields.brightness);
         if (fields.gamma !== undefined) content = this._patchTomlInSection(content, 'display', 'gamma', fields.gamma);
         if (fields.rotation !== undefined) content = this._patchTomlInSection(content, 'display', 'rotation', parseInt(fields.rotation));
+        if (fields.hardware_mapping !== undefined) content = this._patchTomlInSection(content, 'display', 'hardware_mapping', this._tomlString(fields.hardware_mapping), 'display_on');
+        if (fields.disable_hardware_pulsing !== undefined) content = this._patchTomlInSection(content, 'display', 'disable_hardware_pulsing', fields.disable_hardware_pulsing, 'hardware_mapping');
+        if (fields.limit_refresh_rate_hz !== undefined) content = this._patchTomlInSection(content, 'display', 'limit_refresh_rate_hz', fields.limit_refresh_rate_hz, 'slowdown_gpio');
         if (fields.display_on !== undefined) content = this._patchTomlInSection(content, 'display', 'display_on', fields.display_on);
         if (fields.fallback_image_folder !== undefined) content = this._patchTomlInSection(content, 'fallback', 'image_folder', this._tomlString(fields.fallback_image_folder), 'image');
         if (fields.fallback_mode !== undefined) content = this._patchTomlInSection(content, 'fallback', 'mode', this._tomlString(fields.fallback_mode), 'image_folder');
@@ -418,6 +449,19 @@ ControllerVinyltron.prototype._validFallbackMode = function(value) {
     return 'single';
 };
 
+ControllerVinyltron.prototype._validHardwareMapping = function(value) {
+    if (value === 'adafruit-hat-pwm' || value === 'adafruit-hat' || value === 'regular') return value;
+    return 'adafruit-hat-pwm';
+};
+
+ControllerVinyltron.prototype._validRefreshLimit = function(value) {
+    var allowed = [0, 90, 100, 120, 140, 180, 240];
+    for (var i = 0; i < allowed.length; i++) {
+        if (value === allowed[i]) return value;
+    }
+    return 120;
+};
+
 ControllerVinyltron.prototype._labelForFallbackMode = function(value) {
     var labels = {
         'single': 'Built-in Idle Image',
@@ -472,4 +516,17 @@ ControllerVinyltron.prototype._labelForFormatFont = function(value) {
         'spleen': 'Spleen 5x8'
     };
     return labels[value] || value;
+};
+
+ControllerVinyltron.prototype._labelForHardwareMapping = function(value) {
+    var labels = {
+        'adafruit-hat-pwm': 'Bonnet PWM',
+        'adafruit-hat': 'Bonnet',
+        'regular': 'Direct GPIO'
+    };
+    return labels[value] || labels['adafruit-hat-pwm'];
+};
+
+ControllerVinyltron.prototype._labelForRefreshLimit = function(value) {
+    return value === 0 ? 'Uncapped' : value + ' Hz';
 };

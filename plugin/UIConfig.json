@@ -189,7 +189,7 @@
             },
             "saveButton": {
                 "label": "Save & Restart",
-                "data": ["rotation"],
+                "data": ["rotation", "hardware_mapping", "limit_refresh_rate_hz"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -209,6 +209,34 @@
                         {"value": "270", "label": "270°"}
                     ],
                     "doc": "Rotate to match panel mounting orientation"
+                },
+                {
+                    "id": "hardware_mapping",
+                    "element": "select",
+                    "label": "Matrix Mapping",
+                    "value": {},
+                    "options": [
+                        {"value": "adafruit-hat-pwm", "label": "Bonnet PWM"},
+                        {"value": "adafruit-hat",     "label": "Bonnet"},
+                        {"value": "regular",          "label": "Direct GPIO"}
+                    ],
+                    "doc": "GPIO mapping for the matrix adapter. Bonnet PWM requires the GPIO4-to-GPIO18 quality jumper."
+                },
+                {
+                    "id": "limit_refresh_rate_hz",
+                    "element": "select",
+                    "label": "Refresh Limit",
+                    "value": {},
+                    "options": [
+                        {"value": "0",   "label": "Uncapped"},
+                        {"value": "90",  "label": "90 Hz"},
+                        {"value": "100", "label": "100 Hz"},
+                        {"value": "120", "label": "120 Hz"},
+                        {"value": "140", "label": "140 Hz"},
+                        {"value": "180", "label": "180 Hz"},
+                        {"value": "240", "label": "240 Hz"}
+                    ],
+                    "doc": "Caps the HUB75 scan refresh rate. 120 Hz is the current stable bonnet baseline."
                 }
             ]
         },
