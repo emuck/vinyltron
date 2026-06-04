@@ -39,18 +39,40 @@ def open_source_image(src):
     except Exception:
         if src.suffix.lower() not in ('.heic', '.heif'):
             raise
-        return open_heic_with_sips(src)
+        return open_heic_with_external_tool(src)
 
 
-def open_heic_with_sips(src):
+def open_heic_with_external_tool(src):
+    magick = shutil.which('magick')
+    if magick:
+        return open_heic_with_magick(src, magick)
+
     sips = shutil.which('sips')
     if not sips:
-        raise RuntimeError('HEIC/HEIF input requires Pillow HEIF support or macOS sips')
+        raise RuntimeError('HEIC/HEIF input requires Pillow HEIF support, ImageMagick, or macOS sips')
 
+    return open_heic_with_sips(src, sips)
+
+
+def open_heic_with_magick(src, magick):
     with tempfile.TemporaryDirectory(prefix='vinyltron-heic-') as tmp:
         converted = Path(tmp) / (src.stem + '.png')
         subprocess.run(
-            [sips, '-s', 'format', 'png', str(src), '--out', str(converted)],
+            [magick, str(src), '-auto-orient', str(converted)],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        with Image.open(converted) as img:
+            img = ImageOps.exif_transpose(img).convert('RGB')
+            return img.copy()
+
+
+def open_heic_with_sips(src, sips):
+    with tempfile.TemporaryDirectory(prefix='vinyltron-heic-') as tmp:
+        converted = Path(tmp) / (src.stem + '.jpg')
+        subprocess.run(
+            [sips, '-s', 'format', 'jpeg', str(src), '--out', str(converted)],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
