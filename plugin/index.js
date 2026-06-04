@@ -80,6 +80,9 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         var fallback_mode = self.config.get('fallback_mode') || 'single';
         var fallback_image_folder = self.config.get('fallback_image_folder') || DEFAULT_IDLE_FOLDER;
         var fallback_selected_image = self.config.get('fallback_selected_image') || '';
+        var fallback_rotate_seconds = self.config.get('fallback_rotate_seconds');
+        if (fallback_rotate_seconds === undefined || fallback_rotate_seconds === null) fallback_rotate_seconds = 300;
+        fallback_rotate_seconds = self._validFallbackRotateSeconds(fallback_rotate_seconds);
         var idle_options = self._idleImageOptions(fallback_image_folder);
         s[1].content[0].value = {value: fallback_mode, label: self._labelForFallbackMode(fallback_mode)};
         s[1].content[1].value = fallback_image_folder;
@@ -88,6 +91,7 @@ ControllerVinyltron.prototype.getUIConfig = function() {
             value: fallback_selected_image,
             label: self._labelForIdleImage(fallback_selected_image, idle_options)
         };
+        s[1].content[3].value = fallback_rotate_seconds.toString();
 
         // Section 2: Hardware (rotation)
         var rotation = self.config.get('rotation');
@@ -161,6 +165,7 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['fallback', 'mode', 'fallback_mode', 'string'],
             ['fallback', 'image_folder', 'fallback_image_folder', 'string'],
             ['fallback', 'selected_image', 'fallback_selected_image', 'string'],
+            ['fallback', 'rotate_seconds', 'fallback_rotate_seconds', 'number'],
             ['overlays', 'progress_bar', 'progress_bar', 'boolean'],
             ['overlays', 'progress_bar_height', 'progress_bar_height', 'number'],
             ['overlays', 'progress_bar_foreground', 'progress_bar_foreground', 'rgb'],
@@ -190,6 +195,8 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
     var fallback_mode = data['fallback_mode'] ? data['fallback_mode']['value'] : 'single';
     var fallback_image_folder = data['fallback_image_folder'] && data['fallback_image_folder']['value'] !== undefined ? data['fallback_image_folder']['value'] : data['fallback_image_folder'];
     var fallback_selected_image = data['fallback_selected_image'] ? data['fallback_selected_image']['value'] : '';
+    var fallback_rotate_seconds_value = data['fallback_rotate_seconds'] && data['fallback_rotate_seconds']['value'] !== undefined ? data['fallback_rotate_seconds']['value'] : data['fallback_rotate_seconds'];
+    var fallback_rotate_seconds = self._validFallbackRotateSeconds(fallback_rotate_seconds_value);
 
     fallback_mode = self._validFallbackMode(fallback_mode);
     fallback_image_folder = fallback_image_folder || DEFAULT_IDLE_FOLDER;
@@ -200,17 +207,20 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
     self.config.set('fallback_mode', fallback_mode);
     self.config.set('fallback_image_folder', fallback_image_folder);
     self.config.set('fallback_selected_image', fallback_selected_image);
+    self.config.set('fallback_rotate_seconds', fallback_rotate_seconds);
 
     self.logger.info('Vinyltron: saving idle settings: ' + JSON.stringify({
         fallback_mode: fallback_mode,
         fallback_image_folder: fallback_image_folder,
-        fallback_selected_image: fallback_selected_image
+        fallback_selected_image: fallback_selected_image,
+        fallback_rotate_seconds: fallback_rotate_seconds
     }));
 
     self._patchConfigToml({
         fallback_mode: fallback_mode,
         fallback_image_folder: fallback_image_folder,
-        fallback_selected_image: fallback_selected_image
+        fallback_selected_image: fallback_selected_image,
+        fallback_rotate_seconds: fallback_rotate_seconds
     });
 
     self._service('reload', 'idle settings save');
@@ -335,6 +345,7 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.fallback_image_folder !== undefined) content = this._patchTomlInSection(content, 'fallback', 'image_folder', this._tomlString(fields.fallback_image_folder), 'image');
         if (fields.fallback_mode !== undefined) content = this._patchTomlInSection(content, 'fallback', 'mode', this._tomlString(fields.fallback_mode), 'image_folder');
         if (fields.fallback_selected_image !== undefined) content = this._patchTomlInSection(content, 'fallback', 'selected_image', this._tomlString(fields.fallback_selected_image), 'mode');
+        if (fields.fallback_rotate_seconds !== undefined) content = this._patchTomlInSection(content, 'fallback', 'rotate_seconds', fields.fallback_rotate_seconds, 'selected_image');
         if (fields.progress_bar !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar', fields.progress_bar);
         if (fields.progress_bar_height !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_height', fields.progress_bar_height, 'progress_bar');
         if (fields.progress_bar_foreground !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_foreground', this._tomlRgb(fields.progress_bar_foreground), 'progress_bar_height');
@@ -448,6 +459,12 @@ ControllerVinyltron.prototype._sanitizeFilename = function(value) {
 ControllerVinyltron.prototype._validFallbackMode = function(value) {
     if (value === 'selected' || value === 'random_folder') return value;
     return 'single';
+};
+
+ControllerVinyltron.prototype._validFallbackRotateSeconds = function(value) {
+    value = parseInt(value);
+    if (isNaN(value) || value < 0) return 0;
+    return value;
 };
 
 ControllerVinyltron.prototype._validHardwareMapping = function(value) {

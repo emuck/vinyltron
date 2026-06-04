@@ -138,7 +138,7 @@
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["fallback_mode", "fallback_image_folder", "fallback_selected_image"],
+                "data": ["fallback_mode", "fallback_image_folder", "fallback_selected_image", "fallback_rotate_seconds"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -174,6 +174,13 @@
                         {"value": "", "label": "No image found"}
                     ],
                     "doc": "Image filename used when Idle Mode is Selected Folder Image"
+                },
+                {
+                    "id": "fallback_rotate_seconds",
+                    "element": "input",
+                    "label": "Photo Interval (seconds)",
+                    "value": "300",
+                    "doc": "When Idle Mode is Random Folder Image, switch photos after this many seconds. 0 disables rotation."
                 }
             ]
         },

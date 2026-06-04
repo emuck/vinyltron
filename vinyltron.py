@@ -87,6 +87,8 @@ class Vinyltron:
         self._badge_visible = False
         self._fallback_timer: Optional[threading.Timer] = None
         self._fallback_timer_id = 0
+        self._idle_rotation_timer: Optional[threading.Timer] = None
+        self._idle_rotation_timer_id = 0
         self._progress_timer: Optional[threading.Timer] = None
         self._progress_seek_ms = 0
         self._progress_duration_ms = 0
@@ -114,6 +116,7 @@ class Vinyltron:
 
         with self._overlay_lock:
             self._cancel_fallback_locked()
+            self._cancel_idle_rotation_locked()
 
         if not albumart:
             return
@@ -421,6 +424,41 @@ class Vinyltron:
             self._fallback_timer = None
         self._fallback_timer_id += 1
 
+    def _schedule_idle_rotation_locked(self, status: str):
+        if not self._fallback_rotation_enabled():
+            self._cancel_idle_rotation_locked()
+            return
+        if self._idle_rotation_timer:
+            return
+        seconds = self._fallback_rotate_seconds()
+        self._idle_rotation_timer_id += 1
+        timer_id = self._idle_rotation_timer_id
+        log.info("Idle random image rotation scheduled in %ss", seconds)
+        self._idle_rotation_timer = threading.Timer(
+            seconds,
+            self._rotate_idle_image_from_timer,
+            args=(timer_id, status),
+        )
+        self._idle_rotation_timer.daemon = True
+        self._idle_rotation_timer.start()
+
+    def _cancel_idle_rotation_locked(self):
+        if self._idle_rotation_timer:
+            self._idle_rotation_timer.cancel()
+            self._idle_rotation_timer = None
+        self._idle_rotation_timer_id += 1
+
+    def _rotate_idle_image_from_timer(self, timer_id: int, status: str):
+        with self._overlay_lock:
+            if timer_id != self._idle_rotation_timer_id:
+                return
+            self._idle_rotation_timer = None
+            if not self._display_on or not self._fallback_rotation_enabled():
+                return
+            self._display.show_fallback()
+            self._schedule_idle_rotation_locked(status)
+        log.info("Status: %s — rotated idle random image", status)
+
     def _show_fallback_from_timer(self, timer_id: int, status: str):
         with self._overlay_lock:
             if timer_id != self._fallback_timer_id:
@@ -430,6 +468,7 @@ class Vinyltron:
             self._cancel_progress_locked()
             self._badge_visible = False
             self._display.show_fallback()
+            self._schedule_idle_rotation_locked(status)
         with self._state_lock:
             self._state_seq += 1
             self._current_albumart = None
@@ -574,6 +613,18 @@ class Vinyltron:
         except (TypeError, ValueError):
             return 0
 
+    def _fallback_rotation_enabled(self) -> bool:
+        fallback = self._cfg.get('fallback', {})
+        mode = str(fallback.get('mode', 'single')).strip().lower()
+        return mode == 'random_folder' and self._fallback_rotate_seconds() > 0
+
+    def _fallback_rotate_seconds(self) -> int:
+        try:
+            seconds = int(self._cfg.get('fallback', {}).get('rotate_seconds', 300))
+            return max(0, seconds)
+        except (TypeError, ValueError):
+            return 300
+
     def _rgb_tuple(self, value, default):
         try:
             if isinstance(value, str):
@@ -603,7 +654,7 @@ class Vinyltron:
                 "hardware_mapping=%r disable_hardware_pulsing=%r slowdown_gpio=%r "
                 "limit_refresh_rate_hz=%r "
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
-                "fallback_selected=%r progress_height=%r progress_foreground=%r "
+                "fallback_selected=%r fallback_rotate_seconds=%r progress_height=%r progress_foreground=%r "
                 "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
             ),
             source,
@@ -619,6 +670,7 @@ class Vinyltron:
             fallback.get('mode', 'single'),
             fallback.get('image_folder'),
             fallback.get('selected_image'),
+            fallback.get('rotate_seconds', 300),
             overlays.get('progress_bar_height'),
             overlays.get('progress_bar_foreground'),
             overlays.get('progress_bar_background'),
@@ -652,6 +704,7 @@ class Vinyltron:
         self._running = False
         with self._overlay_lock:
             self._cancel_fallback_locked()
+            self._cancel_idle_rotation_locked()
             self._cancel_overlay_locked()
             self._cancel_progress_locked()
             self._badge_visible = False
@@ -672,6 +725,7 @@ class Vinyltron:
             new_format_badge = self._cfg.get('overlays', {}).get('format_badge', False)
             with self._overlay_lock:
                 self._cancel_fallback_locked()
+                self._cancel_idle_rotation_locked()
                 self._cancel_overlay_locked()
                 self._cancel_progress_locked(clear_visible=True)
                 if not new_format_badge and self._badge_visible:
@@ -711,6 +765,8 @@ class Vinyltron:
 
     def run(self):
         self._display.show_fallback()
+        with self._overlay_lock:
+            self._schedule_idle_rotation_locked('startup')
         self._client.start()
         log.info("Vinyltron running")
         while self._running:
