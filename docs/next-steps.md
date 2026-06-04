@@ -136,3 +136,11 @@ When Idle Mode is `Random Folder Image`, Vinyltron can rotate through images in 
 - `0` disables timed rotation.
 - `300` changes the photo every five minutes.
 - Rotation stops as soon as Volumio starts playing or paused album art is shown.
+
+Use `tools/convert-idle-images.py` to pre-convert normal photos into 64x64 optimized PNGs before copying them into `/data/INTERNAL/Vinyltron/idle-images`:
+
+```bash
+python3 tools/convert-idle-images.py ~/Pictures/vinyltron /tmp/vinyltron-idle --recursive
+```
+
+The converter applies EXIF orientation, center-crops to square, resizes with LANCZOS, and writes lossless PNG output.
