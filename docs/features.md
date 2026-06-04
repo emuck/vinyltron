@@ -61,6 +61,10 @@ Implemented behavior:
 - Folder images are loaded only when a real fallback occurs after debounce, then converted
   to RGB, center-cropped to square, resized to 64x64 with LANCZOS, gamma-corrected, and
   shown. The source images are not overwritten.
+- Optional pre-conversion is available with `tools/convert-idle-images.py` for photo-frame
+  use. It accepts common image formats plus HEIC/HEIF, applies EXIF orientation, center
+  crop, LANCZOS resize, and writes optimized 64x64 PNG files that are cheap to store and
+  fast to load.
 - If selected/random images are missing, invalid, or corrupt, the daemon falls back to
   `assets/idle.png`.
 - Plugin install creates `/data/INTERNAL/Vinyltron/idle-images` and makes it writable by
@@ -71,6 +75,9 @@ Validation:
 - Confirm both appear in the plugin Idle Image dropdown.
 - Select one image and confirm it appears after the fallback debounce.
 - Select random-folder mode and confirm real stop/fallback events choose from folder images.
+- Convert a folder of phone photos with `tools/convert-idle-images.py`, copy the generated
+  PNGs into `/data/INTERNAL/Vinyltron/idle-images`, and confirm random-folder mode includes
+  them.
 - Confirm corrupt/unsupported files are ignored or skipped without blocking fallback.
 - Confirm `systemctl reload vinyltron` reloads idle settings without a full restart.
 

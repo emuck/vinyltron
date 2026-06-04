@@ -214,6 +214,24 @@ Expected:
 - Portrait and landscape images are center-cropped to square and rendered as 64x64.
 - Empty folders, missing selected files, and corrupt files fall back to `assets/idle.png`.
 
+### Idle Photo Import Workflow
+
+Convert source photos on the Mac before copying them to Volumio:
+
+```bash
+python3 tools/convert-idle-images.py "$HOME/Downloads/convert" /tmp/vinyltron-idle --recursive
+rsync -avz /tmp/vinyltron-idle/ volumio@192.168.88.50:/data/INTERNAL/Vinyltron/idle-images/
+```
+
+Expected:
+- Output files are optimized 64x64 PNGs, typically under 15 KB each.
+- HEIC/HEIF iPhone photos are accepted when ImageMagick `magick` or macOS `sips` is
+  available.
+- Reopen the plugin settings page and confirm the new PNG files are visible in the idle
+  image folder.
+- Set `Idle Mode = Random Folder Image` and `Photo Interval (seconds)` to a short value,
+  such as `60`, to confirm images rotate while Volumio is stopped.
+
 ---
 
 ## 8. Known Follow-Up Checks
