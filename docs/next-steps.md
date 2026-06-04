@@ -128,3 +128,11 @@ The Volumio plugin exposes Matrix Mapping and Refresh Limit under Hardware. Refr
 - Add basic validation for config fields before writing TOML.
 - Keep microphone recognition and microphone visualizer experiments on separate branches until they are product-ready.
 - Keep the idle image / picture-frame behavior in scope as a useful non-playing mode.
+
+## Idle Photo Frame
+
+When Idle Mode is `Random Folder Image`, Vinyltron can rotate through images in the idle folder while Volumio remains stopped/idle. The plugin exposes `Photo Interval (seconds)` in the Idle Image section:
+
+- `0` disables timed rotation.
+- `300` changes the photo every five minutes.
+- Rotation stops as soon as Volumio starts playing or paused album art is shown.
