@@ -2,12 +2,15 @@
 import argparse
 import hashlib
 import os
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 
 from PIL import Image, ImageOps
 
 
-IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'}
+IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp', '.heic', '.heif'}
 
 
 def center_crop_square(img):
@@ -28,9 +31,37 @@ def output_name(path, source_root):
     return f'{safe}-{digest}.png'
 
 
-def convert_image(src, dst, size):
-    with Image.open(src) as img:
+def open_source_image(src):
+    try:
+        img = Image.open(src)
         img = ImageOps.exif_transpose(img).convert('RGB')
+        return img
+    except Exception:
+        if src.suffix.lower() not in ('.heic', '.heif'):
+            raise
+        return open_heic_with_sips(src)
+
+
+def open_heic_with_sips(src):
+    sips = shutil.which('sips')
+    if not sips:
+        raise RuntimeError('HEIC/HEIF input requires Pillow HEIF support or macOS sips')
+
+    with tempfile.TemporaryDirectory(prefix='vinyltron-heic-') as tmp:
+        converted = Path(tmp) / (src.stem + '.png')
+        subprocess.run(
+            [sips, '-s', 'format', 'png', str(src), '--out', str(converted)],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        with Image.open(converted) as img:
+            img = ImageOps.exif_transpose(img).convert('RGB')
+            return img.copy()
+
+
+def convert_image(src, dst, size):
+    with open_source_image(src) as img:
         img = center_crop_square(img)
         img = img.resize((size, size), Image.LANCZOS)
         dst.parent.mkdir(parents=True, exist_ok=True)

@@ -144,3 +144,5 @@ python3 tools/convert-idle-images.py ~/Pictures/vinyltron /tmp/vinyltron-idle --
 ```
 
 The converter applies EXIF orientation, center-crops to square, resizes with LANCZOS, and writes lossless PNG output.
+
+HEIC/HEIF iPhone photos are accepted. If Pillow cannot open them directly, the converter falls back to macOS `sips` automatically.
