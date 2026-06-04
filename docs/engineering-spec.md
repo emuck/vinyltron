@@ -225,6 +225,11 @@ transpose, converts to RGB, center-crops to square, resizes to 64x64, applies th
 gamma LUT, and renders them. Random selection happens only when the fallback state is
 entered after debounce, not on every render.
 
+For photo-frame use, `tools/convert-idle-images.py` can pre-convert source photos into
+64x64 optimized PNGs before they are copied to `image_folder`. This reduces storage,
+startup decode cost, and idle-rotation CPU work. HEIC/HEIF files are supported through
+Pillow if available, otherwise ImageMagick `magick`, otherwise macOS `sips`.
+
 ## rpi-rgb-led-matrix Build
 
 Must build from source. Current HEAD fails to compile on Buster/GCC8 due to Pi 5 RP1
