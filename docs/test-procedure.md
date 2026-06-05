@@ -267,6 +267,6 @@ journalctl -u vinyltron -b --no-pager | tail -120
 
 Check for:
 - `Config startup:` or `Config reload:` showing expected `fallback_mode`,
-  `fallback_folder`, and `fallback_selected` values.
+  `fallback_folder`, `fallback_selected`, and `volumio_artwork_enabled` values.
 - `Loaded idle image ...` when fallback is shown.
 - `Could not load idle image ...` warnings for corrupt or unreadable files.

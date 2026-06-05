@@ -1,6 +1,7 @@
 [volumio]
 host = "volumio.local"
 port = 3000
+artwork_enabled = true
 
 [display]
 brightness = 80

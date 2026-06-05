@@ -85,6 +85,7 @@ class Vinyltron:
         self._overlay_lock = threading.Lock()
         self._badge_timer: Optional[threading.Timer] = None
         self._badge_visible = False
+        self._fallback_visible = False
         self._fallback_timer: Optional[threading.Timer] = None
         self._fallback_timer_id = 0
         self._idle_rotation_timer: Optional[threading.Timer] = None
@@ -109,7 +110,7 @@ class Vinyltron:
         status = state.get('status', 'stop')
         albumart = state.get('albumart', '')
 
-        if status not in ('play', 'pause'):
+        if status not in ('play', 'pause') or not self._volumio_artwork_enabled():
             with self._overlay_lock:
                 self._schedule_fallback_locked(status)
             return
@@ -174,6 +175,7 @@ class Vinyltron:
             with self._overlay_lock:
                 if album_changed or albumart != self._current_albumart:
                     self._display.show_image(img)
+                    self._fallback_visible = False
             with self._state_lock:
                 self._current_albumart = albumart
                 self._current_album_key = album_key
@@ -195,6 +197,7 @@ class Vinyltron:
                 self._cancel_progress_locked(clear_visible=album_changed)
                 self._badge_visible = False
                 self._display.show_fallback()
+                self._fallback_visible = True
             log.info("Album art unavailable; showing fallback for current track")
             with self._state_lock:
                 if seq != self._state_seq or track_key != self._current_track_key:
@@ -401,7 +404,7 @@ class Vinyltron:
             self._badge_timer = None
 
     def _schedule_fallback_locked(self, status: str):
-        if self._fallback_timer:
+        if self._fallback_timer or self._fallback_visible:
             return
         self._fallback_timer_id += 1
         timer_id = self._fallback_timer_id
@@ -456,6 +459,7 @@ class Vinyltron:
             if not self._display_on or not self._fallback_rotation_enabled():
                 return
             self._display.show_fallback()
+            self._fallback_visible = True
             self._schedule_idle_rotation_locked(status)
         log.info("Status: %s — rotated idle random image", status)
 
@@ -468,6 +472,7 @@ class Vinyltron:
             self._cancel_progress_locked()
             self._badge_visible = False
             self._display.show_fallback()
+            self._fallback_visible = True
             self._schedule_idle_rotation_locked(status)
         with self._state_lock:
             self._state_seq += 1
@@ -625,6 +630,9 @@ class Vinyltron:
         except (TypeError, ValueError):
             return 300
 
+    def _volumio_artwork_enabled(self) -> bool:
+        return bool(self._cfg.get('volumio', {}).get('artwork_enabled', True))
+
     def _rgb_tuple(self, value, default):
         try:
             if isinstance(value, str):
@@ -648,11 +656,12 @@ class Vinyltron:
         display = self._cfg.get('display', {})
         overlays = self._cfg.get('overlays', {})
         fallback = self._cfg.get('fallback', {})
+        volumio = self._cfg.get('volumio', {})
         log.info(
             (
                 "Config %s: display_on=%r brightness=%r gamma=%r rotation=%r "
                 "hardware_mapping=%r disable_hardware_pulsing=%r slowdown_gpio=%r "
-                "limit_refresh_rate_hz=%r "
+                "limit_refresh_rate_hz=%r volumio_artwork_enabled=%r "
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
                 "fallback_selected=%r fallback_rotate_seconds=%r progress_height=%r progress_foreground=%r "
                 "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
@@ -666,6 +675,7 @@ class Vinyltron:
             display.get('disable_hardware_pulsing', False),
             display.get('slowdown_gpio'),
             display.get('limit_refresh_rate_hz', 0),
+            volumio.get('artwork_enabled', True),
             fallback.get('image'),
             fallback.get('mode', 'single'),
             fallback.get('image_folder'),
@@ -709,6 +719,7 @@ class Vinyltron:
             self._cancel_progress_locked()
             self._badge_visible = False
             self._display.clear()
+            self._fallback_visible = False
         with self._state_lock:
             self._state_seq += 1
             self._pending_track_key = None
@@ -732,9 +743,11 @@ class Vinyltron:
                     self._display.clear_badge()
                 self._badge_visible = False
                 self._display.reconfigure(self._cfg)
+                self._fallback_visible = False
             if not self._display_on:
                 with self._overlay_lock:
                     self._display.clear()
+                    self._fallback_visible = False
                 with self._state_lock:
                     self._state_seq += 1
                     self._current_albumart = None
@@ -764,8 +777,9 @@ class Vinyltron:
             log.warning("Config reload failed: %s", e)
 
     def run(self):
-        self._display.show_fallback()
         with self._overlay_lock:
+            self._display.show_fallback()
+            self._fallback_visible = True
             self._schedule_idle_rotation_locked('startup')
         self._client.start()
         log.info("Vinyltron running")
