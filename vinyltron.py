@@ -110,9 +110,20 @@ class Vinyltron:
         status = state.get('status', 'stop')
         albumart = state.get('albumart', '')
 
-        if status not in ('play', 'pause') or not self._volumio_artwork_enabled():
+        if status not in ('play', 'pause'):
             with self._overlay_lock:
-                self._schedule_fallback_locked(status)
+                if self._fallback_visible:
+                    self._clear_playback_overlays_on_fallback_locked(status)
+                    clear_track_state = True
+                else:
+                    self._schedule_fallback_locked(status)
+                    clear_track_state = False
+            if clear_track_state:
+                self._clear_current_track_state()
+            return
+
+        if not self._volumio_artwork_enabled():
+            self._on_idle_artwork_state(state, albumart, status)
             return
 
         with self._overlay_lock:
@@ -162,6 +173,34 @@ class Vinyltron:
             name="albumart-fetch",
         )
         worker.start()
+
+    def _on_idle_artwork_state(self, state: Dict, albumart: str, status: str):
+        with self._overlay_lock:
+            self._ensure_fallback_background_locked(status)
+
+        track_key = self._track_key(state, albumart)
+        album_key = self._album_key(state, albumart)
+
+        with self._state_lock:
+            is_current_track = track_key == self._current_track_key
+
+        if is_current_track:
+            self._sync_progress_from_state(state)
+            return
+
+        log.info("New track metadata over idle image: %s — %s", state.get('artist'), state.get('title'))
+        self._log_format_state(state)
+
+        with self._state_lock:
+            album_changed = album_key != self._current_album_key
+            self._current_albumart = albumart
+            self._current_album_key = album_key
+            self._current_track_key = track_key
+            self._pending_track_key = None
+
+        self._sync_progress_from_state(state)
+        if album_changed:
+            self._show_format_badge(state)
 
     def _load_track_image(self, seq: int, state: Dict, albumart: str, track_key: str, album_key: str, album_changed: bool):
         img = self._fetch_albumart(albumart)
@@ -426,6 +465,30 @@ class Vinyltron:
             self._fallback_timer.cancel()
             self._fallback_timer = None
         self._fallback_timer_id += 1
+
+    def _ensure_fallback_background_locked(self, status: str):
+        if self._fallback_visible:
+            return
+        self._cancel_fallback_locked()
+        self._display.show_fallback()
+        self._fallback_visible = True
+        self._schedule_idle_rotation_locked(status)
+
+    def _clear_playback_overlays_on_fallback_locked(self, status: str):
+        self._cancel_overlay_locked()
+        self._cancel_progress_locked(clear_visible=True)
+        if self._badge_visible:
+            self._display.clear_badge()
+        self._badge_visible = False
+        self._schedule_idle_rotation_locked(status)
+
+    def _clear_current_track_state(self):
+        with self._state_lock:
+            self._state_seq += 1
+            self._current_albumart = None
+            self._current_album_key = None
+            self._current_track_key = None
+            self._pending_track_key = None
 
     def _schedule_idle_rotation_locked(self, status: str):
         if not self._fallback_rotation_enabled():

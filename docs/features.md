@@ -203,7 +203,9 @@ is configured during `RGBMatrix` construction.
 
 When Volumio artwork is disabled, Vinyltron still watches Volumio state but does not fetch
 or display playback album art. The display remains governed by idle settings, including
-random folder rotation for photo-frame use.
+random folder rotation for photo-frame use. Playback overlays still apply on top of the
+idle image: progress follows `Progress Height`, and the format badge follows the existing
+`Format Overlay` toggle.
 
 **Publication goal:** Submit to Volumio plugin store as open-source alternative to
 commercial album art displays (e.g. TuneShine at $199 — our BOM is ~$67, and we support
