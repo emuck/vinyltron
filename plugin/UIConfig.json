@@ -15,7 +15,7 @@
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["brightness", "gamma", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "format_font", "badge_duration"],
+                "data": ["brightness", "gamma", "volumio_artwork_enabled", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "format_font", "badge_duration"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -54,6 +54,13 @@
                         {"value": "2.4", "label": "2.4 — Dark"}
                     ],
                     "doc": "Display gamma correction curve"
+                },
+                {
+                    "id": "volumio_artwork_enabled",
+                    "element": "switch",
+                    "label": "Volumio Artwork",
+                    "value": true,
+                    "doc": "Show Volumio album art while music is playing. Turn off to keep the idle image or random photo folder on screen."
                 },
                 {
                     "id": "progress_bar_height",

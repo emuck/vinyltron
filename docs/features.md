@@ -188,6 +188,7 @@ Volumio's UI under Settings -> Plugins -> Vinyltron. No separate web UI or SSH r
 Settings exposed:
 - Brightness (select 10-100)
 - Gamma (select: 1.8 / 2.0 / 2.2 / 2.4)
+- Volumio artwork toggle; disable it to keep idle/photo-frame images on screen
 - Progress height (typed 0-64; 0 disables)
 - Progress fill color
 - Progress track color, including album-art passthrough
@@ -199,6 +200,10 @@ Settings exposed:
 On save: plugin writes `config.toml`, sends `SIGHUP` to vinyltron daemon → daemon reloads
 display settings without restart. Rotation changes require restart because matrix geometry
 is configured during `RGBMatrix` construction.
+
+When Volumio artwork is disabled, Vinyltron still watches Volumio state but does not fetch
+or display playback album art. The display remains governed by idle settings, including
+random folder rotation for photo-frame use.
 
 **Publication goal:** Submit to Volumio plugin store as open-source alternative to
 commercial album art displays (e.g. TuneShine at $199 — our BOM is ~$67, and we support

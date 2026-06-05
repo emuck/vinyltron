@@ -1,6 +1,7 @@
 {
     "brightness":   {"type": "number",  "value": 80},
     "gamma":        {"type": "string",  "value": "2.2"},
+    "volumio_artwork_enabled": {"type": "boolean", "value": true},
     "rotation":     {"type": "string",  "value": "270"},
     "hardware_mapping": {"type": "string", "value": "adafruit-hat-pwm"},
     "limit_refresh_rate_hz": {"type": "number", "value": 0},

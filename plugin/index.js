@@ -62,19 +62,20 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         s[0].content[0].value = {value: brightness, label: brightness + '%'};
         var gamma = self.config.get('gamma');
         s[0].content[1].value = {value: gamma, label: gamma};
+        s[0].content[2].value = self.config.get('volumio_artwork_enabled') !== false;
         var saved_progress_bar_height = self.config.get('progress_bar_height');
         var progress_bar_height = (saved_progress_bar_height === undefined || saved_progress_bar_height === null ? 0 : saved_progress_bar_height).toString();
-        s[0].content[2].value = progress_bar_height;
+        s[0].content[3].value = progress_bar_height;
         var progress_bar_foreground = self.config.get('progress_bar_foreground') || '255,255,255';
-        s[0].content[3].value = {value: progress_bar_foreground, label: self._labelForProgressColor(progress_bar_foreground)};
+        s[0].content[4].value = {value: progress_bar_foreground, label: self._labelForProgressColor(progress_bar_foreground)};
         var progress_bar_background = self.config.get('progress_bar_background');
         if (progress_bar_background === undefined || progress_bar_background === null) progress_bar_background = '';
-        s[0].content[4].value = {value: progress_bar_background, label: self._labelForProgressColor(progress_bar_background)};
-        s[0].content[5].value = self.config.get('format_badge');
+        s[0].content[5].value = {value: progress_bar_background, label: self._labelForProgressColor(progress_bar_background)};
+        s[0].content[6].value = self.config.get('format_badge');
         var format_font = self.config.get('format_font') || 'tom_thumb';
-        s[0].content[6].value = {value: format_font, label: self._labelForFormatFont(format_font)};
+        s[0].content[7].value = {value: format_font, label: self._labelForFormatFont(format_font)};
         var badge_duration = (self.config.get('badge_duration') || 10).toString();
-        s[0].content[7].value = {value: badge_duration, label: badge_duration + ' seconds'};
+        s[0].content[8].value = {value: badge_duration, label: badge_duration + ' seconds'};
 
         // Section 1: Idle image
         var fallback_mode = self.config.get('fallback_mode') || 'single';
@@ -162,6 +163,7 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['display', 'hardware_mapping', 'hardware_mapping', 'string'],
             ['display', 'limit_refresh_rate_hz', 'limit_refresh_rate_hz', 'number'],
             ['display', 'display_on', 'display_on', 'boolean'],
+            ['volumio', 'artwork_enabled', 'volumio_artwork_enabled', 'boolean'],
             ['fallback', 'mode', 'fallback_mode', 'string'],
             ['fallback', 'image_folder', 'fallback_image_folder', 'string'],
             ['fallback', 'selected_image', 'fallback_selected_image', 'string'],
@@ -234,6 +236,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
 
     var brightness   = parseInt(data['brightness']['value']);
     var gamma        = data['gamma']['value'];
+    var volumio_artwork_enabled = data['volumio_artwork_enabled'] !== false && data['volumio_artwork_enabled'] !== 'false';
     var progress_bar_height_value = data['progress_bar_height'] && data['progress_bar_height']['value'] !== undefined ? data['progress_bar_height']['value'] : data['progress_bar_height'];
     var progress_bar_height = progress_bar_height_value !== undefined ? parseInt(progress_bar_height_value) : 0;
     var progress_bar_foreground = data['progress_bar_foreground'] ? data['progress_bar_foreground']['value'] : '255,255,255';
@@ -248,6 +251,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
 
     self.config.set('brightness', brightness);
     self.config.set('gamma', gamma);
+    self.config.set('volumio_artwork_enabled', volumio_artwork_enabled);
     self.config.set('progress_bar', progress_bar);
     self.config.set('progress_bar_height', progress_bar_height);
     self.config.set('progress_bar_foreground', progress_bar_foreground);
@@ -259,6 +263,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     self.logger.info('Vinyltron: saving display settings: ' + JSON.stringify({
         brightness: brightness,
         gamma: gamma,
+        volumio_artwork_enabled: volumio_artwork_enabled,
         progress_bar: progress_bar,
         progress_bar_height: progress_bar_height,
         progress_bar_foreground: progress_bar_foreground,
@@ -269,6 +274,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     }));
 
     self._patchConfigToml({brightness: brightness, gamma: gamma,
+                           volumio_artwork_enabled: volumio_artwork_enabled,
                            progress_bar: progress_bar,
                            progress_bar_height: progress_bar_height,
                            progress_bar_foreground: progress_bar_foreground,
@@ -337,6 +343,7 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
 
         if (fields.brightness !== undefined) content = this._patchTomlInSection(content, 'display', 'brightness', fields.brightness);
         if (fields.gamma !== undefined) content = this._patchTomlInSection(content, 'display', 'gamma', fields.gamma);
+        if (fields.volumio_artwork_enabled !== undefined) content = this._patchTomlInSection(content, 'volumio', 'artwork_enabled', fields.volumio_artwork_enabled, 'port');
         if (fields.rotation !== undefined) content = this._patchTomlInSection(content, 'display', 'rotation', parseInt(fields.rotation));
         if (fields.hardware_mapping !== undefined) content = this._patchTomlInSection(content, 'display', 'hardware_mapping', this._tomlString(fields.hardware_mapping), 'display_on');
         if (fields.disable_hardware_pulsing !== undefined) content = this._patchTomlInSection(content, 'display', 'disable_hardware_pulsing', fields.disable_hardware_pulsing, 'hardware_mapping');
