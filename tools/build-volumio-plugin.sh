@@ -27,6 +27,10 @@ rsync -av \
 
 echo "Copying daemon runtime..."
 rsync -av \
+  --exclude='.git/' \
+  --exclude='.claude/' \
+  --exclude='.env' \
+  --exclude='.env.*' \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
   --exclude='.DS_Store' \

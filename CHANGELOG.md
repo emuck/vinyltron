@@ -3,6 +3,11 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
+## [0.2.1] - 2026-06-09
+
+- Fix `tools/build-volumio-plugin.sh` packaging `.git/` and `.claude/` into the plugin
+  zip's bundled daemon directory.
+
 ## [0.2.0] - 2026-06-09
 
 - Add a phone-friendly plugin photo manager for idle image upload, selection, random mode,

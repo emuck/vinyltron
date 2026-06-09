@@ -278,9 +278,9 @@ This commit predates `pyproject.toml`. Build manually with Cython:
 ```bash
 sudo apt-get install -y cython3
 cd bindings/python
-wget https://raw.githubusercontent.com/emuck/vinyltron/v0.2.0/tools/matrix-build/setup.py
+wget https://raw.githubusercontent.com/emuck/vinyltron/v0.2.1/tools/matrix-build/setup.py
 mkdir -p rgbmatrix/shims
-wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinyltron/v0.2.0/tools/matrix-build/rgbmatrix/shims/Imaging.h
+wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinyltron/v0.2.1/tools/matrix-build/rgbmatrix/shims/Imaging.h
 python3 setup.py build_ext --inplace
 ```
 
