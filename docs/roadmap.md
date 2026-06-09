@@ -54,11 +54,11 @@ _Plugin targets the current platform._
 
 _Docs are accurate, sparse, and useful to a new user finding the repo cold._
 
-- [ ] README is the single entry point: quick start via plugin, hardware wiring, architecture diagram
+- [x] README is the single entry point: quick start via plugin, hardware wiring, architecture diagram
 - [x] `docs/next-steps.md` converted from dev log to forward-looking notes or removed
-- [ ] `docs/features.md` trimmed to what is shipped; future ideas removed or marked clearly
-- [ ] `CHANGELOG.md` current through store submission version
-- [ ] Internal dev scripts (`deploy.sh`, `dev-install-plugin.sh`) have one-line headers explaining their purpose
+- [x] `docs/features.md` removed — content folded into engineering-spec.md
+- [x] `CHANGELOG.md` current through store submission version
+- [x] Internal dev scripts (`deploy.sh`, `dev-install-plugin.sh`) have one-line headers explaining their purpose
 
 ---
 
