@@ -11,7 +11,7 @@ Behavior:
 - `plugin/package.json` owns the Volumio plugin package version.
 - `CHANGELOG.md` records user-facing changes.
 - `docs/release.md` defines the release checklist and tag format.
-- Git tags should use `vinyltron-vX.Y.Z` because Vinyltron lives inside a larger repo.
+- Git tags use `vX.Y.Z`.
 
 ### Volumio Ecosystem Packaging Goal
 
