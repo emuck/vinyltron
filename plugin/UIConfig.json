@@ -174,7 +174,7 @@
                     "element": "input",
                     "label": "Photo Manager",
                     "value": "http://volumio.local:3018/photos",
-                    "doc": "Open this URL on your iPhone to add, select, or delete idle photos."
+                    "doc": "Open this URL in a browser on the same network to add, select, or delete idle photos."
                 }
             ]
         },
@@ -228,7 +228,7 @@
                     "element": "input",
                     "label": "Refresh Limit (Hz)",
                     "value": "0",
-                    "doc": "Caps the HUB75 scan refresh rate. 0 is uncapped. 90-140 Hz is a useful tuning range; 120 Hz reduced flicker on the test bonnet setup."
+                    "doc": "Caps the HUB75 scan refresh rate. 0 is uncapped. 90-140 Hz is a useful tuning range; 120 Hz reduced flicker in testing."
                 }
             ]
         },

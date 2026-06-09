@@ -45,7 +45,8 @@ seengreat wiring corrects color ordering in hardware.
 sudo python3 ~/test_matrix.py
 ```
 
-`test_matrix.py` sets four corners to distinct colors with `Rotate:270` applied.
+`test_matrix.py` is a small one-off script (not in this repo) that sets four corners to
+distinct colors with `Rotate:270` applied.
 Expected: RED top-left, GREEN top-right, BLUE bottom-left, YELLOW bottom-right.
 
 ✅ Confirmed working 2026-05-23.
@@ -119,7 +120,6 @@ Development deployment note: `./deploy.sh` preserves the legacy Pi runtime `conf
 by default. The plugin-owned install path uses
 `/data/configuration/user_interface/vinyltron/config.toml`; use `./dev-install-plugin.sh`
 when changing plugin-owned daemon files.
-when intentionally replacing the remote config with the repo default.
 
 ---
 
@@ -259,14 +259,11 @@ Expected:
 
 ---
 
-## 8. Known Follow-Up Checks
+## 8. Troubleshooting
 
-### Overlay Startup After Upgrade
+### Overlay Not Appearing After Upgrade
 
-Observed once: immediately after upgrade, the progress bar and format text did not appear.
-After changing plugin settings and reloading, overlays eventually started again.
-
-If this repeats, capture:
+If the progress bar or format text does not appear after a plugin upgrade, capture:
 ```bash
 journalctl -u vinyltron -b --no-pager | tail -120
 cat /data/configuration/user_interface/vinyltron/config.toml

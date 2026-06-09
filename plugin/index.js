@@ -13,6 +13,7 @@ var BUNDLED_CONFIG_TOML = __dirname + '/vinyltron/config.toml';
 var DEFAULT_IDLE_FOLDER = '/data/INTERNAL/Vinyltron/idle-images';
 var IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'];
 var SYSTEMCTL = '/usr/bin/sudo /bin/systemctl';
+// Binds to all interfaces — designed for trusted home LAN use, no authentication
 var PHOTO_MANAGER_HOST = '0.0.0.0';
 var PHOTO_MANAGER_PORT = 3018;
 var PHOTO_MANAGER_MAX_BYTES = 32 * 1024 * 1024;

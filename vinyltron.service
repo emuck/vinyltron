@@ -1,3 +1,5 @@
+# Standalone dev service — for deploy.sh workflow only.
+# The plugin-managed service is written by plugin/install.sh at install time.
 [Unit]
 Description=Vinyltron — HUB75 album art display
 After=network.target volumio.service

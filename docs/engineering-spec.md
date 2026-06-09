@@ -26,7 +26,7 @@ HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
 - **Debian Buster** (not Bullseye as initially assumed) — Python 3.7, GCC 8
 - Standard apt, systemd available
 - User customizations to `/boot/config.txt` should go in `/boot/userconfig.txt`
-  to survive Volumio system updates — `install.sh` will write there
+  to survive Volumio system updates
 
 ### HUB75E Panel (64×64) — Seengreat P3.0-64x64
 - 5-bit row addressing (A/B/C/D/E) — HUB75E, not standard 4-bit HUB75
@@ -96,9 +96,8 @@ Pi GND pin ──► Panel GND (common ground required)
 ## Software Architecture
 
 ### Runtime
-- **Python 3.7** (Volumio on Buster — not 3.11+ as originally planned; code must be 3.7-compatible)
-- Runs as a systemd service, starts after Volumio (`After=volumio.service`)
-- Drops privileges after GPIO initialization
+- **Python 3.7+** — tested on Buster/Volumio 3.x (Python 3.7); plugin targets Bookworm/Volumio 4 (Python 3.11)
+- Runs as a systemd service, starts after Volumio (`After=volumio.service`), runs as root
 - Logging via Python `logging` module to journald
 
 ### Components
@@ -262,7 +261,7 @@ code. **Check out the last commit before RP1 support was added:**
 ```bash
 git clone https://github.com/hzeller/rpi-rgb-led-matrix
 cd rpi-rgb-led-matrix
-git checkout $(git log --oneline -- lib/rp1/ | tail -1 | awk '{print $1}')^
+git checkout e947417
 make -C examples-api-use
 ```
 
@@ -275,12 +274,13 @@ This commit predates `pyproject.toml`. Build manually with Cython:
 ```bash
 sudo apt-get install -y cython3
 cd bindings/python
-# setup.py and rgbmatrix/shims/Imaging.h are provided in this repo under
-# rpi-rgb-led-matrix/bindings/python/ — scp them to the Pi before building
+cp /path/to/vinyltron/tools/matrix-build/setup.py .
+cp /path/to/vinyltron/tools/matrix-build/rgbmatrix/shims/Imaging.h rgbmatrix/shims/
 python3 setup.py build_ext --inplace
 ```
 
-The `Imaging.h` stub defines a minimal `ImagingMemoryInstance` struct matching
-Pillow 5–9 layout on 32-bit ARM, avoiding the need for Pillow dev headers.
+`tools/matrix-build/` in this repo contains the custom `setup.py` and an `Imaging.h` stub.
+The stub defines a minimal `ImagingMemoryInstance` struct matching Pillow 5–9 layout on
+32-bit ARM, avoiding the need for Pillow dev headers.
 
 Use `sys.path.insert(0, '/home/volumio/rpi-rgb-led-matrix/bindings/python')` to import.
