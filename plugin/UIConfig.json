@@ -73,30 +73,17 @@
                 },
                 {
                     "id": "progress_bar_foreground",
-                    "element": "select",
+                    "element": "input",
                     "label": "Progress Fill",
-                    "value": {},
-                    "options": [
-                        {"value": "255,255,255", "label": "White"},
-                        {"value": "255,160,0",   "label": "Amber"},
-                        {"value": "0,220,80",    "label": "Green"},
-                        {"value": "0,255,255",   "label": "Cyan"}
-                    ],
-                    "doc": "Filled portion color"
+                    "value": "255,255,255",
+                    "doc": "Filled portion color as R,G,B — e.g. 255,160,0 for amber, 0,255,255 for cyan"
                 },
                 {
                     "id": "progress_bar_background",
-                    "element": "select",
+                    "element": "input",
                     "label": "Progress Track",
-                    "value": {},
-                    "options": [
-                        {"value": "",            "label": "Album Art"},
-                        {"value": "0,0,0",       "label": "Black"},
-                        {"value": "32,32,32",    "label": "Dim Gray"},
-                        {"value": "0,32,32",     "label": "Deep Cyan"},
-                        {"value": "32,20,0",     "label": "Deep Amber"}
-                    ],
-                    "doc": "Unfilled portion color"
+                    "value": "",
+                    "doc": "Unfilled portion color as R,G,B. Leave blank to show album art behind the track."
                 },
                 {
                     "id": "format_badge",
@@ -119,17 +106,10 @@
                 },
                 {
                     "id": "badge_duration",
-                    "element": "select",
-                    "label": "Format Duration",
-                    "value": {},
-                    "options": [
-                        {"value": "5",  "label": "5 seconds"},
-                        {"value": "10", "label": "10 seconds"},
-                        {"value": "15", "label": "15 seconds"},
-                        {"value": "20", "label": "20 seconds"},
-                        {"value": "30", "label": "30 seconds"}
-                    ],
-                    "doc": "How long the format badge remains visible after a new track starts"
+                    "element": "input",
+                    "label": "Format Duration (seconds)",
+                    "value": "10",
+                    "doc": "How long the format badge stays visible after a new track starts"
                 }
             ]
         },
