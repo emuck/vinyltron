@@ -3,6 +3,15 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vinyltron-vX.Y.Z` format.
 
+## Unreleased
+
+- Add a phone-friendly plugin photo manager for idle image upload, selection, random mode,
+  and deletion.
+- Add a bundled Python/Pillow upload converter that writes optimized 64x64 PNG idle images.
+- Add an optional daily matrix power schedule for photo-frame use when idle.
+- Treat zero-valued bitrate metadata as unknown instead of showing `0K`.
+- Allow active Volumio playback artwork to override the idle/photo display schedule.
+
 ## [0.1.0] - 2026-05-27
 
 Initial public-development baseline.

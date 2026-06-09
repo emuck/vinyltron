@@ -81,7 +81,8 @@ class Vinyltron:
         self._pending_track_key: Optional[str] = None
         self._state_seq = 0
         self._state_lock = threading.Lock()
-        self._display_on: bool = True
+        self._last_state: Dict = {}
+        self._display_on: bool = self._effective_display_on()
         self._overlay_lock = threading.Lock()
         self._badge_timer: Optional[threading.Timer] = None
         self._badge_visible = False
@@ -104,6 +105,17 @@ class Vinyltron:
         signal.signal(signal.SIGHUP, self._reload)
 
     def _on_state(self, state: Dict):
+        self._last_state = dict(state)
+        effective_on = self._effective_display_on(state)
+        if effective_on != self._display_on:
+            self._display_on = effective_on
+            if effective_on:
+                self._clear_current_track_state()
+                log.info("Display on by playback artwork")
+            else:
+                self._clear_display_for_power_off("Display off by schedule")
+                return
+
         if not self._display_on:
             return
 
@@ -322,7 +334,10 @@ class Vinyltron:
         digits = ''.join(ch for ch in text if ch.isdigit())
         if not digits:
             return None
-        return "%sK" % digits
+        value = int(digits)
+        if value <= 0:
+            return None
+        return "%sK" % value
 
     def _mpd_bitrate_label(self, state: Dict) -> Optional[str]:
         if self._normalized(state.get('service')) != 'mpd':
@@ -717,6 +732,7 @@ class Vinyltron:
 
     def _log_runtime_config(self, source: str):
         display = self._cfg.get('display', {})
+        schedule = self._cfg.get('schedule', {})
         overlays = self._cfg.get('overlays', {})
         fallback = self._cfg.get('fallback', {})
         volumio = self._cfg.get('volumio', {})
@@ -724,7 +740,8 @@ class Vinyltron:
             (
                 "Config %s: display_on=%r brightness=%r gamma=%r rotation=%r "
                 "hardware_mapping=%r disable_hardware_pulsing=%r slowdown_gpio=%r "
-                "limit_refresh_rate_hz=%r volumio_artwork_enabled=%r "
+                "limit_refresh_rate_hz=%r schedule_enabled=%r schedule_on=%r schedule_off=%r "
+                "effective_display_on=%r volumio_artwork_enabled=%r "
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
                 "fallback_selected=%r fallback_rotate_seconds=%r progress_height=%r progress_foreground=%r "
                 "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
@@ -738,6 +755,10 @@ class Vinyltron:
             display.get('disable_hardware_pulsing', False),
             display.get('slowdown_gpio'),
             display.get('limit_refresh_rate_hz', 0),
+            schedule.get('enabled', False),
+            schedule.get('on_time', '08:00'),
+            schedule.get('off_time', '23:00'),
+            self._effective_display_on(),
             volumio.get('artwork_enabled', True),
             fallback.get('image'),
             fallback.get('mode', 'single'),
@@ -795,7 +816,7 @@ class Vinyltron:
             self._cfg = toml.load(self._config_path)
             self._log_runtime_config("reload")
             was_on = self._display_on
-            self._display_on = self._cfg['display'].get('display_on', True)
+            self._display_on = self._effective_display_on()
             new_format_badge = self._cfg.get('overlays', {}).get('format_badge', False)
             with self._overlay_lock:
                 self._cancel_fallback_locked()
@@ -808,45 +829,97 @@ class Vinyltron:
                 self._display.reconfigure(self._cfg)
                 self._fallback_visible = False
             if not self._display_on:
-                with self._overlay_lock:
-                    self._display.clear()
-                    self._fallback_visible = False
-                with self._state_lock:
-                    self._state_seq += 1
-                    self._current_albumart = None
-                    self._current_album_key = None
-                    self._current_track_key = None
-                    self._pending_track_key = None
-                log.info("Display off")
+                self._clear_display_for_power_off("Display off")
             elif not was_on:
-                with self._state_lock:
-                    self._state_seq += 1
-                    self._current_albumart = None  # force re-fetch on next state
-                    self._current_album_key = None
-                    self._current_track_key = None
-                    self._pending_track_key = None
-                self._client.request_state()
-                log.info("Display on")
+                self._request_redisplay("Display on")
             else:
-                with self._state_lock:
-                    self._state_seq += 1
-                    self._current_albumart = None
-                    self._current_album_key = None
-                    self._current_track_key = None
-                    self._pending_track_key = None
-                self._client.request_state()
-                log.info("Config reloaded — requesting redisplay")
+                self._request_redisplay("Config reloaded — requesting redisplay")
         except Exception as e:
             log.warning("Config reload failed: %s", e)
 
-    def run(self):
+    def _effective_display_on(self, state: Optional[Dict] = None) -> bool:
+        display = self._cfg.get('display', {})
+        if not display.get('display_on', True):
+            return False
+        if self._schedule_allows_display():
+            return True
+        return self._playback_artwork_overrides_schedule(state)
+
+    def _playback_artwork_overrides_schedule(self, state: Optional[Dict] = None) -> bool:
+        if not self._volumio_artwork_enabled():
+            return False
+        state = state or self._last_state
+        return state.get('status') in ('play', 'pause')
+
+    def _schedule_allows_display(self) -> bool:
+        schedule = self._cfg.get('schedule', {})
+        if not schedule.get('enabled', False):
+            return True
+
+        on_minute = self._time_of_day_minutes(schedule.get('on_time', '08:00'))
+        off_minute = self._time_of_day_minutes(schedule.get('off_time', '23:00'))
+        if on_minute is None or off_minute is None or on_minute == off_minute:
+            return True
+
+        now = time.localtime()
+        current_minute = now.tm_hour * 60 + now.tm_min
+        if on_minute < off_minute:
+            return on_minute <= current_minute < off_minute
+        return current_minute >= on_minute or current_minute < off_minute
+
+    def _time_of_day_minutes(self, value) -> Optional[int]:
+        parts = str(value or '').strip().split(':')
+        if len(parts) != 2:
+            return None
+        try:
+            hour = int(parts[0])
+            minute = int(parts[1])
+        except ValueError:
+            return None
+        if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+            return None
+        return hour * 60 + minute
+
+    def _apply_display_schedule(self):
+        effective_on = self._effective_display_on()
+        if effective_on == self._display_on:
+            return
+        self._display_on = effective_on
+        if effective_on:
+            self._request_redisplay("Display on by schedule")
+        else:
+            self._clear_display_for_power_off("Display off by schedule")
+
+    def _clear_display_for_power_off(self, message: str):
         with self._overlay_lock:
-            self._display.show_fallback()
-            self._fallback_visible = True
-            self._schedule_idle_rotation_locked('startup')
+            self._cancel_fallback_locked()
+            self._cancel_idle_rotation_locked()
+            self._cancel_overlay_locked()
+            self._cancel_progress_locked(clear_visible=True)
+            self._badge_visible = False
+            self._display.clear()
+            self._fallback_visible = False
+        self._clear_current_track_state()
+        log.info(message)
+
+    def _request_redisplay(self, message: str):
+        self._clear_current_track_state()
+        self._client.request_state()
+        log.info(message)
+
+    def run(self):
+        if self._display_on:
+            with self._overlay_lock:
+                self._display.show_fallback()
+                self._fallback_visible = True
+                self._schedule_idle_rotation_locked('startup')
+        else:
+            with self._overlay_lock:
+                self._display.clear()
         self._client.start()
         log.info("Vinyltron running")
         while self._running:
+            self._apply_display_schedule()
             time.sleep(1)
 
 

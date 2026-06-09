@@ -188,6 +188,13 @@
                     "label": "Photo Interval (seconds)",
                     "value": "300",
                     "doc": "When Idle Mode is Random Folder Image, switch photos after this many seconds. 0 disables rotation."
+                },
+                {
+                    "id": "photo_manager_url",
+                    "element": "input",
+                    "label": "Photo Manager",
+                    "value": "http://volumio.local:3018/photos",
+                    "doc": "Open this URL on your iPhone to add, select, or delete idle photos."
                 }
             ]
         },
@@ -257,7 +264,7 @@
             },
             "saveButton": {
                 "label": "Apply",
-                "data": ["display_on"],
+                "data": ["display_on", "schedule_enabled", "schedule_on_time", "schedule_off_time"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -271,6 +278,27 @@
                     "label": "Display On",
                     "value": true,
                     "doc": "Blank the panel without stopping the service. Art resumes instantly when re-enabled."
+                },
+                {
+                    "id": "schedule_enabled",
+                    "element": "switch",
+                    "label": "Schedule",
+                    "value": false,
+                    "doc": "Turn the matrix on and off automatically each day."
+                },
+                {
+                    "id": "schedule_on_time",
+                    "element": "input",
+                    "label": "On Time",
+                    "value": "08:00",
+                    "doc": "Daily local time to turn the matrix on, using 24-hour HH:MM format."
+                },
+                {
+                    "id": "schedule_off_time",
+                    "element": "input",
+                    "label": "Off Time",
+                    "value": "23:00",
+                    "doc": "Daily local time to turn the matrix off, using 24-hour HH:MM format."
                 }
             ]
         }

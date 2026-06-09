@@ -2,14 +2,21 @@
 
 var libQ = require('kew');
 var fs = require('fs-extra');
-var exec = require('child_process').exec;
+var childProcess = require('child_process');
+var exec = childProcess.exec;
+var execFile = childProcess.execFile;
+var http = require('http');
 var path = require('path');
+var url = require('url');
 
 var CONFIG_TOML = '/data/configuration/user_interface/vinyltron/config.toml';
 var BUNDLED_CONFIG_TOML = __dirname + '/vinyltron/config.toml';
 var DEFAULT_IDLE_FOLDER = '/data/INTERNAL/Vinyltron/idle-images';
 var IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'];
 var SYSTEMCTL = '/usr/bin/sudo /bin/systemctl';
+var PHOTO_MANAGER_HOST = '0.0.0.0';
+var PHOTO_MANAGER_PORT = 3018;
+var PHOTO_MANAGER_MAX_BYTES = 32 * 1024 * 1024;
 
 module.exports = ControllerVinyltron;
 
@@ -18,6 +25,7 @@ function ControllerVinyltron(context) {
     this.commandRouter = this.context.coreCommand;
     this.logger = this.context.logger;
     this.configManager = this.context.configManager;
+    this.photoServer = null;
 }
 
 ControllerVinyltron.prototype.onVolumioStart = function() {
@@ -30,10 +38,12 @@ ControllerVinyltron.prototype.onVolumioStart = function() {
 };
 
 ControllerVinyltron.prototype.onStart = function() {
+    this._startPhotoManager();
     return this._service('start', 'plugin start');
 };
 
 ControllerVinyltron.prototype.onStop = function() {
+    this._stopPhotoManager();
     return this._service('stop', 'plugin stop');
 };
 
@@ -43,7 +53,8 @@ ControllerVinyltron.prototype.getAdditionalConf = function() {
     exec(SYSTEMCTL + ' is-active vinyltron', function(error, stdout) {
         defer.resolve({
             service_active: !error && stdout && stdout.trim() === 'active',
-            config_path: CONFIG_TOML
+            config_path: CONFIG_TOML,
+            photo_manager_url: self._photoManagerUrl()
         });
     });
     return defer.promise;
@@ -93,6 +104,7 @@ ControllerVinyltron.prototype.getUIConfig = function() {
             label: self._labelForIdleImage(fallback_selected_image, idle_options)
         };
         s[1].content[3].value = fallback_rotate_seconds.toString();
+        s[1].content[4].value = self._photoManagerUrl();
 
         // Section 2: Hardware (rotation)
         var rotation = self.config.get('rotation');
@@ -106,8 +118,11 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         limit_refresh_rate_hz = self._validRefreshLimit(limit_refresh_rate_hz);
         s[2].content[2].value = limit_refresh_rate_hz.toString();
 
-        // Section 3: Power (display_on)
+        // Section 3: Power and display schedule
         s[3].content[0].value = self.config.get('display_on');
+        s[3].content[1].value = self.config.get('schedule_enabled');
+        s[3].content[2].value = self.config.get('schedule_on_time') || '08:00';
+        s[3].content[3].value = self.config.get('schedule_off_time') || '23:00';
 
         defer.resolve(uiconf);
     } catch (e) {
@@ -174,7 +189,10 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['overlays', 'progress_bar_background', 'progress_bar_background', 'rgb'],
             ['overlays', 'format_badge', 'format_badge', 'boolean'],
             ['overlays', 'format_font', 'format_font', 'string'],
-            ['overlays', 'badge_duration', 'badge_duration', 'number']
+            ['overlays', 'badge_duration', 'badge_duration', 'number'],
+            ['schedule', 'enabled', 'schedule_enabled', 'boolean'],
+            ['schedule', 'on_time', 'schedule_on_time', 'string'],
+            ['schedule', 'off_time', 'schedule_off_time', 'string']
         ];
 
         for (var i = 0; i < mappings.length; i++) {
@@ -326,13 +344,313 @@ ControllerVinyltron.prototype.toggleDisplay = function(data) {
     var self = this;
 
     var display_on = data['display_on'] === true || data['display_on'] === 'true';
+    var schedule_enabled = data['schedule_enabled'] === true || data['schedule_enabled'] === 'true';
+    var schedule_on_time = self._validTimeOfDay(data['schedule_on_time'] && data['schedule_on_time']['value'] !== undefined ? data['schedule_on_time']['value'] : data['schedule_on_time'], '08:00');
+    var schedule_off_time = self._validTimeOfDay(data['schedule_off_time'] && data['schedule_off_time']['value'] !== undefined ? data['schedule_off_time']['value'] : data['schedule_off_time'], '23:00');
     self.config.set('display_on', display_on);
-    self.logger.info('Vinyltron: saving power setting: ' + JSON.stringify({display_on: display_on}));
-    self._patchConfigToml({display_on: display_on});
+    self.config.set('schedule_enabled', schedule_enabled);
+    self.config.set('schedule_on_time', schedule_on_time);
+    self.config.set('schedule_off_time', schedule_off_time);
+    self.logger.info('Vinyltron: saving power setting: ' + JSON.stringify({
+        display_on: display_on,
+        schedule_enabled: schedule_enabled,
+        schedule_on_time: schedule_on_time,
+        schedule_off_time: schedule_off_time
+    }));
+    self._patchConfigToml({
+        display_on: display_on,
+        schedule_enabled: schedule_enabled,
+        schedule_on_time: schedule_on_time,
+        schedule_off_time: schedule_off_time
+    });
 
     self._service('reload', 'power setting save');
 
     return libQ.resolve();
+};
+
+ControllerVinyltron.prototype._startPhotoManager = function() {
+    var self = this;
+    if (self.photoServer) return;
+
+    self.photoServer = http.createServer(function(req, res) {
+        self._handlePhotoManagerRequest(req, res);
+    });
+    self.photoServer.on('error', function(e) {
+        self.logger.error('Vinyltron: photo manager server failed: ' + e);
+    });
+    self.photoServer.listen(PHOTO_MANAGER_PORT, PHOTO_MANAGER_HOST, function() {
+        self.logger.info('Vinyltron: photo manager listening on port ' + PHOTO_MANAGER_PORT);
+    });
+};
+
+ControllerVinyltron.prototype._stopPhotoManager = function() {
+    if (!this.photoServer) return;
+    try {
+        this.photoServer.close();
+    } catch (e) {
+        this.logger.warn('Vinyltron: photo manager close failed: ' + e);
+    }
+    this.photoServer = null;
+};
+
+ControllerVinyltron.prototype._handlePhotoManagerRequest = function(req, res) {
+    var self = this;
+    var parsed = url.parse(req.url || '/', true);
+    var pathname = parsed.pathname || '/';
+
+    if (req.method === 'GET' && (pathname === '/' || pathname === '/photos' || pathname === '/photo-manager.html')) {
+        self._sendFile(res, path.join(__dirname, 'photo-manager.html'), 'text/html; charset=utf-8');
+        return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/images') {
+        self._json(res, 200, {ok: true, images: self._idleImages()});
+        return;
+    }
+
+    if (req.method === 'GET' && pathname.indexOf('/image/') === 0) {
+        var imageName = decodeURIComponent(pathname.slice('/image/'.length));
+        var imagePath = self._safeIdleImagePath(imageName);
+        if (!imagePath) {
+            self._json(res, 404, {ok: false, error: 'Image not found'});
+            return;
+        }
+        self._sendFile(res, imagePath, self._imageContentType(imagePath));
+        return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/upload') {
+        self._readJsonBody(req, res, function(body) {
+            self._uploadIdleImage(body, res);
+        });
+        return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/delete') {
+        self._readJsonBody(req, res, function(body) {
+            self._deleteIdleImage(body, res);
+        });
+        return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/select') {
+        self._readJsonBody(req, res, function(body) {
+            self._selectIdleImage(body, res);
+        });
+        return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/random') {
+        self._readJsonBody(req, res, function() {
+            self._setRandomIdleMode(res);
+        });
+        return;
+    }
+
+    self._json(res, 404, {ok: false, error: 'Not found'});
+};
+
+ControllerVinyltron.prototype._readJsonBody = function(req, res, callback) {
+    var self = this;
+    var chunks = [];
+    var total = 0;
+    var rejected = false;
+
+    req.on('data', function(chunk) {
+        if (rejected) return;
+        total += chunk.length;
+        if (total > PHOTO_MANAGER_MAX_BYTES) {
+            rejected = true;
+            self._json(res, 413, {ok: false, error: 'Upload is too large'});
+            req.destroy();
+            return;
+        }
+        chunks.push(chunk);
+    });
+    req.on('end', function() {
+        if (rejected) return;
+        try {
+            var text = Buffer.concat(chunks).toString('utf8');
+            callback(text ? JSON.parse(text) : {});
+        } catch (e) {
+            self._json(res, 400, {ok: false, error: 'Invalid JSON'});
+        }
+    });
+    req.on('error', function(e) {
+        self.logger.warn('Vinyltron: photo manager request failed: ' + e);
+    });
+};
+
+ControllerVinyltron.prototype._uploadIdleImage = function(body, res) {
+    var self = this;
+    var filename = self._sanitizeFilename(body.filename || 'photo');
+    var data = body.data || '';
+    if (!data) {
+        self._json(res, 400, {ok: false, error: 'No image data received'});
+        return;
+    }
+
+    var buffer;
+    try {
+        buffer = Buffer.from(data, 'base64');
+    } catch (e) {
+        self._json(res, 400, {ok: false, error: 'Invalid image data'});
+        return;
+    }
+    if (!buffer.length || buffer.length > PHOTO_MANAGER_MAX_BYTES) {
+        self._json(res, 413, {ok: false, error: 'Upload is too large'});
+        return;
+    }
+
+    var folder = self._idleFolder();
+    var tmpDir = fs.mkdtempSync('/tmp/vinyltron-upload-');
+    var tmpPath = path.join(tmpDir, filename || 'photo');
+    fs.ensureDirSync(folder);
+    fs.writeFileSync(tmpPath, buffer);
+
+    execFile('/usr/bin/python3', [
+        self._photoConverterPath(),
+        tmpPath,
+        folder,
+        '--source-name',
+        filename || 'photo'
+    ], {timeout: 60000, maxBuffer: 1024 * 1024}, function(error, stdout, stderr) {
+        fs.remove(tmpDir, function() {});
+        if (error) {
+            self.logger.error('Vinyltron: photo upload conversion failed: ' + error + ' ' + stderr);
+            self._json(res, 500, {ok: false, error: 'Could not convert image'});
+            return;
+        }
+
+        try {
+            var result = JSON.parse(stdout);
+            self._service('reload', 'idle photo upload');
+            self._json(res, 200, {ok: true, image: result, images: self._idleImages()});
+        } catch (e) {
+            self.logger.error('Vinyltron: photo upload returned invalid JSON: ' + stdout);
+            self._json(res, 500, {ok: false, error: 'Could not read conversion result'});
+        }
+    });
+};
+
+ControllerVinyltron.prototype._deleteIdleImage = function(body, res) {
+    var filename = this._sanitizeFilename(body.filename || '');
+    var imagePath = this._safeIdleImagePath(filename);
+    if (!imagePath) {
+        this._json(res, 404, {ok: false, error: 'Image not found'});
+        return;
+    }
+
+    fs.removeSync(imagePath);
+    if ((this.config.get('fallback_selected_image') || '') === filename) {
+        this.config.set('fallback_selected_image', '');
+        this._patchConfigToml({fallback_selected_image: ''});
+    }
+    this._service('reload', 'idle photo delete');
+    this._json(res, 200, {ok: true, images: this._idleImages()});
+};
+
+ControllerVinyltron.prototype._selectIdleImage = function(body, res) {
+    var filename = this._sanitizeFilename(body.filename || '');
+    if (!this._safeIdleImagePath(filename)) {
+        this._json(res, 404, {ok: false, error: 'Image not found'});
+        return;
+    }
+
+    this.config.set('fallback_mode', 'selected');
+    this.config.set('fallback_selected_image', filename);
+    this._patchConfigToml({fallback_mode: 'selected', fallback_selected_image: filename});
+    this._service('reload', 'idle photo select');
+    this._json(res, 200, {ok: true, images: this._idleImages()});
+};
+
+ControllerVinyltron.prototype._setRandomIdleMode = function(res) {
+    this.config.set('fallback_mode', 'random_folder');
+    this._patchConfigToml({fallback_mode: 'random_folder'});
+    this._service('reload', 'idle random photo mode');
+    this._json(res, 200, {ok: true, images: this._idleImages()});
+};
+
+ControllerVinyltron.prototype._idleImages = function() {
+    var self = this;
+    var selected = self.config.get('fallback_selected_image') || '';
+    return self._idleImageOptions(self._idleFolder()).filter(function(option) {
+        return option.value;
+    }).map(function(option) {
+        var imagePath = path.join(self._idleFolder(), option.value);
+        var stat = fs.statSync(imagePath);
+        return {
+            name: option.value,
+            selected: option.value === selected,
+            size: stat.size,
+            modified: stat.mtime.toISOString()
+        };
+    });
+};
+
+ControllerVinyltron.prototype._idleFolder = function() {
+    return this.config.get('fallback_image_folder') || DEFAULT_IDLE_FOLDER;
+};
+
+ControllerVinyltron.prototype._safeIdleImagePath = function(filename) {
+    filename = this._sanitizeFilename(filename);
+    if (!filename) return null;
+    var ext = path.extname(filename).toLowerCase();
+    if (IMAGE_EXTENSIONS.indexOf(ext) === -1) return null;
+    var imagePath = path.join(this._idleFolder(), filename);
+    try {
+        if (!fs.statSync(imagePath).isFile()) return null;
+    } catch (e) {
+        return null;
+    }
+    return imagePath;
+};
+
+ControllerVinyltron.prototype._photoConverterPath = function() {
+    var bundled = path.join(__dirname, 'vinyltron', 'photo_upload_convert.py');
+    if (fs.existsSync(bundled)) return bundled;
+    return path.join(__dirname, '..', 'photo_upload_convert.py');
+};
+
+ControllerVinyltron.prototype._sendFile = function(res, filePath, contentType) {
+    fs.readFile(filePath, function(error, data) {
+        if (error) {
+            res.writeHead(404, {'Content-Type': 'application/json'});
+            res.end(JSON.stringify({ok: false, error: 'Not found'}));
+            return;
+        }
+        res.writeHead(200, {
+            'Content-Type': contentType,
+            'Cache-Control': 'no-store'
+        });
+        res.end(data);
+    });
+};
+
+ControllerVinyltron.prototype._imageContentType = function(filePath) {
+    var ext = path.extname(filePath).toLowerCase();
+    if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+    if (ext === '.gif') return 'image/gif';
+    if (ext === '.webp') return 'image/webp';
+    if (ext === '.bmp') return 'image/bmp';
+    return 'image/png';
+};
+
+ControllerVinyltron.prototype._json = function(res, status, data) {
+    res.writeHead(status, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+    });
+    res.end(JSON.stringify(data));
+};
+
+ControllerVinyltron.prototype._photoManagerHostLabel = function() {
+    return 'volumio.local';
+};
+
+ControllerVinyltron.prototype._photoManagerUrl = function() {
+    return 'http://' + this._photoManagerHostLabel() + ':' + PHOTO_MANAGER_PORT + '/photos';
 };
 
 // Patch specific keys in config.toml without touching unmanaged values
@@ -360,6 +678,9 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.format_badge !== undefined) content = this._patchTomlInSection(content, 'overlays', 'format_badge', fields.format_badge, 'progress_bar_background');
         if (fields.format_font !== undefined) content = this._patchTomlInSection(content, 'overlays', 'format_font', this._tomlString(fields.format_font), 'format_badge');
         if (fields.badge_duration !== undefined) content = this._patchTomlInSection(content, 'overlays', 'badge_duration', fields.badge_duration, 'format_font');
+        if (fields.schedule_enabled !== undefined) content = this._patchTomlInSection(content, 'schedule', 'enabled', fields.schedule_enabled);
+        if (fields.schedule_on_time !== undefined) content = this._patchTomlInSection(content, 'schedule', 'on_time', this._tomlString(fields.schedule_on_time), 'enabled');
+        if (fields.schedule_off_time !== undefined) content = this._patchTomlInSection(content, 'schedule', 'off_time', this._tomlString(fields.schedule_off_time), 'on_time');
 
         fs.writeFileSync(CONFIG_TOML, content, 'utf8');
         self.logger.info('Vinyltron: updated config.toml fields: ' + Object.keys(fields).join(', '));
@@ -483,6 +804,16 @@ ControllerVinyltron.prototype._validRefreshLimit = function(value) {
     value = parseInt(value);
     if (isNaN(value) || value < 0) return 0;
     return value;
+};
+
+ControllerVinyltron.prototype._validTimeOfDay = function(value, fallback) {
+    var text = (value === undefined || value === null) ? '' : value.toString().trim();
+    var match = /^(\d{1,2}):(\d{2})$/.exec(text);
+    if (!match) return fallback;
+    var hour = parseInt(match[1]);
+    var minute = parseInt(match[2]);
+    if (isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return fallback;
+    return (hour < 10 ? '0' : '') + hour + ':' + (minute < 10 ? '0' : '') + minute;
 };
 
 ControllerVinyltron.prototype._labelForFallbackMode = function(value) {
