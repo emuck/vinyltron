@@ -2,10 +2,13 @@
 
 ## System Overview
 
-Vinyltron is a Linux daemon running on a Raspberry Pi 3B alongside Volumio 3.x. It subscribes
+Vinyltron is a Linux daemon running on a Raspberry Pi alongside Volumio. It subscribes
 to Volumio's Socket.io `pushState` event stream for real-time track change notifications,
 fetches album art, processes it through an image pipeline, and pushes frames to a 64×64
 HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
+
+The plugin targets **Volumio 4 / Bookworm** for store submission. Development and testing
+were done on Volumio 3 / Buster; the daemon is Python 3.7+ compatible and runs on both.
 
 ## Hardware Constraints
 
@@ -23,7 +26,8 @@ HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
 - CPU: 4× Cortex-A53 @ 1.2GHz — sufficient; keep image pipeline lightweight
 
 ### Volumio OS
-- **Debian Buster** (not Bullseye as initially assumed) — Python 3.7, GCC 8
+- **Debian Buster** (Volumio 3, tested) — Python 3.7, GCC 8
+- **Debian Bookworm** (Volumio 4, store target) — Python 3.11, Node ≥ 20
 - Standard apt, systemd available
 - User customizations to `/boot/config.txt` should go in `/boot/userconfig.txt`
   to survive Volumio system updates
@@ -274,8 +278,9 @@ This commit predates `pyproject.toml`. Build manually with Cython:
 ```bash
 sudo apt-get install -y cython3
 cd bindings/python
-cp /path/to/vinyltron/tools/matrix-build/setup.py .
-cp /path/to/vinyltron/tools/matrix-build/rgbmatrix/shims/Imaging.h rgbmatrix/shims/
+wget https://raw.githubusercontent.com/emuck/vinyltron/main/tools/matrix-build/setup.py
+mkdir -p rgbmatrix/shims
+wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinyltron/main/tools/matrix-build/rgbmatrix/shims/Imaging.h
 python3 setup.py build_ext --inplace
 ```
 
