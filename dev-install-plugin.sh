@@ -37,6 +37,7 @@ rsync -avz --delete --delete-excluded \
   --exclude='.DS_Store' \
   --exclude='.git/' \
   --exclude='.gitignore' \
+  --exclude='.claude/' \
   --exclude='dist/' \
   --exclude='docs/' \
   --exclude='rpi-rgb-led-matrix/' \

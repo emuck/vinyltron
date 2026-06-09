@@ -16,25 +16,25 @@ _Repo is clean and ready to flip to public._
 
 _All source files reviewed for clarity, correctness, and dead code._
 
-- [ ] `vinyltron.py` — orchestrator logic, state machine, SIGHUP handling
-- [ ] `display.py` — image pipeline, gamma, overlays, schedule
-- [ ] `volumio_client.py` — Socket.io reconnect loop, state parsing
-- [ ] `photo_upload_convert.py` — upload pipeline, EXIF handling
-- [ ] `plugin/index.js` — plugin lifecycle, photo manager server, TOML patching
-- [ ] Comments audit: keep only where the *why* is non-obvious; remove the rest
-- [ ] No dead code, no TODO comments, no unused config keys
+- [x] `vinyltron.py` — orchestrator logic, state machine, SIGHUP handling
+- [x] `display.py` — image pipeline, gamma, overlays, schedule
+- [x] `volumio_client.py` — Socket.io reconnect loop, state parsing
+- [x] `photo_upload_convert.py` — upload pipeline, EXIF handling
+- [x] `plugin/index.js` — plugin lifecycle, photo manager server, TOML patching
+- [x] Comments audit: keep only where the *why* is non-obvious; remove the rest
+- [x] No dead code, no TODO comments, no unused config keys
 
 ---
 
 ## M3 — Plugin Integration Test
 
-_End-to-end verified on a clean Volumio image._
+_End-to-end verified on Volumio 3 / Buster hardware._
 
 - [ ] Install from zip on a fresh Volumio Bookworm install
 - [ ] All four UI settings sections save and round-trip correctly to `config.toml`
-- [ ] Service lifecycle: start, stop, reload (SIGHUP), restart all behave correctly
-- [ ] Photo manager: upload, preview, select, delete, random mode
-- [ ] Uninstall cleans up cleanly; reinstall works from scratch
+- [x] Service lifecycle: start, stop, reload (SIGHUP), restart all behave correctly
+- [x] Photo manager: upload, preview, select, delete, random mode
+- [x] Uninstall cleans up cleanly; reinstall works from scratch
 
 ---
 
