@@ -35,7 +35,10 @@ chown -R volumio:volumio "$CONFIG_DIR"
 # Install Python dependencies
 if [ -f "$VINYLTRON_DIR/requirements.txt" ]; then
     echo "Installing Python dependencies..."
-    pip3 install -r "$VINYLTRON_DIR/requirements.txt"
+    # --break-system-packages required on Python 3.11+ (PEP 668 / Bookworm)
+    PIP_FLAGS=""
+    python3 -c "import sys; exit(0 if sys.version_info >= (3, 11) else 1)" 2>/dev/null && PIP_FLAGS="--break-system-packages"
+    pip3 install $PIP_FLAGS -r "$VINYLTRON_DIR/requirements.txt"
 fi
 
 # Install and enable systemd service
