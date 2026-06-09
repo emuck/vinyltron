@@ -10,7 +10,7 @@ The current direction is to turn Vinyltron into a Volumio-owned plugin instead o
 
 The dev install has been tested against:
 
-- Volumio host: `192.168.88.50`
+- Volumio host: `<your-volumio-ip>`
 - Plugin path: `/data/plugins/user_interface/vinyltron`
 - Daemon runtime path: `/data/plugins/user_interface/vinyltron/vinyltron`
 - Persistent config path: `/data/configuration/user_interface/vinyltron/config.toml`
@@ -152,7 +152,7 @@ photos before copying them into the idle folder:
 
 ```bash
 python3 tools/convert-idle-images.py ~/Pictures/vinyltron /tmp/vinyltron-idle --recursive
-rsync -avz /tmp/vinyltron-idle/ volumio@192.168.88.50:/data/INTERNAL/Vinyltron/idle-images/
+rsync -avz /tmp/vinyltron-idle/ volumio@<your-volumio-ip>:/data/INTERNAL/Vinyltron/idle-images/
 ```
 
 The converter applies EXIF orientation, center-crops to square, resizes with LANCZOS, and writes lossless PNG output.
