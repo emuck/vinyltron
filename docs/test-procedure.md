@@ -245,7 +245,7 @@ Convert source photos on the Mac before copying them to Volumio:
 
 ```bash
 python3 tools/convert-idle-images.py "$HOME/Downloads/convert" /tmp/vinyltron-idle --recursive
-rsync -avz /tmp/vinyltron-idle/ volumio@192.168.88.50:/data/INTERNAL/Vinyltron/idle-images/
+rsync -avz /tmp/vinyltron-idle/ volumio@<your-volumio-ip>:/data/INTERNAL/Vinyltron/idle-images/
 ```
 
 Expected:
