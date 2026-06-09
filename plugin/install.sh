@@ -16,6 +16,13 @@ if [ ! -f "$VINYLTRON_DIR/vinyltron.py" ]; then
     exit 1
 fi
 
+MATRIX_LIB=/home/volumio/rpi-rgb-led-matrix/bindings/python
+if ! python3 -c "import sys; sys.path.insert(0, '$MATRIX_LIB'); import rgbmatrix" 2>/dev/null; then
+    echo "ERROR: rpi-rgb-led-matrix Python bindings not found at $MATRIX_LIB"
+    echo "Build the library before installing — see docs/engineering-spec.md#rpi-rgb-led-matrix-build"
+    exit 1
+fi
+
 echo "Creating idle image folder..."
 mkdir -p "$IDLE_IMAGE_DIR"
 chown -R volumio:volumio /data/INTERNAL/Vinyltron
