@@ -2,7 +2,8 @@
 
 ## M1 — Public Launch
 
-_Repo is clean and ready to flip to public._
+_Privacy and licensing checks are done; the repo is ready for the public-launch checklist
+below. End-to-end Bookworm testing (M4) remains a known follow-up after launch._
 
 - [x] MIT license added
 - [x] Home network IP scrubbed from docs
