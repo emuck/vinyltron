@@ -11,7 +11,7 @@ Keep these in sync for every release:
 - `plugin/package.json` - Volumio plugin package version.
 - `plugin/package.json` `volumio_info.changelog` - short store-facing summary.
 - `CHANGELOG.md` - human-readable release notes.
-- Git tag - use `vinyltron-vX.Y.Z` because this project lives in a larger repository.
+- Git tag - use `vX.Y.Z`.
 
 ## Checklist
 
@@ -34,9 +34,9 @@ Keep these in sync for every release:
 7. Commit the release changes.
 8. Tag the release:
    ```bash
-   git tag -a vinyltron-vX.Y.Z -m "Vinyltron vX.Y.Z"
+   git tag -a vX.Y.Z -m "Vinyltron vX.Y.Z"
    git push origin main
-   git push origin vinyltron-vX.Y.Z
+   git push origin vX.Y.Z
    ```
 
 ## Volumio Submission Notes

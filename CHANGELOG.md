@@ -1,7 +1,7 @@
 # Changelog
 
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
-`plugin/package.json`, and git tags using the `vinyltron-vX.Y.Z` format.
+`plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
 ## Unreleased
 

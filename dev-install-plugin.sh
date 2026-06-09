@@ -1,6 +1,6 @@
 #!/bin/bash
 # Dev-install the Vinyltron Volumio plugin
-# Run from projects/vinyltron/
+# Run from the Vinyltron repo root.
 # Usage: ./dev-install-plugin.sh [host]
 
 set -e
