@@ -66,7 +66,7 @@ the bundled Python/Pillow helper into optimized 64x64 PNG files under
 | 1 | Bill of Materials | ✅ Complete |
 | — | Hardware assembled, display verified end-to-end | ✅ Complete |
 | — | Core daemon (album art display, Socket.io, reconnect) | ✅ Working |
-| — | Adafruit Bonnet #3211 (level shifting / flicker fix) | Planned hardware fix |
+| — | Adafruit Bonnet #3211 with quality/PWM jumper | ✅ Installed / production wiring |
 | 2 | systemd service, idle image, SIGHUP reload | Working |
 | 3 | Overlays (progress bar, format text) + Volumio plugin | Working |
 

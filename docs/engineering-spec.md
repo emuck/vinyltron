@@ -13,7 +13,7 @@ HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
 - GPIO: 3.3V logic — direct HUB75E connection runs but causes **vertical column flicker**
   (confirmed 2026-05-23). Root cause: Pi 3B GPIO (3.3V) is below the 5V CMOS VIH threshold
   (0.7×5V = 3.5V) of the panel's row driver ICs. Not software-tunable.
-  **Adafruit Bonnet (#3211)** with 74AHCT245 level shifters (VIH ~2.0V) is the definitive fix — on order.
+  **Adafruit Bonnet (#3211)** with 74AHCT245 level shifters (VIH ~2.0V) is the installed production wiring.
 - GPIO speed: `opts.gpio_slowdown = 2` with the bonnet; `4` caused more horizontal flicker in testing
 - Bonnet refresh limiting: `opts.limit_refresh_rate_hz = 120` reduced horizontal static substantially during testing; packaged default is `0` for uncapped driver behavior
 - Bonnet quality/PWM mode: bridge `GPIO4` to `GPIO18` and use `hardware_mapping = "adafruit-hat-pwm"` for cleaner OE timing
