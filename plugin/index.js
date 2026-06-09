@@ -77,15 +77,15 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         var progress_bar_height = (saved_progress_bar_height === undefined || saved_progress_bar_height === null ? 0 : saved_progress_bar_height).toString();
         s[0].content[3].value = progress_bar_height;
         var progress_bar_foreground = self.config.get('progress_bar_foreground') || '255,255,255';
-        s[0].content[4].value = {value: progress_bar_foreground, label: self._labelForProgressColor(progress_bar_foreground)};
+        s[0].content[4].value = progress_bar_foreground;
         var progress_bar_background = self.config.get('progress_bar_background');
         if (progress_bar_background === undefined || progress_bar_background === null) progress_bar_background = '';
-        s[0].content[5].value = {value: progress_bar_background, label: self._labelForProgressColor(progress_bar_background)};
+        s[0].content[5].value = progress_bar_background;
         s[0].content[6].value = self.config.get('format_badge');
         var format_font = self.config.get('format_font') || 'tom_thumb';
         s[0].content[7].value = {value: format_font, label: self._labelForFormatFont(format_font)};
         var badge_duration = (self.config.get('badge_duration') || 10).toString();
-        s[0].content[8].value = {value: badge_duration, label: badge_duration + ' seconds'};
+        s[0].content[8].value = badge_duration;
 
         var fallback_mode = self.config.get('fallback_mode') || 'single';
         var fallback_image_folder = self.config.get('fallback_image_folder') || DEFAULT_IDLE_FOLDER;
@@ -253,11 +253,12 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     var volumio_artwork_enabled = data['volumio_artwork_enabled'] !== false && data['volumio_artwork_enabled'] !== 'false';
     var progress_bar_height_value = data['progress_bar_height'] && data['progress_bar_height']['value'] !== undefined ? data['progress_bar_height']['value'] : data['progress_bar_height'];
     var progress_bar_height = progress_bar_height_value !== undefined ? parseInt(progress_bar_height_value) : 0;
-    var progress_bar_foreground = data['progress_bar_foreground'] ? data['progress_bar_foreground']['value'] : '255,255,255';
-    var progress_bar_background = data['progress_bar_background'] ? data['progress_bar_background']['value'] : '';
+    var progress_bar_foreground = data['progress_bar_foreground'] && data['progress_bar_foreground']['value'] !== undefined ? data['progress_bar_foreground']['value'] : (data['progress_bar_foreground'] || '255,255,255');
+    var progress_bar_background = data['progress_bar_background'] && data['progress_bar_background']['value'] !== undefined ? data['progress_bar_background']['value'] : (data['progress_bar_background'] !== undefined ? data['progress_bar_background'] : '');
     var format_badge = data['format_badge'] === true || data['format_badge'] === 'true';
     var format_font = data['format_font'] ? data['format_font']['value'] : 'tom_thumb';
-    var badge_duration = data['badge_duration'] ? parseInt(data['badge_duration']['value']) : 10;
+    var badge_duration_value = data['badge_duration'] && data['badge_duration']['value'] !== undefined ? data['badge_duration']['value'] : data['badge_duration'];
+    var badge_duration = badge_duration_value !== undefined ? parseInt(badge_duration_value) : 10;
     if (isNaN(progress_bar_height)) progress_bar_height = 0;
     progress_bar_height = Math.max(0, Math.min(64, progress_bar_height));
     var progress_bar = progress_bar_height > 0;
@@ -844,20 +845,6 @@ ControllerVinyltron.prototype._tomlString = function(value) {
     return '"' + text.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 };
 
-ControllerVinyltron.prototype._labelForProgressColor = function(value) {
-    var labels = {
-        '': 'Album Art',
-        '255,255,255': 'White',
-        '255,160,0': 'Amber',
-        '0,220,80': 'Green',
-        '0,255,255': 'Cyan',
-        '0,0,0': 'Black',
-        '32,32,32': 'Dim Gray',
-        '0,32,32': 'Deep Cyan',
-        '32,20,0': 'Deep Amber'
-    };
-    return labels[value] || value;
-};
 
 ControllerVinyltron.prototype._labelForFormatFont = function(value) {
     var labels = {
