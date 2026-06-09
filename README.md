@@ -8,21 +8,23 @@ The rpi-rgb-led-matrix C library and Python bindings must be built on the Pi bef
 plugin will start. SSH in and run:
 
 ```bash
+sudo apt-get update
+sudo apt-get install -y git build-essential python3-dev python3-pip cython3 wget
 git clone https://github.com/hzeller/rpi-rgb-led-matrix
 cd rpi-rgb-led-matrix
 git checkout e947417
 make -C examples-api-use
-sudo apt-get install -y cython3
 cd bindings/python
-wget https://raw.githubusercontent.com/emuck/vinyltron/main/tools/matrix-build/setup.py
+wget https://raw.githubusercontent.com/emuck/vinyltron/v0.2.0/tools/matrix-build/setup.py
 mkdir -p rgbmatrix/shims
-wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinyltron/main/tools/matrix-build/rgbmatrix/shims/Imaging.h
+wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinyltron/v0.2.0/tools/matrix-build/rgbmatrix/shims/Imaging.h
 python3 setup.py build_ext --inplace
 ```
 
-The `setup.py` and `Imaging.h` stub in `tools/matrix-build/` are custom build helpers
-for Python 3.7 on 32-bit ARM. See [engineering-spec.md](docs/engineering-spec.md#rpi-rgb-led-matrix-build)
-for context on the specific commit and the Imaging.h requirement.
+The `setup.py` and `Imaging.h` stub in `tools/matrix-build/` are custom build helpers —
+this commit predates `pyproject.toml`, and `Imaging.h` is a minimal stub that avoids
+needing Pillow's dev headers. See [engineering-spec.md](docs/engineering-spec.md#rpi-rgb-led-matrix-build)
+for details.
 
 ## Install
 
