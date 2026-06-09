@@ -137,12 +137,26 @@ When Idle Mode is `Random Folder Image`, Vinyltron can rotate through images in 
 - `300` changes the photo every five minutes.
 - Rotation stops as soon as Volumio starts playing or paused album art is shown.
 
-Use `tools/convert-idle-images.py` to pre-convert normal photos into 64x64 optimized PNGs before copying them into `/data/INTERNAL/Vinyltron/idle-images`:
+For normal use, open the photo manager from a phone on the same network:
+
+```text
+http://volumio.local:3018/photos
+```
+
+Use it to add photos, select one fixed idle image, delete images, or switch to random
+idle photos. The plugin converts uploads into optimized 64x64 PNG files and stores them
+in `/data/INTERNAL/Vinyltron/idle-images`.
+
+For bulk imports from a computer, `tools/convert-idle-images.py` can pre-convert normal
+photos before copying them into the idle folder:
 
 ```bash
 python3 tools/convert-idle-images.py ~/Pictures/vinyltron /tmp/vinyltron-idle --recursive
+rsync -avz /tmp/vinyltron-idle/ volumio@192.168.88.50:/data/INTERNAL/Vinyltron/idle-images/
 ```
 
 The converter applies EXIF orientation, center-crops to square, resizes with LANCZOS, and writes lossless PNG output.
 
-HEIC/HEIF iPhone photos are accepted. If Pillow cannot open them directly, the converter falls back to macOS `sips` automatically.
+HEIC/HEIF support depends on the conversion path. The bulk converter can use ImageMagick
+or macOS `sips` as fallbacks. The phone photo manager intentionally avoids native Node
+image dependencies and relies on Pillow support available on the Pi.

@@ -152,6 +152,7 @@ Known examples from Volumio logs:
 - `service='spop' trackType='spotify' codec='ogg' samplerate='320 kbps'` -> `320K`, green
 - `trackType='mp3' bitrate=None samplerate='44.1 kHz' bitdepth='24 bit'` with MPD `bitrate: 320` -> `MP3 320K`, cyan
 - `trackType='mp3' bitrate=None` with no MPD bitrate available -> `MP3`, cyan
+- `trackType='mp3' bitrate=0` or MPD `bitrate: 0` -> `MP3`, not `MP3 0K`
 - `trackType='m4a' samplerate='44.1 kHz' bitdepth='16 bit'` -> `16/44.1`, white
 - `trackType='flac' samplerate='192 kHz' bitdepth='24 bit'` -> `24/192`, white
 - `trackType='dsf' samplerate='2.82 MHz' bitdepth='1 bit'` -> `DSD64`, magenta
@@ -214,7 +215,31 @@ Expected:
 - Portrait and landscape images are center-cropped to square and rendered as 64x64.
 - Empty folders, missing selected files, and corrupt files fall back to `assets/idle.png`.
 
-### Idle Photo Import Workflow
+### Photo Manager Import Workflow
+
+Open the phone-friendly manager from a browser on the same network:
+
+```text
+http://volumio.local:3018/photos
+```
+
+Expected:
+- The page loads without a Volumio login prompt and shows the current idle image grid.
+- `Add Photos` opens the native file/photo picker on iPhone.
+- A JPEG or PNG upload appears in the grid as an optimized PNG file.
+- `Select` makes that image the selected idle image and reloads Vinyltron settings.
+- `Use Random Photos` switches idle mode to random-folder behavior.
+- Delete removes the image from `/data/INTERNAL/Vinyltron/idle-images`.
+- `http://volumio.local:3018/api/images` returns JSON with the same image list.
+
+The manager writes uploads to a temporary file, calls the bundled
+`photo_upload_convert.py` helper, stores only the converted 64x64 PNG in the idle folder,
+and discards the uploaded original.
+
+HEIC/HEIF behavior depends on Pillow support on the Pi. For predictable iPhone uploads,
+use camera/photo export settings that produce JPEG, or use the bulk import path below.
+
+### Bulk Idle Photo Import Workflow
 
 Convert source photos on the Mac before copying them to Volumio:
 

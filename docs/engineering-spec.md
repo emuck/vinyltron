@@ -172,11 +172,17 @@ disable_hardware_pulsing = false
 display_on = true
 panel_type = ""          # set to "FM6126A" if colors/timing are wrong
 
+[schedule]
+enabled = false
+on_time = "08:00"
+off_time = "23:00"
+
 [fallback]
 image = "assets/idle.png"
 image_folder = "/data/INTERNAL/Vinyltron/idle-images"
 mode = "single"          # single | selected | random_folder
 selected_image = ""      # basename inside image_folder
+rotate_seconds = 300
 
 [overlays]
 progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar
@@ -201,6 +207,7 @@ The format overlay intentionally stays short enough for a 64-pixel-wide display:
 | DSD 2.82 / 5.64 / 11.28 / 22.58 MHz | `DSD64` / `DSD128` / `DSD256` / `DSD512` in magenta |
 | MP3 with bitrate | `MP3 256K` style compact lossy label in cyan |
 | MP3 without Volumio bitrate | Query MPD `status` and show `MP3 320K` if MPD reports bitrate; otherwise show `MP3` |
+| MP3 with zero-valued bitrate | Treat `0` as unknown and show `MP3` unless MPD reports a valid bitrate |
 
 ### Format Text Fonts
 
@@ -229,6 +236,23 @@ For photo-frame use, `tools/convert-idle-images.py` can pre-convert source photo
 64x64 optimized PNGs before they are copied to `image_folder`. This reduces storage,
 startup decode cost, and idle-rotation CPU work. HEIC/HEIF files are supported through
 Pillow if available, otherwise ImageMagick `magick`, otherwise macOS `sips`.
+
+The plugin also serves a phone-friendly photo manager at
+`http://volumio.local:3018/photos`. It can upload, list, select, delete, and enable
+random idle photos. Uploads are written to a temporary file, converted by the bundled
+Python/Pillow helper `photo_upload_convert.py`, and stored as optimized 64x64 PNG files
+under `image_folder`; uploaded originals are discarded.
+
+### Display Schedule
+
+The optional `[schedule]` section controls idle/photo-frame display time:
+
+- `display_on = false` is a hard master off and blanks the matrix.
+- When `display_on = true`, schedule windows gate idle/photo-frame display.
+- Active Volumio `play` or `pause` state wakes the matrix outside the schedule only when
+  `[volumio] artwork_enabled = true`.
+- Overnight windows are supported, for example `on_time = "18:00"` and
+  `off_time = "01:00"`.
 
 ## rpi-rgb-led-matrix Build
 

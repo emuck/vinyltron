@@ -16,5 +16,8 @@
     "format_badge": {"type": "boolean", "value": false},
     "format_font": {"type": "string", "value": "tom_thumb"},
     "badge_duration": {"type": "number", "value": 10},
-    "display_on":   {"type": "boolean", "value": true}
+    "display_on":   {"type": "boolean", "value": true},
+    "schedule_enabled": {"type": "boolean", "value": false},
+    "schedule_on_time": {"type": "string", "value": "08:00"},
+    "schedule_off_time": {"type": "string", "value": "23:00"}
 }

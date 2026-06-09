@@ -16,6 +16,11 @@ hardware_mapping = "adafruit-hat-pwm" # requires GPIO4->GPIO18 bonnet quality ju
 disable_hardware_pulsing = false   # true was required for direct GPIO; bonnet handles PWM
 panel_type = ""          # set to "FM6126A" if colors/timing are wrong
 
+[schedule]
+enabled = false
+on_time = "08:00"
+off_time = "23:00"
+
 [fallback]
 image = "assets/idle.png"
 image_folder = "/data/INTERNAL/Vinyltron/idle-images"

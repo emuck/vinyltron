@@ -43,11 +43,10 @@ Publication path to investigate:
 
 ### Idle Image Upload + Pruner
 
-Status: implemented as folder-based selection/randomization instead of direct upload.
+Status: implemented.
 
-Goal: allow the Volumio plugin settings screen to upload a replacement idle image while
-keeping the runtime asset simple and bounded. The uploaded original should be treated as
-temporary input only.
+Goal: make idle/photo-frame image management possible from a phone while keeping the
+runtime asset simple and bounded. Uploaded originals are treated as temporary input only.
 
 Implemented behavior:
 - Keep `[fallback] image = "assets/idle.png"` as the stable daemon path.
@@ -65,21 +64,31 @@ Implemented behavior:
   use. It accepts common image formats plus HEIC/HEIF, applies EXIF orientation, center
   crop, LANCZOS resize, and writes optimized 64x64 PNG files that are cheap to store and
   fast to load.
+- The plugin serves a lightweight photo manager at `http://volumio.local:3018/photos`.
+  It is designed for iPhone use and can list, upload, select, delete, and enable random
+  idle photos without SCP or network-share copying.
+- The Volumio settings page shows the photo manager URL in the Idle Image section.
+- Uploads are sent to the Node plugin as JSON, written to a temporary file, and converted
+  by the bundled Python/Pillow helper `photo_upload_convert.py`. The idle folder receives
+  only optimized 64x64 PNG output; uploaded originals are discarded after conversion.
+- The manager intentionally avoids native Node image dependencies. HEIC uploads require
+  Pillow HEIF support on the Pi or an iPhone camera setting that produces compatible
+  image files.
 - If selected/random images are missing, invalid, or corrupt, the daemon falls back to
   `assets/idle.png`.
 - Plugin install creates `/data/INTERNAL/Vinyltron/idle-images` and makes it writable by
   the `volumio` user.
 
 Validation:
-- Copy a large portrait image and a large landscape image into the idle folder.
-- Confirm both appear in the plugin Idle Image dropdown.
-- Select one image and confirm it appears after the fallback debounce.
-- Select random-folder mode and confirm real stop/fallback events choose from folder images.
-- Convert a folder of phone photos with `tools/convert-idle-images.py`, copy the generated
-  PNGs into `/data/INTERNAL/Vinyltron/idle-images`, and confirm random-folder mode includes
-  them.
-- Confirm corrupt/unsupported files are ignored or skipped without blocking fallback.
-- Confirm `systemctl reload vinyltron` reloads idle settings without a full restart.
+- Open `http://volumio.local:3018/photos` from an iPhone on the same network.
+- Upload a portrait photo and a landscape photo; confirm both appear in the grid and in
+  the plugin Idle Image dropdown.
+- Tap `Select` on one image and confirm `Idle Mode` becomes selected-folder behavior.
+- Tap `Use Random Photos`, set a short `Photo Interval (seconds)`, and confirm real
+  fallback/idle events rotate through folder images.
+- Delete an uploaded image and confirm it disappears from the grid and random pool.
+- Confirm corrupt/unsupported uploads return an error without blocking the photo manager.
+- Confirm upload/select/delete/random actions reload idle settings without a full restart.
 
 ### Configurable Format Text Fonts
 
@@ -178,12 +187,15 @@ Format detection uses Volumio `pushState` fields: `service`, `trackType`, `codec
 `bitrate`, `samplerate`, and `bitdepth`. The daemon logs the raw fields to journald so
 new services can be classified from real observations. For MPD tracks where Volumio omits
 bitrate, Vinyltron asks MPD for its current `status` bitrate before falling back to the
-generic MP3 label.
+generic MP3 label. Zero-valued bitrates are treated as unknown so transient or VBR-related
+metadata does not render as `0K`.
 
 ### 2c — Volumio Plugin (settings integration)
 
 Native Volumio plugin (Node.js shell + UIConfig.json) exposing settings directly in
-Volumio's UI under Settings -> Plugins -> Vinyltron. No separate web UI or SSH required.
+Volumio's UI under Settings -> Plugins -> Vinyltron. A small companion photo manager is
+served by the same plugin at `http://volumio.local:3018/photos` for phone uploads and
+curation; SSH is not required for normal settings or idle-photo management.
 
 Settings exposed:
 - Brightness (select 10-100)
@@ -196,6 +208,7 @@ Settings exposed:
 - Format duration (5 / 10 / 15 / 20 / 30 seconds)
 - Rotation (restart path)
 - Display power toggle
+- Daily display power schedule
 
 On save: plugin writes `config.toml`, sends `SIGHUP` to vinyltron daemon → daemon reloads
 display settings without restart. Rotation changes require restart because matrix geometry
@@ -206,6 +219,13 @@ or display playback album art. The display remains governed by idle settings, in
 random folder rotation for photo-frame use. Playback overlays still apply on top of the
 idle image: progress follows `Progress Height`, and the format badge follows the existing
 `Format Overlay` toggle.
+
+The Power section includes an optional daily schedule with 24-hour `On Time` and
+`Off Time` values. `Display On` remains the master switch. When `Display On` is off,
+the matrix stays blank. When `Display On` is on, the schedule controls idle/photo-frame
+display time, but active `play`/`pause` state with Volumio artwork enabled wakes the
+matrix for playback artwork even outside the scheduled window. Overnight windows are
+supported, for example `18:00` to `01:00`.
 
 **Publication goal:** Submit to Volumio plugin store as open-source alternative to
 commercial album art displays (e.g. TuneShine at $199 — our BOM is ~$67, and we support

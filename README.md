@@ -40,6 +40,19 @@ Optional overlays:
 - Compact format text at the top-left, shown once per album and cleared after a
   configurable duration.
 
+## Photo Manager
+
+Vinyltron includes a phone-friendly idle photo manager served by the Volumio plugin:
+
+```text
+http://volumio.local:3018/photos
+```
+
+Open it from an iPhone on the same network to add photos, choose a selected idle image,
+delete unwanted images, or switch to random idle photos. Uploaded photos are converted by
+the bundled Python/Pillow helper into optimized 64x64 PNG files under
+`/data/INTERNAL/Vinyltron/idle-images`; originals are treated as temporary upload input.
+
 ## Pi 3B Configuration
 
 - `dtparam=audio=off` in `/boot/config.txt` (PWM conflict with HUB75 OE# on GPIO 18)
