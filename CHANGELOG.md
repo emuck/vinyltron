@@ -11,6 +11,10 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 - Add an optional daily matrix power schedule for photo-frame use when idle.
 - Treat zero-valued bitrate metadata as unknown instead of showing `0K`.
 - Allow active Volumio playback artwork to override the idle/photo display schedule.
+- Replace progress color dropdowns with free-text R,G,B inputs — any RGB color is now valid.
+- Replace format badge duration dropdown with a typed seconds field.
+- Update plugin package to target Bookworm / Volumio 4 (`armhf`, Node ≥ 20, `volumio >= 4`).
+- Handle PEP 668 pip restriction on Python 3.11+ with `--break-system-packages`.
 
 ## [0.1.0] - 2026-05-27
 
