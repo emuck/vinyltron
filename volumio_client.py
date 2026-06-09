@@ -21,7 +21,7 @@ class VolumioClient:
         self._sio = socketio.Client(reconnection=False, logger=False, engineio_logger=False)
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
-        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="voluma-state")
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="volumio-state")
         self._register_handlers()
 
     def _register_handlers(self):
@@ -69,7 +69,6 @@ class VolumioClient:
             delay = min(delay * 2, self.RECONNECT_MAX)
 
     def _rest_fallback(self):
-        """Poll REST API once while Socket.io is down."""
         try:
             r = requests.get(f"{self._url}/api/v1/getstate", timeout=5)
             if r.ok:

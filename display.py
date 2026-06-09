@@ -196,7 +196,6 @@ class ProgressOverlay(NamedTuple):
     background_rgb: Optional[Tuple[int, int, int]]
 
 
-# Gamma LUT: maps 0-255 linear → gamma-corrected 0-255
 def _build_gamma_lut(gamma: float):
     single = bytes(int((i / 255.0) ** gamma * 255 + 0.5) for i in range(256))
     return single * 3  # Pillow needs 768 entries for RGB (256 per channel)

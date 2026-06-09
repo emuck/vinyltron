@@ -32,8 +32,6 @@ FORMAT_COLORS = {
     'lossless': (255, 255, 255),
     'dsd': (220, 0, 220),
     'spotify': (0, 220, 80),
-    # Reserved for future analog-source detection.
-    'analog': (255, 160, 0),
 }
 
 TRACK_TYPE_CATEGORIES = {
@@ -149,10 +147,7 @@ class Vinyltron:
         album_key = self._album_key(state, albumart)
 
         with self._state_lock:
-            if track_key == self._current_track_key:
-                is_current_track = True
-            else:
-                is_current_track = False
+            is_current_track = track_key == self._current_track_key
             is_pending_track = track_key == self._pending_track_key
 
         if is_current_track:

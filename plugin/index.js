@@ -68,7 +68,6 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         var uiconf = fs.readJsonSync(__dirname + '/UIConfig.json');
         var s = uiconf.sections;
 
-        // Section 0: Display overlays and image tuning
         var brightness = self.config.get('brightness').toString();
         s[0].content[0].value = {value: brightness, label: brightness + '%'};
         var gamma = self.config.get('gamma');
@@ -88,7 +87,6 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         var badge_duration = (self.config.get('badge_duration') || 10).toString();
         s[0].content[8].value = {value: badge_duration, label: badge_duration + ' seconds'};
 
-        // Section 1: Idle image
         var fallback_mode = self.config.get('fallback_mode') || 'single';
         var fallback_image_folder = self.config.get('fallback_image_folder') || DEFAULT_IDLE_FOLDER;
         var fallback_selected_image = self.config.get('fallback_selected_image') || '';
@@ -106,7 +104,6 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         s[1].content[3].value = fallback_rotate_seconds.toString();
         s[1].content[4].value = self._photoManagerUrl();
 
-        // Section 2: Hardware (rotation)
         var rotation = self.config.get('rotation');
         s[2].content[0].value = {value: rotation, label: rotation + '°'};
         var hardware_mapping = self.config.get('hardware_mapping') || 'adafruit-hat-pwm';
@@ -118,7 +115,6 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         limit_refresh_rate_hz = self._validRefreshLimit(limit_refresh_rate_hz);
         s[2].content[2].value = limit_refresh_rate_hz.toString();
 
-        // Section 3: Power and display schedule
         s[3].content[0].value = self.config.get('display_on');
         s[3].content[1].value = self.config.get('schedule_enabled');
         s[3].content[2].value = self.config.get('schedule_on_time') || '08:00';
