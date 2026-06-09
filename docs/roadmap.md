@@ -42,10 +42,11 @@ _End-to-end verified on Volumio 3 / Buster hardware._
 
 _Plugin targets the current platform._
 
-- [ ] `package.json` architectures updated to Bookworm format (`armhf`, `os: ["bookworm"]`, `engines: {node: ">=20", volumio: ">=4"}`)
-- [ ] `index.js` verified compatible with Node ≥ 20
-- [ ] `plugin/install.sh` and `plugin/uninstall.sh` verified against Bookworm paths
-- [ ] `plugin/UIConfig.json` reviewed against current Volumio UI framework
+- [x] `package.json` architectures updated to Bookworm format (`armhf`, `os: ["bookworm"]`, `engines: {node: ">=20", volumio: ">=4"}`)
+- [x] `index.js` verified compatible with Node ≥ 20 — replaced deprecated `url.parse()` with `new URL()`
+- [x] `plugin/install.sh` updated for Bookworm pip behavior (PEP 668 / `--break-system-packages`)
+- [x] `plugin/UIConfig.json` reviewed against current Volumio UI framework — no changes needed
+- [ ] End-to-end test on Volumio 4 / Bookworm hardware
 
 ---
 

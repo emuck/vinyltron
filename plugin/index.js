@@ -7,7 +7,6 @@ var exec = childProcess.exec;
 var execFile = childProcess.execFile;
 var http = require('http');
 var path = require('path');
-var url = require('url');
 
 var CONFIG_TOML = '/data/configuration/user_interface/vinyltron/config.toml';
 var BUNDLED_CONFIG_TOML = __dirname + '/vinyltron/config.toml';
@@ -393,7 +392,7 @@ ControllerVinyltron.prototype._stopPhotoManager = function() {
 
 ControllerVinyltron.prototype._handlePhotoManagerRequest = function(req, res) {
     var self = this;
-    var parsed = url.parse(req.url || '/', true);
+    var parsed = new URL(req.url || '/', 'http://localhost');
     var pathname = parsed.pathname || '/';
 
     if (req.method === 'GET' && (pathname === '/' || pathname === '/photos' || pathname === '/photo-manager.html')) {
