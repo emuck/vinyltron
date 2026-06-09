@@ -14,8 +14,9 @@ git checkout e947417
 make -C examples-api-use
 sudo apt-get install -y cython3
 cd bindings/python
-cp /path/to/vinyltron/tools/matrix-build/setup.py .
-cp /path/to/vinyltron/tools/matrix-build/rgbmatrix/shims/Imaging.h rgbmatrix/shims/
+wget https://raw.githubusercontent.com/emuck/vinyltron/main/tools/matrix-build/setup.py
+mkdir -p rgbmatrix/shims
+wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinyltron/main/tools/matrix-build/rgbmatrix/shims/Imaging.h
 python3 setup.py build_ext --inplace
 ```
 

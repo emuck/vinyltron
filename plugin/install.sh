@@ -19,7 +19,7 @@ fi
 MATRIX_LIB=/home/volumio/rpi-rgb-led-matrix/bindings/python
 if ! python3 -c "import sys; sys.path.insert(0, '$MATRIX_LIB'); import rgbmatrix" 2>/dev/null; then
     echo "ERROR: rpi-rgb-led-matrix Python bindings not found at $MATRIX_LIB"
-    echo "Build the library before installing — see docs/engineering-spec.md#rpi-rgb-led-matrix-build"
+    echo "Build the library before installing — see https://github.com/emuck/vinyltron#prerequisites"
     exit 1
 fi
 
