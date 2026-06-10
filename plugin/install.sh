@@ -41,6 +41,10 @@ chown -R volumio:volumio "$CONFIG_DIR"
 
 # Install Python dependencies
 if [ -f "$VINYLTRON_DIR/requirements.txt" ]; then
+    echo "Installing Pillow build dependencies..."
+    # Pillow has no prebuilt wheels for armv7l, so pip builds it from source
+    apt-get install -y libjpeg-dev zlib1g-dev
+
     echo "Installing Python dependencies..."
     # --break-system-packages required on Python 3.11+ (PEP 668 / Bookworm)
     PIP_FLAGS=""

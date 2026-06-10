@@ -29,10 +29,11 @@ _All source files reviewed for clarity, correctness, and dead code._
 
 ## M3 — Plugin Integration Test
 
-_End-to-end verified on Volumio 3 / Buster hardware._
+_End-to-end verified on Volumio 3 / Buster hardware, and Volumio 4 / Bookworm
+(see Known Issues)._
 
-- [ ] Install from zip on a fresh Volumio Bookworm install
-- [ ] All four UI settings sections save and round-trip correctly to `config.toml`
+- [x] Install from zip on a fresh Volumio Bookworm install
+- [x] All four UI settings sections save and round-trip correctly to `config.toml`
 - [x] Service lifecycle: start, stop, reload (SIGHUP), restart all behave correctly
 - [x] Photo manager: upload, preview, select, delete, random mode
 - [x] Uninstall cleans up cleanly; reinstall works from scratch
@@ -47,7 +48,21 @@ _Plugin targets the current platform._
 - [x] `index.js` verified compatible with Node ≥ 20 — replaced deprecated `url.parse()` with `new URL()`
 - [x] `plugin/install.sh` updated for Bookworm pip behavior (PEP 668 / `--break-system-packages`)
 - [x] `plugin/UIConfig.json` reviewed against current Volumio UI framework — no changes needed
-- [ ] End-to-end test on Volumio 4 / Bookworm hardware
+- [x] End-to-end test on Volumio 4 / Bookworm hardware
+
+---
+
+## Known Issues
+
+- **Bookworm hardware-pulse flicker** (confirmed 2026-06-10): On Volumio 4 / Bookworm,
+  `snd_bcm2835` remains loaded even with `dtparam=audio=off` in `userconfig.txt` —
+  Volumio's custom `volumio.initrd` isn't rebuilt by `update-initramfs`, so the usual
+  blacklist-and-rebuild fix doesn't apply. The daemon detects this at startup and
+  falls back to `disable_hardware_pulsing = True` (`display.py`), so the plugin
+  installs and runs correctly, but with noticeably more flicker than on Buster.
+  Production displays should stay on Volumio 3 / Buster until this is fixed —
+  either upstream in Volumio's initramfs tooling, or via a safe in-place initramfs
+  patch. See `docs/engineering-spec.md` for details.
 
 ---
 
