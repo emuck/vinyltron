@@ -21,6 +21,16 @@ wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinylt
 python3 setup.py build_ext --inplace
 ```
 
+If `apt-get install` reports unmet dependencies on `libpython3.11-stdlib` (a known broken
+package state on fresh Volumio 4.119 images, where the build toolchain ships unconfigured),
+fix it first with:
+
+```bash
+sudo apt-get install -y -f -o Dpkg::Options::='--force-overwrite'
+```
+
+then re-run the `apt-get install` line above.
+
 The `setup.py` and `Imaging.h` stub in `tools/matrix-build/` are custom build helpers —
 this commit predates `pyproject.toml`, and `Imaging.h` is a minimal stub that avoids
 needing Pillow's dev headers. See [engineering-spec.md](docs/engineering-spec.md#rpi-rgb-led-matrix-build)
@@ -50,7 +60,11 @@ Matrix power runs on a separate 5V rail. The Bonnet handles 3.3V→5V level shif
 
 Three things required before the matrix will work:
 
-- `dtparam=audio=off` in `/boot/config.txt` — PWM conflict between HUB75 OE# and GPIO 18
+- `dtparam=audio=off` in `/boot/userconfig.txt` — PWM conflict between HUB75 OE# and GPIO 18.
+  On Volumio 4/Bookworm this alone doesn't fully unload `snd_bcm2835` (Volumio's custom
+  initramfs isn't rebuilt by `update-initramfs`), but the daemon detects this at startup
+  and automatically falls back to software pulse timing (more flicker, but it runs). Set
+  it anyway — it's required for full hardware-pulse quality on Volumio 3/Buster.
 - Close the HUB75E E-address solder jumper on the Bonnet for 64-row support
 - `slowdown_gpio = 2` in `config.toml` (the default)
 

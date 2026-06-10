@@ -196,6 +196,14 @@ class ProgressOverlay(NamedTuple):
     background_rgb: Optional[Tuple[int, int, int]]
 
 
+def _snd_bcm2835_loaded() -> bool:
+    try:
+        with open('/proc/modules') as f:
+            return any(line.split()[0] == 'snd_bcm2835' for line in f)
+    except OSError:
+        return False
+
+
 def _build_gamma_lut(gamma: float):
     single = bytes(int((i / 255.0) ** gamma * 255 + 0.5) for i in range(256))
     return single * 3  # Pillow needs 768 entries for RGB (256 per channel)
@@ -215,6 +223,13 @@ class Display:
             opts.pwm_bits = d['pwm_bits']
         opts.hardware_mapping = d.get('hardware_mapping', 'adafruit-hat-pwm')
         opts.disable_hardware_pulsing = d.get('disable_hardware_pulsing', False)
+        if not opts.disable_hardware_pulsing and _snd_bcm2835_loaded():
+            log.warning(
+                "snd_bcm2835 sound module is loaded; forcing disable_hardware_pulsing=True "
+                "to avoid rpi-rgb-led-matrix exiting on startup (expect more flicker). "
+                "See docs/engineering-spec.md for how to disable the sound module."
+            )
+            opts.disable_hardware_pulsing = True
         opts.pixel_mapper_config = f"Rotate:{d['rotation']}"
         if d.get('panel_type'):
             opts.panel_type = d['panel_type']
