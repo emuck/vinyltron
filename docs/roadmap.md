@@ -3,7 +3,7 @@
 ## M1 — Public Launch
 
 _Privacy and licensing checks are done; the repo is ready for the public-launch checklist
-below. End-to-end Bookworm testing (M4) remains a known follow-up after launch._
+below. End-to-end Bookworm testing (M4) is complete._
 
 - [x] MIT license added
 - [x] Home network IP scrubbed from docs
@@ -29,8 +29,7 @@ _All source files reviewed for clarity, correctness, and dead code._
 
 ## M3 — Plugin Integration Test
 
-_End-to-end verified on Volumio 3 / Buster hardware, and Volumio 4 / Bookworm
-(see Known Issues)._
+_End-to-end verified on Volumio 3 / Buster hardware and Volumio 4 / Bookworm._
 
 - [x] Install from zip on a fresh Volumio Bookworm install
 - [x] All four UI settings sections save and round-trip correctly to `config.toml`
@@ -49,20 +48,9 @@ _Plugin targets the current platform._
 - [x] `plugin/install.sh` updated for Bookworm pip behavior (PEP 668 / `--break-system-packages`)
 - [x] `plugin/UIConfig.json` reviewed against current Volumio UI framework — no changes needed
 - [x] End-to-end test on Volumio 4 / Bookworm hardware
-
----
-
-## Known Issues
-
-- **Bookworm hardware-pulse flicker** (confirmed 2026-06-10): On Volumio 4 / Bookworm,
-  `snd_bcm2835` remains loaded even with `dtparam=audio=off` in `userconfig.txt` —
-  Volumio's custom `volumio.initrd` isn't rebuilt by `update-initramfs`, so the usual
-  blacklist-and-rebuild fix doesn't apply. The daemon detects this at startup and
-  falls back to `disable_hardware_pulsing = True` (`display.py`), so the plugin
-  installs and runs correctly, but with noticeably more flicker than on Buster.
-  Production displays should stay on Volumio 3 / Buster until this is fixed —
-  either upstream in Volumio's initramfs tooling, or via a safe in-place initramfs
-  patch. See `docs/engineering-spec.md` for details.
+- [x] Hardware-pulse mode verified on Volumio 4 / Bookworm by disabling `snd_bcm2835`
+  with `/boot/userconfig.txt` and `/boot/cmdline.txt` boot args; see
+  `docs/engineering-spec.md`.
 
 ---
 
