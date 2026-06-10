@@ -2,10 +2,12 @@
 
 ---
 
-## Pi 3B / Volumio Prep (completed 2026-05-23)
+## Pi 3B / Volumio Prep (updated 2026-06-10)
 
-- [x] `dtparam=audio=off` added to `/boot/config.txt`
-- [x] `isolcpus=3` appended to `/boot/cmdline.txt`
+- [x] `dtparam=audio=off` added to `/boot/userconfig.txt`
+- [x] Volumio 4 / Bookworm: removed `snd_bcm2835.enable_hdmi=1` and
+  `snd_bcm2835.enable_headphones=1` from `/boot/cmdline.txt`; appended
+  `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835`
 - [x] Build tools already present on Volumio (git, build-essential, python3-dev, python3-pip)
 - [x] rpi-rgb-led-matrix cloned and checked out to pre-RP1 commit `e947417`
 - [x] `make -C examples-api-use` — built successfully
@@ -29,11 +31,12 @@ cd ~/rpi-rgb-led-matrix
 sudo ./examples-api-use/demo -D 0 \
   --led-rows=64 --led-cols=64 \
   --led-slowdown-gpio=2 \
-  --led-no-hardware-pulse
+  --led-gpio-mapping=adafruit-hat-pwm
 ```
 
 Expected: full 64×64 panel cycling colors. No `--led-rgb-sequence=GBR` needed —
-seengreat wiring corrects color ordering in hardware.
+seengreat wiring corrects color ordering in hardware. With the Bookworm boot args above,
+hardware-pulse mode should run without `snd_bcm2835` conflicts.
 
 **If only top 32 rows light up:** E address pin (GPIO 15, header pin 10) not connected.
 
@@ -49,12 +52,12 @@ sudo python3 ~/test_matrix.py
 distinct colors with `Rotate:270` applied.
 Expected: RED top-left, GREEN top-right, BLUE bottom-left, YELLOW bottom-right.
 
-✅ Confirmed working 2026-05-23.
+Confirmed working 2026-06-10 on Volumio 4 / Bookworm.
 
 **Key findings from hardware testing:**
 - `led_rgb_sequence = 'GBR'` must NOT be set — seengreat wiring corrects in hardware
 - `pixel_mapper_config = 'Rotate:270'` required for correct orientation
-- `disable_hardware_pulsing = True` required for direct GPIO (no Bonnet)
+- `disable_hardware_pulsing = True` required only for direct GPIO (no Bonnet)
 - Python bindings: `sys.path.insert(0, '/home/volumio/rpi-rgb-led-matrix/bindings/python')`
 
 ---

@@ -3,6 +3,19 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
+## [0.2.2] - 2026-06-10
+
+- Fix Bookworm hardware-pulse flicker: `snd_bcm2835` was loading despite
+  `dtparam=audio=off`, forcing software pulse timing. Documented the fix
+  (`module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835` in
+  `/boot/cmdline.txt`) so `disable_hardware_pulsing = false` now works on
+  Volumio 4 / Bookworm with the same quality as Buster.
+- Add a runtime safety net in `display.py`: if `snd_bcm2835` is still loaded
+  at startup, force `disable_hardware_pulsing = true` instead of letting
+  rpi-rgb-led-matrix hard-exit.
+- Install `libjpeg-dev`/`zlib1g-dev` in `plugin/install.sh` so Pillow can build
+  from source on Bookworm's armv7l.
+
 ## [0.2.1] - 2026-06-09
 
 - Fix `tools/build-volumio-plugin.sh` packaging `.git/` and `.claude/` into the plugin

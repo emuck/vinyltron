@@ -58,13 +58,14 @@ Matrix power runs on a separate 5V rail. The Bonnet handles 3.3V→5V level shif
 
 ## Pi setup
 
-Three things required before the matrix will work:
+Four things required before the matrix will work:
 
 - `dtparam=audio=off` in `/boot/userconfig.txt` — PWM conflict between HUB75 OE# and GPIO 18.
-  On Volumio 4/Bookworm this alone doesn't fully unload `snd_bcm2835` (Volumio's custom
-  initramfs isn't rebuilt by `update-initramfs`), but the daemon detects this at startup
-  and automatically falls back to software pulse timing (more flicker, but it runs). Set
-  it anyway — it's required for full hardware-pulse quality on Volumio 3/Buster.
+- On Volumio 4/Bookworm, remove any `snd_bcm2835.enable_hdmi=1` and
+  `snd_bcm2835.enable_headphones=1` entries from `/boot/cmdline.txt`, then append
+  `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835`. This keeps the
+  onboard PWM audio module unloaded so `adafruit-hat-pwm` hardware pulsing works.
+  After reboot, `grep '^snd_bcm2835 ' /proc/modules` should return no output.
 - Close the HUB75E E-address solder jumper on the Bonnet for 64-row support
 - `slowdown_gpio = 2` in `config.toml` (the default)
 
