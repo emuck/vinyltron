@@ -9,7 +9,7 @@ below. End-to-end Bookworm testing (M4) remains a known follow-up after launch._
 - [x] Home network IP scrubbed from docs
 - [x] README updated — plugin install as the lead path, legacy scripts noted as dev tools
 - [x] Stale branch reference in `next-steps.md` removed or updated
-- [ ] Repo flipped to public on GitHub
+- [x] Repo flipped to public on GitHub
 
 ---
 
