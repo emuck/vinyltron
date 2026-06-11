@@ -8,7 +8,7 @@ Download the latest `vinyltron.zip` from [Releases](../../releases), then in Vol
 **Settings → Plugins → Manual Install → select the zip.**
 
 The installer builds the rpi-rgb-led-matrix C library and Python bindings from source for
-the Pi it's running on (first install only — roughly 45 minutes on a Pi 3B), bundles the
+the Pi it's running on (first install only — roughly 25 minutes on a Pi 3B), bundles the
 Python daemon, installs a systemd service, and sets up the sudoers rules needed for
 service control. No SSH required.
 

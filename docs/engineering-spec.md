@@ -334,9 +334,10 @@ On first install, if `rgbmatrix` isn't importable from `/home/volumio/rpi-rgb-le
 The result persists at `/home/volumio/rpi-rgb-led-matrix` across plugin reinstalls/updates
 (uninstall.sh does not remove it), so the build only runs once per device.
 
-On a Pi 3B, `apt-get update`/`install` takes 1-2 minutes and `make -C examples-api-use`
-(9 LTO-linked binaries) takes roughly 30-40 minutes — budget at least 45 minutes for a
-first install on a Pi 3B.
+Measured on a Pi 3B (full rebuild, from `systemctl stop` to `plugininstallend`): ~24
+minutes total — `make -C examples-api-use` (library + 9 binaries) takes ~19 minutes and
+the Cython Python bindings take ~4 minutes, plus apt/pip/systemd overhead. Budget roughly
+25-30 minutes for a first install on a Pi 3B.
 
 **Volumio runs `install.sh` via `/bin/sh` (dash), ignoring the `#!/bin/bash` shebang** —
 confirmed via `journalctl -u volumio` showing `COMMAND=/usr/bin/sh .../install.sh`. dash
