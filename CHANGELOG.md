@@ -3,6 +3,21 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
+## [0.2.3] - 2026-06-11
+
+- `install.sh` now builds the rpi-rgb-led-matrix C library and Python bindings from
+  source automatically on first install, downloading the pinned commit
+  (`e947417fff9042b3ea173542be09490acab069f7`) as a tarball and building the bundled
+  `matrix-build/` Cython extension. Removes the manual SSH prerequisite steps entirely —
+  installing the plugin zip is now sufficient.
+- `install.sh` always prints `plugininstallend`, even on failure, and removes the plugin
+  folder on a failed install (matching Volumio plugin manager conventions).
+- `install.sh` now uses `set -e` instead of `set -eo pipefail` and avoids piping into
+  `tar`, since Volumio runs the script with `sh` (dash), which doesn't support
+  `pipefail` and was causing every install to fail instantly.
+- `tools/build-volumio-plugin.sh` bundles `tools/matrix-build/` into the plugin package
+  as `vinyltron/matrix-build/`.
+
 ## [0.2.2] - 2026-06-10
 
 - Fix Bookworm hardware-pulse flicker: `snd_bcm2835` was loading despite

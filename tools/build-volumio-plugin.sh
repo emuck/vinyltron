@@ -48,6 +48,9 @@ rsync -av \
   --exclude='vinyltron.service' \
   "$ROOT_DIR"/ "$STAGE_DIR/vinyltron"/
 
+echo "Copying matrix build helpers..."
+rsync -av "$ROOT_DIR/tools/matrix-build/" "$STAGE_DIR/vinyltron/matrix-build/"
+
 cd "$STAGE_DIR"
 if [ "$WITH_NODE_MODULES" = true ]; then
   echo "Installing Node dependencies into package..."
