@@ -108,7 +108,7 @@ Expected: prints current playback state. Start playing something in Volumio firs
 - [x] Build plugin zip with `./tools/build-volumio-plugin.sh`
 - [x] Build release-style plugin zip with `./tools/build-volumio-plugin.sh --with-node-modules`
 - [x] Install generated zip through Volumio CLI (fresh-build path: `install.sh` builds
-  rpi-rgb-led-matrix from source, ~45 min on Pi 3B; verified `volumio plugin update`
+  rpi-rgb-led-matrix from source, ~24 min on Pi 3B; verified `volumio plugin update`
   reports `Successfully updated plugin`, service starts, `rgbmatrix` imports, and the
   64x64 panel renders the idle image and track overlay)
 - [x] Start vinyltron manually from the plugin-owned daemon path if needed:
