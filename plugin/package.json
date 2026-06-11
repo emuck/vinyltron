@@ -1,6 +1,6 @@
 {
     "name": "vinyltron",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "description": "64×64 HUB75 LED matrix album art display for Volumio",
     "main": "index.js",
     "scripts": {},
@@ -15,7 +15,7 @@
         "architectures": ["armhf"],
         "os": ["bookworm"],
         "details": "Real-time album art on a 64×64 HUB75E LED matrix, driven by Volumio pushState.",
-        "changelog": "0.2.2: Fix Bookworm hardware-pulse flicker via snd_bcm2835 cmdline blacklist"
+        "changelog": "0.2.3: install.sh now builds rpi-rgb-led-matrix from source automatically — no manual SSH prerequisites"
     },
     "author": "Martin Raumann",
     "license": "MIT",

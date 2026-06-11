@@ -278,8 +278,13 @@ The optional `[schedule]` section controls idle/photo-frame display time:
 
 ## rpi-rgb-led-matrix Build
 
-Must build from source. Current HEAD fails to compile on Buster/GCC8 due to Pi 5 RP1
-code. **Check out the last commit before RP1 support was added:**
+Must build from source — no prebuilt wheels exist, and a single prebuilt `.so` would not
+be portable across the Cortex-A core variants in Pi 3B/4/5 (the library's `config.mk` uses
+`-march=native -mtune=native`). `plugin/install.sh` automates this build on first install
+(see below); the steps here are the reference recipe it runs.
+
+Current HEAD fails to compile on Buster/GCC8 due to Pi 5 RP1 code. **Check out the last
+commit before RP1 support was added:**
 
 ```bash
 git clone https://github.com/hzeller/rpi-rgb-led-matrix
@@ -288,7 +293,10 @@ git checkout e947417
 make -C examples-api-use
 ```
 
-Confirmed working commit: `e947417` ("Merge pull request #1885 from ty-porter/patch-2")
+Confirmed working commit: `e947417` ("Merge pull request #1885 from ty-porter/patch-2"),
+full SHA `e947417fff9042b3ea173542be09490acab069f7`. This pin predates Pi 5 RP1 GPIO
+support, so direct GPIO/Bonnet access on a Pi 5 is untested and may not work — see
+`README.md` hardware table.
 
 ### Python Bindings
 
@@ -297,14 +305,41 @@ This commit predates `pyproject.toml`. Build manually with Cython:
 ```bash
 sudo apt-get install -y cython3
 cd bindings/python
-wget https://raw.githubusercontent.com/emuck/vinyltron/v0.2.1/tools/matrix-build/setup.py
+cp /path/to/vinyltron/tools/matrix-build/setup.py .
 mkdir -p rgbmatrix/shims
-wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinyltron/v0.2.1/tools/matrix-build/rgbmatrix/shims/Imaging.h
+cp /path/to/vinyltron/tools/matrix-build/rgbmatrix/shims/Imaging.h rgbmatrix/shims/
 python3 setup.py build_ext --inplace
 ```
 
 `tools/matrix-build/` in this repo contains the custom `setup.py` and an `Imaging.h` stub.
 The stub defines a minimal `ImagingMemoryInstance` struct matching Pillow 5–9 layout on
-32-bit ARM, avoiding the need for Pillow dev headers.
+32-bit ARM, avoiding the need for Pillow dev headers. The plugin package bundles this
+directory at `vinyltron/matrix-build/` so `install.sh` can use it without network access
+to this repo.
 
 Use `sys.path.insert(0, '/home/volumio/rpi-rgb-led-matrix/bindings/python')` to import.
+
+### Automated Install (plugin/install.sh)
+
+On first install, if `rgbmatrix` isn't importable from `/home/volumio/rpi-rgb-led-matrix`,
+`install.sh`:
+1. Installs build dependencies (`build-essential python3-dev python3-pip cython3 wget
+   libjpeg-dev zlib1g-dev`), retrying with `--force-overwrite` for the known
+   `libpython3-stdlib` conflict on fresh Bookworm images.
+2. Downloads the pinned commit as a tarball from
+   `https://github.com/hzeller/rpi-rgb-led-matrix/archive/<sha>.tar.gz` (no `git` needed).
+3. Runs `make -C examples-api-use`, then builds the Python bindings using the bundled
+   `matrix-build/` helpers.
+
+The result persists at `/home/volumio/rpi-rgb-led-matrix` across plugin reinstalls/updates
+(uninstall.sh does not remove it), so the build only runs once per device.
+
+On a Pi 3B, `apt-get update`/`install` takes 1-2 minutes and `make -C examples-api-use`
+(9 LTO-linked binaries) takes roughly 30-40 minutes — budget at least 45 minutes for a
+first install on a Pi 3B.
+
+**Volumio runs `install.sh` via `/bin/sh` (dash), ignoring the `#!/bin/bash` shebang** —
+confirmed via `journalctl -u volumio` showing `COMMAND=/usr/bin/sh .../install.sh`. dash
+does not support `set -o pipefail`, so the script uses plain `set -e` and avoids any
+`cmd | other_cmd` pipeline whose exit status matters (e.g. the matrix tarball is
+downloaded with `wget -qO file` then extracted with `tar -f file`, not `wget -qO- | tar`).

@@ -2,12 +2,18 @@
 
 ---
 
-## Pi 3B / Volumio Prep (updated 2026-06-10)
+## Pi 3B / Volumio Prep (updated 2026-06-11)
 
 - [x] `dtparam=audio=off` added to `/boot/userconfig.txt`
 - [x] Volumio 4 / Bookworm: removed `snd_bcm2835.enable_hdmi=1` and
   `snd_bcm2835.enable_headphones=1` from `/boot/cmdline.txt`; appended
   `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835`
+
+`plugin/install.sh` now builds rpi-rgb-led-matrix from source automatically (pinned commit
+`e947417`, see `docs/engineering-spec.md#rpi-rgb-led-matrix-build`) — the steps below are
+only needed for **daemon-only dev deploys** via `deploy.sh`/`dev-install-plugin.sh`, which
+sync source files directly and don't run `install.sh`.
+
 - [x] Build tools already present on Volumio (git, build-essential, python3-dev, python3-pip)
 - [x] rpi-rgb-led-matrix cloned and checked out to pre-RP1 commit `e947417`
 - [x] `make -C examples-api-use` — built successfully
@@ -100,8 +106,11 @@ Expected: prints current playback state. Start playing something in Volumio firs
 - [x] Deploy via `./deploy.sh` from Mac for daemon-only development
 - [x] Reinstall/update plugin and bundled daemon via `./dev-install-plugin.sh` from Mac
 - [x] Build plugin zip with `./tools/build-volumio-plugin.sh`
-- [ ] Build release-style plugin zip with `./tools/build-volumio-plugin.sh --with-node-modules`
-- [ ] Install generated zip through Volumio CLI with `./tools/install-volumio-plugin-zip.sh`
+- [x] Build release-style plugin zip with `./tools/build-volumio-plugin.sh --with-node-modules`
+- [x] Install generated zip through Volumio CLI (fresh-build path: `install.sh` builds
+  rpi-rgb-led-matrix from source, ~45 min on Pi 3B; verified `volumio plugin update`
+  reports `Successfully updated plugin`, service starts, `rgbmatrix` imports, and the
+  64x64 panel renders the idle image and track overlay)
 - [x] Start vinyltron manually from the plugin-owned daemon path if needed:
   `sudo python3 /data/plugins/user_interface/vinyltron/vinyltron/vinyltron.py /data/configuration/user_interface/vinyltron/config.toml`
 - [x] Start vinyltron as a service: `sudo systemctl start vinyltron`

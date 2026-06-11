@@ -2,47 +2,19 @@
 
 Album art on a 64×64 HUB75E RGB LED matrix, driven by Volumio.
 
-## Prerequisites
-
-The rpi-rgb-led-matrix C library and Python bindings must be built on the Pi before the
-plugin will start. SSH in and run:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y git build-essential python3-dev python3-pip cython3 wget
-git clone https://github.com/hzeller/rpi-rgb-led-matrix
-cd rpi-rgb-led-matrix
-git checkout e947417
-make -C examples-api-use
-cd bindings/python
-wget https://raw.githubusercontent.com/emuck/vinyltron/v0.2.1/tools/matrix-build/setup.py
-mkdir -p rgbmatrix/shims
-wget -O rgbmatrix/shims/Imaging.h https://raw.githubusercontent.com/emuck/vinyltron/v0.2.1/tools/matrix-build/rgbmatrix/shims/Imaging.h
-python3 setup.py build_ext --inplace
-```
-
-If `apt-get install` reports unmet dependencies on `libpython3.11-stdlib` (a known broken
-package state on fresh Volumio 4.119 images, where the build toolchain ships unconfigured),
-fix it first with:
-
-```bash
-sudo apt-get install -y -f -o Dpkg::Options::='--force-overwrite'
-```
-
-then re-run the `apt-get install` line above.
-
-The `setup.py` and `Imaging.h` stub in `tools/matrix-build/` are custom build helpers —
-this commit predates `pyproject.toml`, and `Imaging.h` is a minimal stub that avoids
-needing Pillow's dev headers. See [engineering-spec.md](docs/engineering-spec.md#rpi-rgb-led-matrix-build)
-for details.
-
 ## Install
 
 Download the latest `vinyltron.zip` from [Releases](../../releases), then in Volumio:
 **Settings → Plugins → Manual Install → select the zip.**
 
-The plugin bundles the Python daemon, installs a systemd service, and sets up the sudoers
-rules needed for service control. No SSH required after the library is built.
+The installer builds the rpi-rgb-led-matrix C library and Python bindings from source for
+the Pi it's running on (first install only — roughly 45 minutes on a Pi 3B), bundles the
+Python daemon, installs a systemd service, and sets up the sudoers rules needed for
+service control. No SSH required.
+
+The bundled `tools/matrix-build/` helpers (`setup.py` and an `Imaging.h` stub) are custom
+build helpers needed because the pinned library commit predates `pyproject.toml` — see
+[engineering-spec.md](docs/engineering-spec.md#rpi-rgb-led-matrix-build) for details.
 
 ## Hardware
 

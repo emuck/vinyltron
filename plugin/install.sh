@@ -1,8 +1,6 @@
 #!/bin/bash
 # Called by Volumio after plugin zip is extracted.
 
-set -e
-
 PLUGIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 VINYLTRON_DIR="$PLUGIN_DIR/vinyltron"
 LEGACY_DIR=/home/volumio/vinyltron
@@ -10,17 +8,59 @@ CONFIG_DIR=/data/configuration/user_interface/vinyltron
 CONFIG_TOML="$CONFIG_DIR/config.toml"
 SERVICE=vinyltron
 IDLE_IMAGE_DIR=/data/INTERNAL/Vinyltron/idle-images
+MATRIX_DIR=/home/volumio/rpi-rgb-led-matrix
+MATRIX_LIB="$MATRIX_DIR/bindings/python"
+# Pin to the last commit before Pi 5 RP1 support was added — see
+# docs/engineering-spec.md#rpi-rgb-led-matrix-build
+MATRIX_COMMIT=e947417fff9042b3ea173542be09490acab069f7
+
+# Volumio's plugin manager waits for "plugininstallend" on stdout to know the
+# install finished, on success or failure. On failure, also remove the plugin
+# folder so a broken install doesn't linger in the plugin list.
+exit_cleanup() {
+    ERR="$?"
+    if [ "$ERR" -ne 0 ]; then
+        echo "Vinyltron install failed (exit $ERR). Cleaning up..."
+        bash "$PLUGIN_DIR/uninstall.sh" >/dev/null 2>&1 || true
+        rm -rf "$PLUGIN_DIR"
+    fi
+    echo "plugininstallend"
+}
+trap exit_cleanup EXIT
+# Volumio runs this script via "sh" (dash), which doesn't support
+# "set -o pipefail", so avoid relying on pipe exit codes below.
+set -e
 
 if [ ! -f "$VINYLTRON_DIR/vinyltron.py" ]; then
     echo "ERROR: bundled Vinyltron daemon not found at $VINYLTRON_DIR"
     exit 1
 fi
 
-MATRIX_LIB=/home/volumio/rpi-rgb-led-matrix/bindings/python
+echo "Installing build dependencies..."
+apt-get update
+if ! apt-get install -y build-essential python3-dev python3-pip cython3 wget libjpeg-dev zlib1g-dev; then
+    echo "Retrying with --force-overwrite (known libpython3-stdlib conflict on fresh Bookworm images)..."
+    apt-get install -y -f -o Dpkg::Options::='--force-overwrite'
+    apt-get install -y build-essential python3-dev python3-pip cython3 wget libjpeg-dev zlib1g-dev
+fi
+
 if ! python3 -c "import sys; sys.path.insert(0, '$MATRIX_LIB'); import rgbmatrix" 2>/dev/null; then
-    echo "ERROR: rpi-rgb-led-matrix Python bindings not found at $MATRIX_LIB"
-    echo "Build the library before installing — see https://github.com/emuck/vinyltron#prerequisites"
-    exit 1
+    echo "Building rpi-rgb-led-matrix (this can take several minutes)..."
+    rm -rf "$MATRIX_DIR"
+    mkdir -p "$MATRIX_DIR"
+    MATRIX_TARBALL="/tmp/rpi-rgb-led-matrix-$MATRIX_COMMIT.tar.gz"
+    wget -qO "$MATRIX_TARBALL" "https://github.com/hzeller/rpi-rgb-led-matrix/archive/$MATRIX_COMMIT.tar.gz"
+    tar xz -C "$MATRIX_DIR" --strip-components=1 -f "$MATRIX_TARBALL"
+    rm -f "$MATRIX_TARBALL"
+
+    make -C "$MATRIX_DIR/examples-api-use"
+
+    cp "$VINYLTRON_DIR/matrix-build/setup.py" "$MATRIX_LIB/setup.py"
+    mkdir -p "$MATRIX_LIB/rgbmatrix/shims"
+    cp "$VINYLTRON_DIR/matrix-build/rgbmatrix/shims/Imaging.h" "$MATRIX_LIB/rgbmatrix/shims/Imaging.h"
+    (cd "$MATRIX_LIB" && python3 setup.py build_ext --inplace)
+
+    chown -R volumio:volumio "$MATRIX_DIR"
 fi
 
 echo "Creating idle image folder..."
@@ -39,18 +79,11 @@ if [ ! -f "$CONFIG_TOML" ]; then
 fi
 chown -R volumio:volumio "$CONFIG_DIR"
 
-# Install Python dependencies
-if [ -f "$VINYLTRON_DIR/requirements.txt" ]; then
-    echo "Installing Pillow build dependencies..."
-    # Pillow has no prebuilt wheels for armv7l, so pip builds it from source
-    apt-get install -y libjpeg-dev zlib1g-dev
-
-    echo "Installing Python dependencies..."
-    # --break-system-packages required on Python 3.11+ (PEP 668 / Bookworm)
-    PIP_FLAGS=""
-    python3 -c "import sys; exit(0 if sys.version_info >= (3, 11) else 1)" 2>/dev/null && PIP_FLAGS="--break-system-packages"
-    pip3 install $PIP_FLAGS -r "$VINYLTRON_DIR/requirements.txt"
-fi
+echo "Installing Python dependencies..."
+# --break-system-packages required on Python 3.11+ (PEP 668 / Bookworm)
+PIP_FLAGS=""
+python3 -c "import sys; exit(0 if sys.version_info >= (3, 11) else 1)" 2>/dev/null && PIP_FLAGS="--break-system-packages"
+pip3 install $PIP_FLAGS -r "$VINYLTRON_DIR/requirements.txt"
 
 # Install and enable systemd service
 echo "Installing systemd service..."
@@ -81,5 +114,3 @@ cat > /etc/sudoers.d/vinyltron <<'EOF'
 volumio ALL=(ALL) NOPASSWD: /bin/systemctl start vinyltron, /bin/systemctl stop vinyltron, /bin/systemctl restart vinyltron, /bin/systemctl reload vinyltron, /bin/systemctl is-active vinyltron
 EOF
 chmod 440 /etc/sudoers.d/vinyltron
-
-echo "plugininstallend"
