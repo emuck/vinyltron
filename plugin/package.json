@@ -1,6 +1,6 @@
 {
     "name": "vinyltron",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "description": "64×64 HUB75 LED matrix album art display for Volumio",
     "main": "index.js",
     "scripts": {},
@@ -15,7 +15,7 @@
         "architectures": ["armhf"],
         "os": ["bookworm"],
         "details": "Real-time album art on a 64×64 HUB75E LED matrix, driven by Volumio pushState.",
-        "changelog": "0.2.3: install.sh now builds rpi-rgb-led-matrix from source automatically — no manual SSH prerequisites"
+        "changelog": "0.2.4: install.sh now configures boot files for matrix PWM automatically; fixes a __pycache__ update-hang and a Pi 5 shutdown hang"
     },
     "author": "Martin Raumann",
     "license": "MIT",

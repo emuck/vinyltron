@@ -3,6 +3,26 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
+## [0.2.4] - 2026-06-11
+
+- `install.sh` now configures `/boot/userconfig.txt` (`dtparam=audio=off`) and
+  `/boot/cmdline.txt` (removes `snd_bcm2835.enable_hdmi=1`/`enable_headphones=1`,
+  appends `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835`)
+  automatically and idempotently, so hardware-pulse PWM mode with the Bonnet works
+  out of the box without any manual SSH setup. Prints a reboot reminder if either
+  file changed; the original `cmdline.txt` is saved as `cmdline.txt.vinyltron-orig`.
+- The systemd service now sets `Environment=PYTHONDONTWRITEBYTECODE=1`, so the
+  root-running daemon no longer leaves `__pycache__/*.pyc` behind in the plugin
+  directory. Previously this could make `/bin/mv` fail with "Directory not empty"
+  during the next `volumio plugin update`, hanging the update indefinitely.
+- `display.py` now detects Raspberry Pi 5 (`/proc/device-tree/model`) and forces
+  `disable_hardware_pulsing=True`, regardless of config. On this Pi 5, hardware-pulse
+  mode (`disable_hardware_pulsing=False`) causes rpi-rgb-led-matrix's PWM init to hang
+  (the pinned library predates RP1 GPIO support), which busy-spins and prevents the
+  daemon from responding to SIGTERM — `systemctl stop`/`restart`/uninstall/update would
+  hang for 90s and require SIGKILL. Software-pulse mode is unaffected and shuts down
+  cleanly in ~1s.
+
 ## [0.2.3] - 2026-06-11
 
 - `install.sh` now builds the rpi-rgb-led-matrix C library and Python bindings from

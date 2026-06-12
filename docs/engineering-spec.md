@@ -20,18 +20,9 @@ were done on Volumio 3 / Buster; the daemon is Python 3.7+ compatible and runs o
 - GPIO speed: `opts.gpio_slowdown = 2` with the bonnet; `4` caused more horizontal flicker in testing
 - Bonnet refresh limiting: `opts.limit_refresh_rate_hz = 120` reduced horizontal static substantially during testing; packaged default is `0` for uncapped driver behavior
 - Bonnet quality/PWM mode: bridge `GPIO4` to `GPIO18` and use `hardware_mapping = "adafruit-hat-pwm"` for cleaner OE timing
-- **PWM conflict**: GPIO 18 (PWM0) used for matrix OE# — onboard audio must be disabled
-  for hardware-pulse mode. Keep `dtparam=audio=off` in `/boot/userconfig.txt`.
-  On Volumio 4 / Bookworm, Volumio's default `/boot/cmdline.txt` can append
-  `snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_headphones=1` after the firmware's
-  `=0` values, re-enabling the module. Remove those positive params and append
-  `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835` to `/boot/cmdline.txt`.
-  Confirmed 2026-06-10 on Volumio 4.119 / kernel `6.12.74-v7+`: `snd_bcm2835`
-  remains absent from `/proc/modules`, the `bcm2835 Headphones` ALSA card is gone,
-  and `rpi-rgb-led-matrix` runs with `disable_hardware_pulsing = False` without flicker.
-  `display.py` still checks `/proc/modules` at startup and forces
-  `disable_hardware_pulsing = True` if `snd_bcm2835` is loaded, avoiding the C
-  library's hard `exit(1)` on misconfigured systems.
+- **PWM conflict**: GPIO 18 (PWM0) is used for matrix OE# in hardware-pulse mode, which
+  conflicts with onboard audio (`snd_bcm2835`) on Volumio 4 / Bookworm. See "Bonnet
+  Configuration" below for the fix and how `install.sh` automates it.
 - CPU: 4× Cortex-A53 @ 1.2GHz — sufficient; keep image pipeline lightweight
 
 ### Volumio OS
@@ -59,15 +50,25 @@ opts.hardware_mapping = 'adafruit-hat-pwm'
 opts.disable_hardware_pulsing = False
 opts.limit_refresh_rate_hz = 0  # uncapped by default; try 90-140 if flicker/hiccups appear
 ```
-This requires:
 
-- `E` bridged to `8` for the 64x64 HUB75E panel
-- quality jumper wire from `GPIO4` to `GPIO18`
-- `dtparam=audio=off` kept in `/boot/userconfig.txt`; GPIO18 is reserved for matrix PWM
-  timing.
-- On Volumio 4 / Bookworm, `/boot/cmdline.txt` must not contain
-  `snd_bcm2835.enable_hdmi=1` or `snd_bcm2835.enable_headphones=1`; append
-  `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835`.
+Manual hardware requirements:
+- `E` bridged to `8` on the panel for 64-row HUB75E support
+- Quality jumper wire from `GPIO4` to `GPIO18`, so GPIO18 (PWM0) is reserved for matrix
+  OE# timing
+
+Boot config requirements (GPIO18/PWM must be free of onboard audio): `dtparam=audio=off`
+in `/boot/userconfig.txt`, and `/boot/cmdline.txt` must not contain
+`snd_bcm2835.enable_hdmi=1`/`enable_headphones=1` — instead it should have
+`module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835` (Volumio 4/Bookworm's
+default `cmdline.txt` includes the `enable_*` args, which re-enable the module). As of
+v0.2.4, `install.sh` makes both changes automatically and idempotently (backs up the
+original `cmdline.txt` as `cmdline.txt.vinyltron-orig`) and prints a reboot reminder if
+anything changed — no SSH required. Confirmed 2026-06-10 on Volumio 4.119 / kernel
+`6.12.74-v7+`: `snd_bcm2835` stays absent from `/proc/modules` and `rpi-rgb-led-matrix`
+runs with `disable_hardware_pulsing = False` without flicker.
+
+As a last-resort fallback, `display.py` also detects a still-loaded `snd_bcm2835` at
+startup and forces software-pulse mode — see "Components" below.
 
 Without the quality jumper, use `hardware_mapping = 'adafruit-hat'`.
 
@@ -132,11 +133,13 @@ Pi GND pin ──► Panel GND (common ground required)
 4. Composite optional progress and format-text overlays on a copy of the cached image
 5. Push to matrix via rgbmatrix Python bindings (`SetImage(unsafe=False)` for 3.7 compat)
 
-On startup, if `/proc/modules` shows `snd_bcm2835` loaded, `disable_hardware_pulsing`
-is forced to `True` regardless of `config.toml`, since the underlying C library calls
-`exit(1)` (uncatchable from Python) rather than raising if hardware pulsing is
-requested while that module is loaded. With the Bookworm `/boot/cmdline.txt` fix above,
-this fallback should not trigger.
+Two startup checks force `disable_hardware_pulsing = True` regardless of
+`config.toml`, each working around a different uncatchable failure in the underlying C
+library:
+- `/proc/modules` shows `snd_bcm2835` loaded — the C library calls `exit(1)` if hardware
+  pulsing is requested while that module is loaded. See "Bonnet Configuration" above.
+- `/proc/device-tree/model` identifies a Raspberry Pi 5 — hardware-pulse mode busy-spins
+  and hangs the daemon on Pi 5's RP1 chip. See "rpi-rgb-led-matrix Build" below.
 
 **`vinyltron.py`** — Orchestrator daemon
 - Wires volumio_client → display
@@ -280,41 +283,36 @@ The optional `[schedule]` section controls idle/photo-frame display time:
 
 Must build from source — no prebuilt wheels exist, and a single prebuilt `.so` would not
 be portable across the Cortex-A core variants in Pi 3B/4/5 (the library's `config.mk` uses
-`-march=native -mtune=native`). `plugin/install.sh` automates this build on first install
-(see below); the steps here are the reference recipe it runs.
+`-march=native -mtune=native`). `plugin/install.sh` builds it automatically on first
+install — see "Automated Install" below for what it does.
 
-Current HEAD fails to compile on Buster/GCC8 due to Pi 5 RP1 code. **Check out the last
-commit before RP1 support was added:**
-
-```bash
-git clone https://github.com/hzeller/rpi-rgb-led-matrix
-cd rpi-rgb-led-matrix
-git checkout e947417
-make -C examples-api-use
-```
-
-Confirmed working commit: `e947417` ("Merge pull request #1885 from ty-porter/patch-2"),
-full SHA `e947417fff9042b3ea173542be09490acab069f7`. This pin predates Pi 5 RP1 GPIO
-support, so direct GPIO/Bonnet access on a Pi 5 is untested and may not work — see
+**Pinned commit**: `e947417` ("Merge pull request #1885 from ty-porter/patch-2"), full SHA
+`e947417fff9042b3ea173542be09490acab069f7`. Upstream HEAD fails to compile on Buster/GCC8
+due to Pi 5 RP1 code, and this commit predates Pi 5 RP1 GPIO support entirely — see
 `README.md` hardware table.
+
+Verified 2026-06-11/12 on a Pi 5 (Volumio 4.119/Bookworm, armhf userspace): `install.sh`
+completes, `rgbmatrix` imports, and the daemon starts, connects to Volumio, and shuts down
+cleanly (~1s) in software-pulse mode (`disable_hardware_pulsing = True`).
+
+**Confirmed broken on Pi 5**: hardware-pulse mode (`disable_hardware_pulsing = False`)
+against the RP1 I/O chip — this pinned commit predates RP1 GPIO support. Rather than
+failing to initialize, the C library's PWM setup busy-spins and holds the GIL, so the
+daemon never responds to SIGTERM (`systemctl stop` hangs 90s and requires SIGKILL).
+`display.py` detects Pi 5 and forces `disable_hardware_pulsing = True` regardless of
+`config.toml`, so this can no longer happen — see "Components" above. Actual HUB75
+panel rendering on Pi 5 remains untested: mounting the Bonnet on a Pi 5 requires a tall
+GPIO stacking header (~12-15mm) to clear the Active Cooler, which the test unit doesn't
+have. Pi 3B remains the verified reference platform for hardware-pulse mode and panel
+rendering.
 
 ### Python Bindings
 
-This commit predates `pyproject.toml`. Build manually with Cython:
-
-```bash
-sudo apt-get install -y cython3
-cd bindings/python
-cp /path/to/vinyltron/tools/matrix-build/setup.py .
-mkdir -p rgbmatrix/shims
-cp /path/to/vinyltron/tools/matrix-build/rgbmatrix/shims/Imaging.h rgbmatrix/shims/
-python3 setup.py build_ext --inplace
-```
-
-`tools/matrix-build/` in this repo contains the custom `setup.py` and an `Imaging.h` stub.
-The stub defines a minimal `ImagingMemoryInstance` struct matching Pillow 5–9 layout on
-32-bit ARM, avoiding the need for Pillow dev headers. The plugin package bundles this
-directory at `vinyltron/matrix-build/` so `install.sh` can use it without network access
+This commit predates `pyproject.toml`, so the Python bindings need a custom `setup.py`
+and an `Imaging.h` stub (a minimal `ImagingMemoryInstance` struct matching Pillow 5–9's
+layout on 32-bit ARM, avoiding a dependency on Pillow dev headers). Both live in
+`tools/matrix-build/` in this repo and are bundled into the plugin package as
+`vinyltron/matrix-build/`, so `install.sh` can build the bindings without network access
 to this repo.
 
 Use `sys.path.insert(0, '/home/volumio/rpi-rgb-led-matrix/bindings/python')` to import.
@@ -329,7 +327,7 @@ On first install, if `rgbmatrix` isn't importable from `/home/volumio/rpi-rgb-le
 2. Downloads the pinned commit as a tarball from
    `https://github.com/hzeller/rpi-rgb-led-matrix/archive/<sha>.tar.gz` (no `git` needed).
 3. Runs `make -C examples-api-use`, then builds the Python bindings using the bundled
-   `matrix-build/` helpers.
+   `matrix-build/` helpers (above).
 
 The result persists at `/home/volumio/rpi-rgb-led-matrix` across plugin reinstalls/updates
 (uninstall.sh does not remove it), so the build only runs once per device.
@@ -338,6 +336,10 @@ Measured on a Pi 3B (full rebuild, from `systemctl stop` to `plugininstallend`):
 minutes total — `make -C examples-api-use` (library + 9 binaries) takes ~19 minutes and
 the Cython Python bindings take ~4 minutes, plus apt/pip/systemd overhead. Budget roughly
 25-30 minutes for a first install on a Pi 3B.
+
+Measured on a Pi 5 (fresh install, `install.sh starting` to `plugininstallend`): ~3
+minutes total — `make -C examples-api-use` ~42s, Cython bindings ~12s, apt/pip dominate
+the rest (including building Pillow from source).
 
 **Volumio runs `install.sh` via `/bin/sh` (dash), ignoring the `#!/bin/bash` shebang** —
 confirmed via `journalctl -u volumio` showing `COMMAND=/usr/bin/sh .../install.sh`. dash

@@ -204,6 +204,14 @@ def _snd_bcm2835_loaded() -> bool:
         return False
 
 
+def _pi5_detected() -> bool:
+    try:
+        with open('/proc/device-tree/model') as f:
+            return 'Raspberry Pi 5' in f.read()
+    except OSError:
+        return False
+
+
 def _build_gamma_lut(gamma: float):
     single = bytes(int((i / 255.0) ** gamma * 255 + 0.5) for i in range(256))
     return single * 3  # Pillow needs 768 entries for RGB (256 per channel)
@@ -228,6 +236,14 @@ class Display:
                 "snd_bcm2835 sound module is loaded; forcing disable_hardware_pulsing=True "
                 "to avoid rpi-rgb-led-matrix exiting on startup (expect more flicker). "
                 "See docs/engineering-spec.md for how to disable the sound module."
+            )
+            opts.disable_hardware_pulsing = True
+        if not opts.disable_hardware_pulsing and _pi5_detected():
+            log.warning(
+                "Raspberry Pi 5 detected; forcing disable_hardware_pulsing=True. "
+                "Hardware-pulse mode hangs the daemon on this Pi 5 (rpi-rgb-led-matrix "
+                "predates RP1 GPIO support) and is unsupported here. "
+                "See docs/engineering-spec.md for details."
             )
             opts.disable_hardware_pulsing = True
         opts.pixel_mapper_config = f"Rotate:{d['rotation']}"

@@ -2,22 +2,18 @@
 
 ---
 
-## Pi 3B / Volumio Prep (updated 2026-06-11)
+## Pi 3B / Volumio Prep
 
-- [x] `dtparam=audio=off` added to `/boot/userconfig.txt`
-- [x] Volumio 4 / Bookworm: removed `snd_bcm2835.enable_hdmi=1` and
-  `snd_bcm2835.enable_headphones=1` from `/boot/cmdline.txt`; appended
-  `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835`
+`plugin/install.sh` automatically builds rpi-rgb-led-matrix from source and configures the
+boot files needed for hardware-pulse PWM — see
+[engineering-spec.md](engineering-spec.md#rpi-rgb-led-matrix-build). A normal plugin
+install/update is sufficient; no manual setup is needed.
 
-`plugin/install.sh` now builds rpi-rgb-led-matrix from source automatically (pinned commit
-`e947417`, see `docs/engineering-spec.md#rpi-rgb-led-matrix-build`) — the steps below are
-only needed for **daemon-only dev deploys** via `deploy.sh`/`dev-install-plugin.sh`, which
-sync source files directly and don't run `install.sh`.
-
-- [x] Build tools already present on Volumio (git, build-essential, python3-dev, python3-pip)
-- [x] rpi-rgb-led-matrix cloned and checked out to pre-RP1 commit `e947417`
-- [x] `make -C examples-api-use` — built successfully
-- [x] `cython3` installed, Python bindings built with custom `setup.py` + `Imaging.h` stub
+The one exception is `deploy.sh`, a dev shortcut that rsyncs daemon source directly to
+`/home/volumio/vinyltron` without running `install.sh`. It requires
+`/home/volumio/rpi-rgb-led-matrix` to already exist on the target, i.e. the plugin must
+have been installed at least once first. `dev-install-plugin.sh` runs `install.sh` and has
+no such prerequisite.
 
 ---
 
