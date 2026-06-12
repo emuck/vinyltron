@@ -9,8 +9,10 @@ Download the latest `vinyltron.zip` from [Releases](../../releases), then in Vol
 
 The installer builds the rpi-rgb-led-matrix C library and Python bindings from source for
 the Pi it's running on (first install only — roughly 25 minutes on a Pi 3B), bundles the
-Python daemon, installs a systemd service, and sets up the sudoers rules needed for
-service control. No SSH required.
+Python daemon, installs a systemd service, sets up the sudoers rules needed for service
+control, and configures the boot files needed for matrix PWM (see "Pi setup" below). No
+SSH required — but a reboot may be needed afterwards for the boot config changes to take
+effect.
 
 The bundled `tools/matrix-build/` helpers (`setup.py` and an `Imaging.h` stub) are custom
 build helpers needed because the pinned library commit predates `pyproject.toml` — see
@@ -28,18 +30,27 @@ build helpers needed because the pinned library commit predates `pyproject.toml`
 Matrix power runs on a separate 5V rail. The Bonnet handles 3.3V→5V level shifting
 (74AHCT245).
 
+**Pi 5 note**: the daemon installs and runs in software-pulse mode on a Pi 5 (armhf
+userspace). Hardware-pulse mode is automatically disabled on Pi 5 — the pinned
+rpi-rgb-led-matrix commit predates RP1 GPIO support and hangs the daemon if hardware
+pulsing is attempted. Mounting the Bonnet also requires a tall GPIO stacking header
+(~12-15mm) to clear the Active Cooler. Pi 3B is the verified reference platform for
+hardware-pulse mode and panel rendering.
+
 ## Pi setup
 
-Four things required before the matrix will work:
+`install.sh` automatically disables onboard audio (`dtparam=audio=off` in
+`/boot/userconfig.txt`) and blacklists `snd_bcm2835` (`/boot/cmdline.txt`) so GPIO 18 is
+free for matrix PWM and `adafruit-hat-pwm` hardware pulsing works — no SSH required. If
+either file needed changes, the installer prints a message asking you to **reboot the
+Pi** afterwards. The original `cmdline.txt` is saved as `cmdline.txt.vinyltron-orig`.
 
-- `dtparam=audio=off` in `/boot/userconfig.txt` — PWM conflict between HUB75 OE# and GPIO 18.
-- On Volumio 4/Bookworm, remove any `snd_bcm2835.enable_hdmi=1` and
-  `snd_bcm2835.enable_headphones=1` entries from `/boot/cmdline.txt`, then append
-  `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835`. This keeps the
-  onboard PWM audio module unloaded so `adafruit-hat-pwm` hardware pulsing works.
-  After reboot, `grep '^snd_bcm2835 ' /proc/modules` should return no output.
+Two things remain manual:
+
 - Close the HUB75E E-address solder jumper on the Bonnet for 64-row support
 - `slowdown_gpio = 2` in `config.toml` (the default)
+
+After rebooting, `grep '^snd_bcm2835 ' /proc/modules` should return no output.
 
 ## What it does
 

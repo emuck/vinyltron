@@ -31,6 +31,9 @@ Keep these in sync for every release:
    ./tools/build-volumio-plugin.sh
    git diff --check
    ```
+   `bash -n` only checks syntax — it won't catch dash incompatibilities (e.g.
+   `set -o pipefail`) in `install.sh`/`uninstall.sh`, which Volumio runs via `/bin/sh`
+   (dash). If you change either script, test it on a real Volumio install.
 7. Commit the release changes.
 8. Tag the release:
    ```bash
