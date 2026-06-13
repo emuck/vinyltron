@@ -3,13 +3,25 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
-## [Unreleased]
+## [0.2.6] - 2026-06-12
 
+- Corrected install docs: Volumio's web UI no longer has a plugin-zip "Manual Install"
+  option. Installing or updating Vinyltron requires SSH and `volumio plugin install`
+  (README.md, docs/install.md).
+- Fixed `tools/install-volumio-plugin-zip.sh` to run `volumio plugin update` instead of
+  `volumio plugin install` when Vinyltron is already installed — `install` fails with
+  `Plugin vinyltron already exists` on a reinstall. Documented the same `install` vs
+  `update` distinction in docs/install.md.
 - Added a configurable Photo Manager port in the plugin settings and an in-UI warning when
   the manager cannot bind the selected port.
 - Reworked public documentation around a product-first README, canonical install,
   hardware, troubleshooting, and verification guides.
 - Documented the longer-term turntable listening mode vision behind the Vinyltron name.
+- Replaced the built-in idle image with new "July 1937 VINYLTRON" artwork. The previous
+  eye/flame idle image moves to `assets/idle-images/vinyltron-eye.png` and joins the
+  random photo pool.
+- `saveIdle`/`saveDisplay`/`saveHardware`/`toggleDisplay` in `plugin/index.js` now guard
+  against a missing UI payload.
 
 ## [0.2.5] - 2026-06-12
 

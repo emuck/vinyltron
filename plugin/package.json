@@ -1,6 +1,6 @@
 {
     "name": "vinyltron",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "description": "64×64 HUB75 LED matrix album art display for Volumio",
     "main": "index.js",
     "scripts": {},
@@ -15,7 +15,7 @@
         "architectures": ["armhf"],
         "os": ["bookworm"],
         "details": "Real-time album art on a 64×64 HUB75E LED matrix, driven by Volumio pushState.",
-        "changelog": "0.2.5: plugin lifecycle/robustness fixes (reject on start failure, payload guards, lifecycle no-ops) and doc fixes from pre-submission audit"
+        "changelog": "0.2.6: configurable Photo Manager port, new built-in idle image, corrected SSH-based install docs, and additional UI-payload guards"
     },
     "author": "Martin Raumann",
     "license": "MIT",
