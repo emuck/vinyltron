@@ -8,9 +8,11 @@ screensaver stops immediately and the matrix returns to album art.
 
 Open Vinyltron Settings and set:
 
-- **Idle Mode**: `Screensaver: Brian's Brain`
-- **Screensaver Palette**: choose a color pair
-- **Screensaver Speed**: `Slow`, `Medium`, or `Fast`
+- **Idle Mode**: `Screensaver`
+- **Screensaver**: `Brian's Brain`
+- **Palette**: choose a color pair
+- **Speed**: `Slow`, `Medium`, or `Fast`
+- **Reset Interval**: seconds between random state resets, or `0` to disable
 
 The screensaver appears anywhere Vinyltron would otherwise show fallback art:
 
@@ -19,6 +21,11 @@ The screensaver appears anywhere Vinyltron would otherwise show fallback art:
 - scheduled display-on idle state
 - album-art fetch failure
 - playback with Volumio artwork disabled
+
+When Idle Mode is `Screensaver`, Vinyltron shows the built-in fallback image during early
+service startup and waits before starting the generated screensaver. This grace period does
+not affect the built-in, selected-folder, or random-folder idle modes. It keeps boot lighter
+while Volumio, networking, and the web UI finish coming up.
 
 It stops on playback artwork, display off, config reload, service stop, and shutdown.
 
@@ -65,7 +72,49 @@ Available palettes:
 
 The result is a constantly moving pattern of sparks, trails, and branching structures. If
 the automaton gets too quiet, Vinyltron reseeds it so the idle display does not burn down to
-black during long listening sessions.
+black during long listening sessions. The reset interval also forces a fresh random state
+periodically, which helps if a run condenses into a less interesting pattern.
+
+## Configuration Model
+
+The Volumio plugin UI only exposes controls that make sense across screensavers:
+
+- screensaver engine
+- palette
+- speed
+- reset interval
+
+Engine-specific tuning stays in the daemon config file for advanced users:
+
+```toml
+[screensaver]
+engine = "brians_brain"
+palette = "cyan_amber"
+fps = 6
+reset_seconds = 300
+startup_delay_seconds = 120
+
+# Advanced Brian's Brain tuning
+density = 0.22
+seed = ""
+```
+
+The config file lives at:
+
+```text
+/data/configuration/user_interface/vinyltron/config.toml
+```
+
+`startup_delay_seconds` is also config-file-only. When Idle Mode is `Screensaver`, it
+controls how long Vinyltron waits after service start before replacing the built-in
+fallback image with the selected screensaver. Set it to `0` to start the screensaver
+immediately.
+
+After editing the config over SSH, reload the daemon:
+
+```bash
+sudo systemctl reload vinyltron
+```
 
 ## Performance
 
@@ -76,7 +125,7 @@ The implementation is deliberately small and Pi 3B-friendly:
 - two `bytearray` grids for current and next state
 - precomputed neighbor indexes
 - one RGB byte buffer per frame
-- modest default speed: 12 FPS
+- modest default speed: 6 FPS
 
 The generated frame is handed to the same display path as album art and fallback images, so
 gamma correction, overlays, and the matrix driver's double-buffered `SwapOnVSync` path still

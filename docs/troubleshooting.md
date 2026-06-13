@@ -44,8 +44,7 @@ Expected behavior:
 - **Selected Folder Image** uses the selected image from the configured folder.
 - **Random Folder Image** chooses a supported image from the configured folder when the
   display enters idle state.
-- **Screensaver: Brian's Brain** animates a generated cellular automaton instead of loading
-  an image file.
+- **Screensaver** animates the selected generated display instead of loading an image file.
 - Empty folders, missing selected files, and corrupt files fall back to `assets/idle.png`.
 
 Useful logs:
