@@ -13,6 +13,11 @@ MATRIX_LIB="$MATRIX_DIR/bindings/python"
 # Pin to the last commit before Pi 5 RP1 support was added — see
 # docs/engineering-spec.md#rpi-rgb-led-matrix-build
 MATRIX_COMMIT=e947417fff9042b3ea173542be09490acab069f7
+# Bookworm ships libheif 1.15.1, which rejects HEIC photos from iPhone 15 Pro+ /
+# iOS 18 ("Too many auxiliary image references" — HDR gain maps shared between
+# images in an 'altr' group). Fixed upstream in 1.18.0; bookworm-backports ships
+# 1.19.x prebuilt for armhf. See docs/engineering-spec.md#libheif-build
+BACKPORTS_LIST=/etc/apt/sources.list.d/vinyltron-backports.list
 
 # Volumio's plugin manager waits for "plugininstallend" on stdout to know the
 # install finished, on success or failure. On failure, also remove the plugin
@@ -61,6 +66,25 @@ if ! python3 -c "import sys; sys.path.insert(0, '$MATRIX_LIB'); import rgbmatrix
     (cd "$MATRIX_LIB" && python3 setup.py build_ext --inplace)
 
     chown -R volumio:volumio "$MATRIX_DIR"
+fi
+
+echo "Installing libheif from bookworm-backports (for HEIC/HEIF photo uploads)..."
+# The Debian 12 (bookworm) archive signing key is already trusted on Raspbian Bookworm
+# images, so this needs no keyring setup. Default backports priority (100) means this
+# doesn't affect any other package's install/upgrade candidate.
+if [ ! -f "$BACKPORTS_LIST" ]; then
+    echo "deb http://deb.debian.org/debian bookworm-backports main" > "$BACKPORTS_LIST"
+fi
+if apt-get update; then
+    if ! apt-get install -y -t bookworm-backports libheif-examples; then
+        echo "WARNING: failed to install libheif-examples from bookworm-backports."
+        echo "Vinyltron will still install, but HEIC/HEIF photo uploads will show"
+        echo "'Could not convert image' until this is resolved."
+    fi
+else
+    echo "WARNING: failed to install libheif-examples from bookworm-backports."
+    echo "Vinyltron will still install, but HEIC/HEIF photo uploads will show"
+    echo "'Could not convert image' until this is resolved."
 fi
 
 echo "Creating idle image folder..."

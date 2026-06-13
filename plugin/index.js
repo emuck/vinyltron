@@ -122,13 +122,18 @@ ControllerVinyltron.prototype.getUIConfig = function() {
             label: self._labelForIdleImage(fallback_selected_image, idle_options)
         };
         s[1].content[3].value = fallback_rotate_seconds.toString();
+        var screensaver_palette = self.config.get('screensaver_palette') || 'cyan_amber';
+        screensaver_palette = self._validScreensaverPalette(screensaver_palette);
+        s[1].content[4].value = {value: screensaver_palette, label: self._labelForScreensaverPalette(screensaver_palette)};
+        var screensaver_fps = self._validScreensaverFps(self.config.get('screensaver_fps'));
+        s[1].content[5].value = {value: screensaver_fps.toString(), label: self._labelForScreensaverFps(screensaver_fps)};
         var photo_manager_port = self._photoManagerPort();
         if (self.photoManagerError) {
-            s[1].content[4].value = 'Unavailable on port ' + photo_manager_port + ': ' + self.photoManagerError + '. Change Photo Manager Port below and save.';
+            s[1].content[6].value = 'Unavailable on port ' + photo_manager_port + ': ' + self.photoManagerError + '. Change Photo Manager Port below and save.';
         } else {
-            s[1].content[4].value = self._photoManagerUrl();
+            s[1].content[6].value = self._photoManagerUrl();
         }
-        s[1].content[5].value = photo_manager_port.toString();
+        s[1].content[7].value = photo_manager_port.toString();
 
         var rotation = self.config.get('rotation');
         s[2].content[0].value = {value: rotation, label: rotation + '°'};
@@ -209,6 +214,8 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['fallback', 'image_folder', 'fallback_image_folder', 'string'],
             ['fallback', 'selected_image', 'fallback_selected_image', 'string'],
             ['fallback', 'rotate_seconds', 'fallback_rotate_seconds', 'number'],
+            ['screensaver', 'palette', 'screensaver_palette', 'string'],
+            ['screensaver', 'fps', 'screensaver_fps', 'number'],
             ['overlays', 'progress_bar', 'progress_bar', 'boolean'],
             ['overlays', 'progress_bar_height', 'progress_bar_height', 'number'],
             ['overlays', 'progress_bar_foreground', 'progress_bar_foreground', 'rgb'],
@@ -244,6 +251,10 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
     var fallback_selected_image = data['fallback_selected_image'] ? data['fallback_selected_image']['value'] : '';
     var fallback_rotate_seconds_value = data['fallback_rotate_seconds'] && data['fallback_rotate_seconds']['value'] !== undefined ? data['fallback_rotate_seconds']['value'] : data['fallback_rotate_seconds'];
     var fallback_rotate_seconds = self._validFallbackRotateSeconds(fallback_rotate_seconds_value);
+    var screensaver_palette_value = data['screensaver_palette'] && data['screensaver_palette']['value'] !== undefined ? data['screensaver_palette']['value'] : data['screensaver_palette'];
+    var screensaver_palette = self._validScreensaverPalette(screensaver_palette_value);
+    var screensaver_fps_value = data['screensaver_fps'] && data['screensaver_fps']['value'] !== undefined ? data['screensaver_fps']['value'] : data['screensaver_fps'];
+    var screensaver_fps = self._validScreensaverFps(screensaver_fps_value);
     var photo_manager_port_value = data['photo_manager_port'] && data['photo_manager_port']['value'] !== undefined ? data['photo_manager_port']['value'] : data['photo_manager_port'];
     var photo_manager_port = self._validPhotoManagerPort(photo_manager_port_value);
 
@@ -259,6 +270,8 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
     self.config.set('fallback_image_folder', fallback_image_folder);
     self.config.set('fallback_selected_image', fallback_selected_image);
     self.config.set('fallback_rotate_seconds', fallback_rotate_seconds);
+    self.config.set('screensaver_palette', screensaver_palette);
+    self.config.set('screensaver_fps', screensaver_fps);
     self.config.set('photo_manager_port', photo_manager_port);
 
     self.logger.info('Vinyltron: saving idle settings: ' + JSON.stringify({
@@ -266,6 +279,8 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
         fallback_image_folder: fallback_image_folder,
         fallback_selected_image: fallback_selected_image,
         fallback_rotate_seconds: fallback_rotate_seconds,
+        screensaver_palette: screensaver_palette,
+        screensaver_fps: screensaver_fps,
         photo_manager_port: photo_manager_port
     }));
 
@@ -273,7 +288,9 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
         fallback_mode: fallback_mode,
         fallback_image_folder: fallback_image_folder,
         fallback_selected_image: fallback_selected_image,
-        fallback_rotate_seconds: fallback_rotate_seconds
+        fallback_rotate_seconds: fallback_rotate_seconds,
+        screensaver_palette: screensaver_palette,
+        screensaver_fps: screensaver_fps
     });
 
     if (photo_manager_port_changed) {
@@ -745,6 +762,8 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.fallback_mode !== undefined) content = this._patchTomlInSection(content, 'fallback', 'mode', this._tomlString(fields.fallback_mode), 'image_folder');
         if (fields.fallback_selected_image !== undefined) content = this._patchTomlInSection(content, 'fallback', 'selected_image', this._tomlString(fields.fallback_selected_image), 'mode');
         if (fields.fallback_rotate_seconds !== undefined) content = this._patchTomlInSection(content, 'fallback', 'rotate_seconds', fields.fallback_rotate_seconds, 'selected_image');
+        if (fields.screensaver_palette !== undefined) content = this._patchTomlInSection(content, 'screensaver', 'palette', this._tomlString(fields.screensaver_palette));
+        if (fields.screensaver_fps !== undefined) content = this._patchTomlInSection(content, 'screensaver', 'fps', fields.screensaver_fps, 'palette');
         if (fields.progress_bar !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar', fields.progress_bar);
         if (fields.progress_bar_height !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_height', fields.progress_bar_height, 'progress_bar');
         if (fields.progress_bar_foreground !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_foreground', this._tomlRgb(fields.progress_bar_foreground), 'progress_bar_height');
@@ -859,7 +878,7 @@ ControllerVinyltron.prototype._sanitizeFilename = function(value) {
 };
 
 ControllerVinyltron.prototype._validFallbackMode = function(value) {
-    if (value === 'selected' || value === 'random_folder') return value;
+    if (value === 'selected' || value === 'random_folder' || value === 'screensaver_brians_brain') return value;
     return 'single';
 };
 
@@ -867,6 +886,17 @@ ControllerVinyltron.prototype._validFallbackRotateSeconds = function(value) {
     value = parseInt(value);
     if (isNaN(value) || value < 0) return 0;
     return value;
+};
+
+ControllerVinyltron.prototype._validScreensaverPalette = function(value) {
+    if (value === 'green_magenta' || value === 'blue_red' || value === 'white_violet') return value;
+    return 'cyan_amber';
+};
+
+ControllerVinyltron.prototype._validScreensaverFps = function(value) {
+    value = parseInt(value);
+    if (isNaN(value)) return 12;
+    return Math.max(2, Math.min(24, value));
 };
 
 ControllerVinyltron.prototype._validHardwareMapping = function(value) {
@@ -894,9 +924,26 @@ ControllerVinyltron.prototype._labelForFallbackMode = function(value) {
     var labels = {
         'single': 'Built-in Idle Image',
         'selected': 'Selected Folder Image',
-        'random_folder': 'Random Folder Image'
+        'random_folder': 'Random Folder Image',
+        'screensaver_brians_brain': 'Screensaver: Brian\'s Brain'
     };
     return labels[value] || labels['single'];
+};
+
+ControllerVinyltron.prototype._labelForScreensaverPalette = function(value) {
+    var labels = {
+        'cyan_amber': 'Cyan / Amber',
+        'green_magenta': 'Green / Magenta',
+        'blue_red': 'Blue / Red',
+        'white_violet': 'White / Violet'
+    };
+    return labels[value] || labels['cyan_amber'];
+};
+
+ControllerVinyltron.prototype._labelForScreensaverFps = function(value) {
+    if (value <= 6) return 'Slow';
+    if (value >= 18) return 'Fast';
+    return 'Medium';
 };
 
 ControllerVinyltron.prototype._labelForIdleImage = function(value, options) {

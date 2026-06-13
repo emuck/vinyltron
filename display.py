@@ -327,6 +327,10 @@ class Display:
         self._progress_overlay = None
         self._render()
 
+    def show_screensaver_frame(self, img: Image.Image):
+        self._current_image = img.point(self._gamma_lut)
+        self._render()
+
     def _select_fallback_image(self) -> Image.Image:
         mode = str(self._fallback_cfg.get('mode', 'single')).strip().lower()
         if mode == 'selected':
