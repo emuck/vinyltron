@@ -127,6 +127,7 @@ if [ ! -f "$USERCONFIG" ]; then
     echo "dtparam=audio=off" > "$USERCONFIG"
     NEEDS_REBOOT=1
 elif ! grep -qx 'dtparam=audio=off' "$USERCONFIG"; then
+    [ -f "$USERCONFIG.vinyltron-orig" ] || cp "$USERCONFIG" "$USERCONFIG.vinyltron-orig"
     # Ensure the file ends with a newline before appending, or our line
     # would get tacked onto the end of the last existing line.
     [ -z "$(tail -c1 "$USERCONFIG")" ] || echo >> "$USERCONFIG"
@@ -162,5 +163,6 @@ fi
 if [ "$NEEDS_REBOOT" -eq 1 ]; then
     echo "Boot configuration updated (onboard audio disabled, snd_bcm2835 blacklisted)"
     echo "so the matrix can use hardware-pulse PWM. *** Reboot the Pi for this to take"
-    echo "effect. *** Original /boot/cmdline.txt saved as /boot/cmdline.txt.vinyltron-orig."
+    echo "effect. *** Originals saved as /boot/cmdline.txt.vinyltron-orig and"
+    echo "/boot/userconfig.txt.vinyltron-orig (if it already existed)."
 fi

@@ -1,4 +1,5 @@
-/* Minimal Imaging.h stub for rpi-rgb-led-matrix Pillow shim.
+/* Vinyltron build helper (MIT, see repo LICENSE).
+ * Minimal Imaging.h stub for rpi-rgb-led-matrix's (GPL-2.0) Pillow shim.
  * Defines only the ImagingMemoryInstance fields needed by pillow.c.
  * Layout matches Pillow 5.x-9.x on 32-bit ARM (Pi 3B). */
 #ifndef IMAGING_H
