@@ -294,7 +294,7 @@ install — see "Automated Install" below for what it does.
 **Pinned commit**: `e947417` ("Merge pull request #1885 from ty-porter/patch-2"), full SHA
 `e947417fff9042b3ea173542be09490acab069f7`. Upstream HEAD fails to compile on Buster/GCC8
 due to Pi 5 RP1 code, and this commit predates Pi 5 RP1 GPIO support entirely — see
-`README.md` hardware table.
+the Pi 5 note in `README.md`.
 
 Verified 2026-06-11/12 on a Pi 5 (Volumio 4.119/Bookworm, armhf userspace): `install.sh`
 completes, `rgbmatrix` imports, and the daemon starts, connects to Volumio, and shuts down

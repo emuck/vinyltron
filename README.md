@@ -29,8 +29,8 @@ foundation for it.
 - Optional progress strip with configurable height and RGB colors
 - Optional compact format overlay for bitrate, sample rate, lossless, and DSD labels
 - Idle image modes: built-in image, selected folder image, or random photo rotation
-- Phone-friendly photo manager for adding, selecting, deleting, and randomizing idle photos
-- Configurable photo-manager port, default `3018`, for avoiding local port conflicts
+- Phone-friendly photo manager for adding, selecting, deleting, and randomizing idle photos,
+  with a configurable port if it conflicts with another service
 - Daily display schedule for photo-frame use when music is not playing
 - Volumio settings UI for display, idle image, hardware, and power controls
 
