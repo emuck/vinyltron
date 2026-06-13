@@ -3,6 +3,24 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
+## [Unreleased]
+
+- Added a Brian's Brain animated screensaver fallback mode with palette and speed controls.
+- Added HEIC/HEIF support to the photo upload converter via `heif-convert`. Previously,
+  uploading an iPhone-format `.HEIC` photo failed with "Could not convert image"
+  (`PIL.UnidentifiedImageError`), since Pillow has no built-in HEIF decoder.
+- `plugin/install.sh` now installs `libheif-examples`/`libheif1` 1.19.7 from
+  `bookworm-backports` (Bookworm's default 1.15.1 rejects HEIC photos from iPhone 15 Pro+ /
+  iOS 18 with "Too many auxiliary image references", an HDR gain-map structure fixed
+  upstream in libheif 1.18.0). A from-source build was tried first but ruled out: a Pi 3B
+  has no free memory for the compiler and no usable swap (the overlay root filesystem
+  can't host a swapfile).
+- Fixed `tools/install-volumio-plugin-zip.sh` to restart the `vinyltron` service after
+  `volumio plugin install`/`update`. Volumio's `plugin update` path doesn't restart the
+  daemon, so it kept running with stale code and a stale working directory after every
+  reinstall — this is why `assets/idle.png` failed to load with `No such file or
+  directory` until the service was restarted manually.
+
 ## [0.2.6] - 2026-06-12
 
 - Corrected install docs: Volumio's web UI no longer has a plugin-zip "Manual Install"
