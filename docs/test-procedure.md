@@ -113,9 +113,9 @@ Expected: prints current playback state. Start playing something in Volumio firs
 - [x] Play a track in Volumio — album art appears within 2 seconds
 - [x] Skip track — art updates without restart
 - [x] Volumio Socket.io disconnect — vinyltron reconnects automatically
-- [ ] Pause — art remains visible and progress stops advancing
-- [ ] Stop — fallback image shown after the 1.5 second fallback debounce
-- [ ] Reboot Pi — vinyltron starts after Volumio automatically
+- [x] Pause — art remains visible and progress stops advancing
+- [x] Stop — fallback image shown after the 1.5 second fallback debounce
+- [x] Reboot Pi — vinyltron starts after Volumio automatically
 
 Useful service commands:
 ```bash
