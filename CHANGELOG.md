@@ -5,7 +5,9 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
-- Added a Brian's Brain animated screensaver fallback mode with palette and speed controls.
+- Added a Brian's Brain animated screensaver fallback mode with a dedicated Screensaver
+  settings section, generic engine/palette/speed/reset controls, and advanced
+  Brian's Brain tuning kept in `config.toml`.
 - Added HEIC/HEIF support to the photo upload converter via `heif-convert`. Previously,
   uploading an iPhone-format `.HEIC` photo failed with "Could not convert image"
   (`PIL.UnidentifiedImageError`), since Pillow has no built-in HEIF decoder.
