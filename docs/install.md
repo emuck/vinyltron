@@ -22,8 +22,10 @@ free for matrix PWM and `adafruit-hat-pwm` hardware pulsing works — no SSH req
 either file needed changes, the installer prints a message asking you to **reboot the
 Pi** afterwards. The originals are saved as `cmdline.txt.vinyltron-orig` and
 `userconfig.txt.vinyltron-orig`. Uninstalling the plugin does not revert these boot
-config changes, since they only disable onboard audio/`snd_bcm2835` and have no effect
-without the matrix daemon running.
+config changes — onboard/HDMI audio stays disabled so GPIO18/PWM remains free for the
+matrix. To restore onboard audio, copy `/boot/cmdline.txt.vinyltron-orig` back to
+`/boot/cmdline.txt` and `/boot/userconfig.txt.vinyltron-orig` back to
+`/boot/userconfig.txt` (if present), then reboot.
 
 After rebooting, `grep '^snd_bcm2835 ' /proc/modules` should return no output.
 
