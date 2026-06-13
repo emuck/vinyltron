@@ -3,8 +3,9 @@
 # User config and idle images are preserved under /data, as is the built
 # rpi-rgb-led-matrix tree under /home/volumio. Boot config changes made by
 # install.sh (/boot/userconfig.txt, /boot/cmdline.txt) are also left in place,
-# since they only disable onboard audio/snd_bcm2835 and don't affect Volumio
-# without the matrix daemon running.
+# intentionally leaving onboard/HDMI audio disabled so GPIO18/PWM stays free
+# for the matrix. To restore onboard audio, restore /boot/*.vinyltron-orig
+# (see docs/install.md) and reboot.
 
 /bin/systemctl stop vinyltron || true
 /bin/systemctl disable vinyltron || true
