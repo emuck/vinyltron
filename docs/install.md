@@ -38,6 +38,12 @@ See [hardware setup](hardware.md) for wiring, power, and Bonnet details.
    installed, use `volumio plugin update` instead; `install` fails with
    `Plugin vinyltron already exists` on an existing install.
 
+   `volumio plugin update` does not restart the running daemon, so after an update run:
+
+   ```bash
+   sudo systemctl restart vinyltron
+   ```
+
 3. Wait for `plugininstallend` in the output — Volumio's plugin manager prints this on
    both success and failure.
 4. Reboot if the install output says boot configuration changed.
@@ -50,6 +56,8 @@ The installer:
 
 - Builds the pinned `rpi-rgb-led-matrix` C library and Python bindings on the Pi
 - Installs Python dependencies used by the daemon and photo upload converter
+- Adds Bookworm backports and installs `libheif-examples` when available, so iPhone
+  HEIC/HEIF photo uploads can be decoded by `heif-convert`
 - Installs the `vinyltron` systemd service
 - Adds tightly scoped sudoers rules for controlling only the `vinyltron` service
 - Configures boot files needed for matrix PWM

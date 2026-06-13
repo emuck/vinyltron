@@ -207,9 +207,15 @@ off_time = "23:00"
 [fallback]
 image = "assets/idle.png"
 image_folder = "/data/INTERNAL/Vinyltron/idle-images"
-mode = "single"          # single | selected | random_folder
+mode = "single"          # single | selected | random_folder | screensaver_brians_brain
 selected_image = ""      # basename inside image_folder
 rotate_seconds = 300
+
+[screensaver]
+palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
+fps = 12                 # clamped to 2-24
+density = 0.22
+seed = ""
 
 [overlays]
 progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar
@@ -253,11 +259,24 @@ Fallback image behavior is controlled by `[fallback]`:
 | `single` | Use `assets/idle.png`. |
 | `selected` | Load `image_folder / selected_image`; fall back to `assets/idle.png` on error. |
 | `random_folder` | Pick a random supported image from `image_folder` at real fallback time. |
+| `screensaver_brians_brain` | Run the Brian's Brain animated cellular automaton as the fallback background. |
 
 Folder images are not modified on disk. `display.py` opens them on demand, applies EXIF
 transpose, converts to RGB, center-crops to square, resizes to 64x64, applies the active
 gamma LUT, and renders them. Random selection happens only when the fallback state is
 entered after debounce, not on every render.
+
+Screensaver fallback is controlled by `[screensaver]`. The MVP uses Brian's Brain: a
+three-state cellular automaton backed by two 4096-byte grids and precomputed neighbor
+indexes. It renders generated RGB frames through the same `display.py` image path as static
+fallbacks, so progress and format overlays still compose on top. The frame timer is owned
+by `vinyltron.py` and is cancelled on playback artwork, display-off, config reload, and
+shutdown.
+
+For visual tuning before hardware deployment, `tools/matrix-sim.py` exposes the same
+generated-frame boundary in a browser: engines return 64x64 RGB frames, `/api/frame`
+returns 12288 raw RGB bytes, and the browser canvas renders them as a scaled matrix. See
+[matrix-simulator.md](matrix-simulator.md).
 
 For photo-frame use, `tools/convert-idle-images.py` can pre-convert source photos into
 64x64 optimized PNGs before they are copied to `image_folder`. This reduces storage,
@@ -351,3 +370,37 @@ confirmed via `journalctl -u volumio` showing `COMMAND=/usr/bin/sh .../install.s
 does not support `set -o pipefail`, so the script uses plain `set -e` and avoids any
 `cmd | other_cmd` pipeline whose exit status matters (e.g. the matrix tarball is
 downloaded with `wget -qO file` then extracted with `tar -f file`, not `wget -qO- | tar`).
+
+## libheif Build
+
+Bookworm/Raspbian ships `libheif1`/`libheif-examples` 1.15.1, which rejects HEIC photos
+from iPhone 15 Pro+ running iOS 18: `Could not read HEIF/AVIF file: Invalid input:
+Unspecified: Too many auxiliary image references`. These photos store an HDR "gain map" as
+an auxiliary image shared between two main images in an `altr` group, a structure libheif
+1.15.1 rejects as a sanity-check violation. Fixed upstream in libheif 1.18.0
+([strukturag/libheif#1147](https://github.com/strukturag/libheif/issues/1147)).
+
+**Source: `bookworm-backports`**, which ships `libheif1`/`libheif-examples` 1.19.7 prebuilt
+for armhf — past the 1.18.0 fix. Building libheif from source was tried first but ruled
+out: a Pi 3B has 869MB RAM and no swap by default, and `/` is an overlay filesystem
+(`lowerdir`/`upperdir` from the initramfs, not reachable from the running system), so a
+swapfile can't be created to give the C++ compiler enough headroom — `box.cc` either
+thrashes the system for over an hour or gets OOM-killed.
+
+### Automated Install (plugin/install.sh)
+
+After the required build dependencies are installed, `install.sh` adds
+`/etc/apt/sources.list.d/vinyltron-backports.list`
+(`deb http://deb.debian.org/debian bookworm-backports main`) and refreshes apt metadata.
+The Debian 12 archive signing key is already trusted on Raspbian Bookworm images
+(`/etc/apt/trusted.gpg.d/debian_12.gpg`), so no keyring setup is needed. `apt-get install
+-y -t bookworm-backports libheif-examples` then pulls `libheif-examples`/`libheif1` 1.19.7
+from backports (default backports priority 100 means this doesn't affect any other
+package's install/upgrade candidate). This installs to `/usr/bin`, so
+`photo_upload_convert.py`'s `shutil.which("heif-convert")` picks it up directly — no PATH
+changes needed.
+
+Both the backports metadata refresh and the package install are optional. A failure (e.g.
+backports unreachable) prints a warning and lets the rest of `install.sh` continue, instead
+of `set -e` + the `exit_cleanup` trap uninstalling the whole plugin over an optional HEIC
+feature.

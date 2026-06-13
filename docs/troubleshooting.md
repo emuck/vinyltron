@@ -44,6 +44,8 @@ Expected behavior:
 - **Selected Folder Image** uses the selected image from the configured folder.
 - **Random Folder Image** chooses a supported image from the configured folder when the
   display enters idle state.
+- **Screensaver: Brian's Brain** animates a generated cellular automaton instead of loading
+  an image file.
 - Empty folders, missing selected files, and corrupt files fall back to `assets/idle.png`.
 
 Useful logs:
@@ -65,9 +67,19 @@ The web photo manager writes uploads to a temporary file, calls the bundled
 `photo_upload_convert.py` helper, and stores only an optimized 64x64 PNG in the idle
 folder.
 
-HEIC/HEIF behavior depends on Pillow support on the Pi. For predictable iPhone uploads,
-use camera/photo export settings that produce JPEG, or convert photos before copying them
-to Volumio:
+HEIC/HEIF uploads use `heif-convert` from `libheif-examples`. `install.sh` installs that
+tool from `bookworm-backports` when available; if backports was unreachable during
+install, HEIC uploads fail with a conversion error while JPEG/PNG uploads still work.
+Check the service log for the exact converter error:
+
+```bash
+journalctl -u vinyltron -n 100 --no-pager
+which heif-convert
+heif-convert --version
+```
+
+As a fallback, use camera/photo export settings that produce JPEG, or convert photos
+before copying them to Volumio:
 
 ```bash
 python3 tools/convert-idle-images.py "$HOME/Pictures/source" /tmp/vinyltron-idle --recursive

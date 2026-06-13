@@ -3,9 +3,12 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 
 def center_crop_square(img):
@@ -37,12 +40,59 @@ def unique_destination(destination, source_name, digest):
     raise RuntimeError("could not allocate unique destination filename")
 
 
+def open_source_image(source, source_name):
+    try:
+        img = Image.open(source)
+        img.load()
+        return img
+    except UnidentifiedImageError:
+        suffix = Path(source_name or source.name).suffix.lower()
+        if suffix not in (".heic", ".heif"):
+            raise
+        return open_heic_with_heif_convert(source)
+
+
+def open_heic_with_heif_convert(source):
+    heif_convert = shutil.which("heif-convert")
+    if not heif_convert:
+        raise RuntimeError(
+            "HEIC/HEIF photos require heif-convert (apt install libheif-examples)"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="vinyltron-heic-") as tmp:
+        converted = Path(tmp) / "converted.png"
+        result = subprocess.run(
+            [heif_convert, str(source), str(converted)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                "heif-convert failed (exit %d): %s"
+                % (result.returncode, result.stderr.decode("utf-8", "replace").strip())
+            )
+
+        # heif-convert appends "-1", "-2", ... to the output stem for
+        # multi-image containers (e.g. iPhone "Live Photo" HEIC files with an
+        # embedded thumbnail). Prefer the plain name, else the first numbered one.
+        if not converted.exists():
+            numbered = sorted(converted.parent.glob(converted.stem + "-*" + converted.suffix))
+            if not numbered:
+                raise RuntimeError("heif-convert did not produce an output file")
+            converted = numbered[0]
+
+        with Image.open(converted) as img:
+            img.load()
+            return img.copy()
+
+
 def convert_image(source, destination, source_name, size):
     data = source.read_bytes()
     digest = hashlib.sha1(data).hexdigest()
     output = unique_destination(destination, source_name or source.name, digest)
 
-    with Image.open(source) as img:
+    with open_source_image(source, source_name) as img:
         original_size = img.size
         img = ImageOps.exif_transpose(img).convert("RGB")
         img = center_crop_square(img)
