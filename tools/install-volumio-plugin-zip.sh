@@ -20,7 +20,7 @@ echo "Copying $ZIP_PATH to ${PI_USER}@${PI_HOST}:${REMOTE_ZIP}..."
 scp "$ZIP_PATH" "${PI_USER}@${PI_HOST}:${REMOTE_ZIP}"
 
 echo "Installing plugin on ${PI_HOST}..."
-ssh -t "${PI_USER}@${PI_HOST}" "rm -rf ${REMOTE_DIR} && mkdir -p ${REMOTE_DIR} && unzip -q ${REMOTE_ZIP} -d ${REMOTE_DIR} && cd ${REMOTE_DIR} && volumio plugin install"
+ssh -t "${PI_USER}@${PI_HOST}" "rm -rf ${REMOTE_DIR} && mkdir -p ${REMOTE_DIR} && unzip -q ${REMOTE_ZIP} -d ${REMOTE_DIR} && cd ${REMOTE_DIR} && if volumio plugin list 2>/dev/null | grep -q \"name: 'vinyltron'\"; then volumio plugin update; else volumio plugin install; fi"
 
 echo ""
 echo "Done. Watch install/service logs with:"

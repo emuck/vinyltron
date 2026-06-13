@@ -237,6 +237,7 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
 // Save idle image settings — hot via SIGHUP, no restart needed
 ControllerVinyltron.prototype.saveIdle = function(data) {
     var self = this;
+    data = data || {};
 
     var fallback_mode = data['fallback_mode'] ? data['fallback_mode']['value'] : 'single';
     var fallback_image_folder = data['fallback_image_folder'] && data['fallback_image_folder']['value'] !== undefined ? data['fallback_image_folder']['value'] : data['fallback_image_folder'];
@@ -289,6 +290,7 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
 // Save display settings — hot via SIGHUP, no restart needed
 ControllerVinyltron.prototype.saveDisplay = function(data) {
     var self = this;
+    data = data || {};
 
     var brightness_value = data['brightness'] && data['brightness']['value'] !== undefined ? data['brightness']['value'] : data['brightness'];
     var brightness   = parseInt(brightness_value);
@@ -351,6 +353,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
 // Save hardware settings — requires service restart (rotation changes matrix geometry)
 ControllerVinyltron.prototype.saveHardware = function(data) {
     var self = this;
+    data = data || {};
 
     var rotation = data['rotation'] && data['rotation']['value'] !== undefined ? data['rotation']['value'] : data['rotation'];
     if (rotation === undefined || rotation === null) rotation = '270';
@@ -385,6 +388,7 @@ ControllerVinyltron.prototype.saveHardware = function(data) {
 // Toggle display on/off — hot via SIGHUP, no restart needed
 ControllerVinyltron.prototype.toggleDisplay = function(data) {
     var self = this;
+    data = data || {};
 
     var display_on = data['display_on'] === true || data['display_on'] === 'true';
     var schedule_enabled = data['schedule_enabled'] === true || data['schedule_enabled'] === 'true';
