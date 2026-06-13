@@ -1,3 +1,6 @@
+# Vinyltron build helper (MIT, see repo LICENSE) for compiling the Python
+# bindings of the pinned rpi-rgb-led-matrix commit (GPL-2.0), which predates
+# that project's own pyproject.toml/setup.py.
 from setuptools import setup, Extension
 from Cython.Build import cythonize
 

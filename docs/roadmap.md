@@ -71,7 +71,7 @@ _Docs are accurate, sparse, and useful to a new user finding the repo cold._
 _Plugin is live in the Volumio beta channel._
 
 - [ ] Fork `volumio/volumio-plugins-sources-bookworm`
-- [ ] Add plugin to fork under `user_interface/vinyltron/`
+- [ ] Add plugin to fork under top-level `vinyltron/`
 - [ ] Run `volumio plugin submit` from a running Volumio device
 - [ ] PR opened; submission checklist completed
 - [ ] Respond to Volumio team review feedback
