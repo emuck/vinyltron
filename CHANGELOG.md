@@ -3,6 +3,14 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
+## [Unreleased]
+
+- Added a configurable Photo Manager port in the plugin settings and an in-UI warning when
+  the manager cannot bind the selected port.
+- Reworked public documentation around a product-first README, canonical install,
+  hardware, troubleshooting, and verification guides.
+- Documented the longer-term turntable listening mode vision behind the Vinyltron name.
+
 ## [0.2.5] - 2026-06-12
 
 - Plugin lifecycle/robustness fixes from a pre-submission audit:
@@ -16,8 +24,6 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 - Clarified that uninstall intentionally leaves onboard/HDMI audio disabled
   (for matrix PWM) and documented how to restore it from the `.vinyltron-orig`
   backups.
-- Added a configurable Photo Manager port in the plugin settings and an in-UI warning when
-  the manager cannot bind the selected port.
 - Moved the manual install walkthrough to `docs/install.md`.
 - Added MIT/provenance headers to the bundled `tools/matrix-build/` helpers.
 
