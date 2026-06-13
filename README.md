@@ -1,101 +1,95 @@
-# vinyltron
+# Vinyltron
 
-Album art on a 64×64 HUB75E RGB LED matrix, driven by Volumio.
+Album art on a 64x64 HUB75E RGB LED matrix, driven by Volumio.
 
 ![Vinyltron mounted in a media cabinet, showing the Vinyltron logo on the LED matrix](docs/images/vinyltron.jpg)
 
+Vinyltron turns a Raspberry Pi, a Volumio player, and a small RGB matrix into a physical
+music display for the room. It shows the current album art while music is playing, then
+falls back to selected photos or a built-in idle image when playback stops.
+
+It is built as a Volumio `user_interface` plugin: install the zip from Volumio's plugin
+manager, configure it from the plugin settings page, and let the companion daemon handle
+the matrix.
+
+## Features
+
+- Live Volumio album art from `pushState`, resized and cropped for a 64x64 matrix
+- Pause, stop, track-change, reboot, and reconnect handling without flashing stale art
+- Optional progress strip with configurable height and RGB colors
+- Optional compact format overlay for bitrate, sample rate, lossless, and DSD labels
+- Idle image modes: built-in image, selected folder image, or random photo rotation
+- Phone-friendly photo manager for adding, selecting, deleting, and randomizing idle photos
+- Configurable photo-manager port, default `3018`, for avoiding local port conflicts
+- Daily display schedule for photo-frame use when music is not playing
+- Volumio settings UI for display, idle image, hardware, and power controls
+
 ## Install
 
-Download the latest `vinyltron.zip` from [Releases](../../releases), then in Volumio:
-**Settings → Plugins → Manual Install → select the zip.** No SSH required — see
-[docs/install.md](docs/install.md) for the full walkthrough, including the automated
-boot configuration and the two remaining manual hardware steps.
+Download the latest `vinyltron.zip` from
+[Releases](https://github.com/emuck/vinyltron/releases/latest), then in Volumio:
 
-## Hardware
+`Plugins -> Upload Plugin -> Manual Install`
 
-| Component | Part | ~Cost |
-|---|---|---|
-| Display | 64×64 RGB LED matrix, P3, 192×192mm | $37 |
-| Interface | Adafruit RGB Matrix Bonnet #3211 | $15 |
-| Matrix PSU | 5V 4A switching supply | $12 |
-| Host | Raspberry Pi 3B or newer | — |
+The installer builds the pinned `rpi-rgb-led-matrix` Python bindings on the Pi, installs
+the `vinyltron` systemd service, and configures the boot settings needed for matrix PWM.
+No SSH is required for a normal install, but a reboot may be needed after the first
+install because boot files are changed.
 
-Matrix power runs on a separate 5V rail. The Bonnet handles 3.3V→5V level shifting
-(74AHCT245).
+Read the full [install guide](docs/install.md) before installing. The boot changes disable
+onboard/HDMI audio intentionally so GPIO18/PWM remains free for the matrix.
 
-**Pi 5 note**: the daemon installs and runs in software-pulse mode on a Pi 5 (armhf
-userspace). Hardware-pulse mode is automatically disabled on Pi 5 — the pinned
-rpi-rgb-led-matrix commit predates RP1 GPIO support and hangs the daemon if hardware
-pulsing is attempted. Mounting the Bonnet also requires a tall GPIO stacking header
-(~12-15mm) to clear the Active Cooler. Pi 3B is the verified reference platform for
-hardware-pulse mode and panel rendering.
+## Hardware Snapshot
 
-## What it does
+| Part | Tested setup |
+|---|---|
+| Host | Raspberry Pi 3B running Volumio 4 / Bookworm |
+| Matrix | 64x64 P3 HUB75E RGB LED panel |
+| Interface | Adafruit RGB Matrix Bonnet #3211 recommended; direct GPIO also works |
+| Matrix power | Separate 5V 4A supply |
+| Wiring | Bonnet PWM mode with GPIO4-to-GPIO18 quality jumper for the cleanest output |
 
-Subscribes to Volumio's `pushState` via Socket.io. On each track change it fetches album
-art, resizes to 64×64 with LANCZOS, applies gamma correction, and pushes the frame to the
-matrix. Reconnects automatically if Volumio restarts.
+Pi 5 note: the plugin installs and runs in software-pulse mode on Pi 5, but actual HUB75
+panel rendering on Pi 5 remains untested. Hardware-pulse mode is automatically disabled
+on Pi 5 because the pinned matrix library predates RP1 GPIO support.
 
-Optional overlays, configured in the plugin UI:
+The Bonnet is not strictly required. Vinyltron was originally developed with direct GPIO
+wiring; that path can flicker, but the effect has a certain 1980s display charm if that is
+the look you want. For the most stable output, use the Bonnet in PWM/quality mode.
 
-- **Progress bar** — sits at the bottom edge; height, fill color, and track color are
-  all configurable
-- **Format badge** — shows codec/quality (`24/192`, `320K`, `DSD64`) in the top-left
-  corner once per album, then clears
+See [hardware setup](docs/hardware.md) for the bill of materials, power notes, Bonnet
+jumper requirements, direct GPIO notes, and troubleshooting-oriented wiring checks.
 
-When nothing is playing, the matrix shows an idle image. Set a rotation interval to cycle
-through a folder of photos instead.
+## Photo Manager
 
-## Photo manager
+The photo manager is available from a browser on the same network:
 
-Manage idle images from a browser on the same network:
-
-```
+```text
 http://volumio.local:3018/photos
 ```
 
-Upload, pick a fixed image, delete, or enable random rotation. Uploads are converted to
-64×64 PNG by the bundled Pillow helper. SSH not required.
+The default port is `3018`. If that conflicts with another service on the Pi, change
+**Photo Manager Port** in the plugin's **Idle Image** settings and save. The photo manager
+restarts on the new port immediately.
 
-The photo manager binds to the local network with no authentication — it is designed for
-use on a trusted home LAN, the same security model as Volumio itself.
+The photo manager has no authentication. It is intended for a trusted home LAN, the same
+basic network trust model as the Volumio web UI.
 
-For bulk imports from a Mac:
+## Project Docs
 
-```bash
-python3 tools/convert-idle-images.py ~/Pictures/source /tmp/converted --recursive
-rsync -avz /tmp/converted/ volumio@<your-volumio-ip>:/data/INTERNAL/Vinyltron/idle-images/
-```
+For users:
 
-## Architecture
+- [Install guide](docs/install.md)
+- [Hardware setup](docs/hardware.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
-```
-Volumio pushState (Socket.io)
-        │
-        ▼
-  volumio_client.py  ──►  vinyltron.py  ──►  display.py
-  (reconnecting              (daemon)       (image pipeline)
-   subscriber)                                    │
-                                                  ▼
-                                        rpi-rgb-led-matrix
-                                        (C lib + Python bindings)
-                                                  │
-                                                  ▼
-                                        64×64 HUB75E panel
-```
+For reviewers and builders:
 
-## Dev tools
-
-`deploy.sh` — rsync source to a Pi via SSH; development shortcut, not the normal install path  
-`dev-install-plugin.sh` — build and push the plugin zip to a Pi for iterative testing
-
-## Docs
-
-- [Install](docs/install.md)
 - [Engineering spec](docs/engineering-spec.md)
-- [Bill of materials](docs/bom.md)
-- [Hardware notes](docs/hardware-notes.md)
-- [Test procedure](docs/test-procedure.md)
+- [Verification results](docs/verification.md)
+- [Changelog](CHANGELOG.md)
+
+For maintainers:
+
 - [Release process](docs/release.md)
 - [Roadmap](docs/roadmap.md)
-- [Changelog](CHANGELOG.md)

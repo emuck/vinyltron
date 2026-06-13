@@ -15,8 +15,10 @@ were done on Volumio 3 / Buster; the daemon is Python 3.7+ compatible and runs o
 ### Raspberry Pi 3B
 - GPIO: 3.3V logic — direct HUB75E connection runs but causes **vertical column flicker**
   (confirmed 2026-05-23). Root cause: Pi 3B GPIO (3.3V) is below the 5V CMOS VIH threshold
-  (0.7×5V = 3.5V) of the panel's row driver ICs. Not software-tunable.
-  **Adafruit Bonnet (#3211)** with 74AHCT245 level shifters (VIH ~2.0V) is the installed production wiring.
+  (0.7×5V = 3.5V) of the panel's row driver ICs. Not software-tunable. Direct GPIO remains
+  a supported option if the lower-margin, slightly flickery look is acceptable.
+  **Adafruit Bonnet (#3211)** with 74AHCT245 level shifters (VIH ~2.0V) is recommended for
+  cleaner and more stable output.
 - GPIO speed: `opts.gpio_slowdown = 2` with the bonnet; `4` caused more horizontal flicker in testing
 - Bonnet refresh limiting: `opts.limit_refresh_rate_hz = 120` reduced horizontal static substantially during testing; packaged default is `0` for uncapped driver behavior
 - Bonnet quality/PWM mode: bridge `GPIO4` to `GPIO18` and use `hardware_mapping = "adafruit-hat-pwm"` for cleaner OE timing
@@ -72,7 +74,7 @@ startup and forces software-pulse mode — see "Components" below.
 
 Without the quality jumper, use `hardware_mapping = 'adafruit-hat'`.
 
-### GPIO Wiring (direct to Pi — development only, causes flicker)
+### GPIO Wiring (direct to Pi — optional, lower signal margin)
 
 Using seengreat wiki Table 2-1 — matches hzeller "regular" default mapping:
 
@@ -96,7 +98,7 @@ Using seengreat wiki Table 2-1 — matches hzeller "regular" default mapping:
 
 ### Power Architecture
 
-**With Bonnet (production):**
+**With Bonnet (recommended):**
 ```
 Pi USB-C PSU ──► Pi + Waveshare display
 5V 4A matrix PSU ──► Panel/bonnet matrix 5V input
@@ -104,7 +106,7 @@ Bonnet/ribbon ──► HUB75 data/control with shared ground
 ```
 Do not rely on Pi USB-C back-powering the matrix. The matrix must draw from the dedicated 5V rail; grounds remain common through the bonnet/ribbon/power wiring.
 
-**Direct GPIO (development, no Bonnet):**
+**Direct GPIO (optional, no Bonnet):**
 ```
 Wall ──► 5V 4A PSU ──► Panel VCC/GND (power harness, - terminal = DC return/GND)
 Wall ──► 5V 2.5A PSU ──► Pi micro-USB
@@ -262,11 +264,14 @@ For photo-frame use, `tools/convert-idle-images.py` can pre-convert source photo
 startup decode cost, and idle-rotation CPU work. HEIC/HEIF files are supported through
 Pillow if available, otherwise ImageMagick `magick`, otherwise macOS `sips`.
 
-The plugin also serves a phone-friendly photo manager at
-`http://volumio.local:3018/photos`. It can upload, list, select, delete, and enable
-random idle photos. Uploads are written to a temporary file, converted by the bundled
-Python/Pillow helper `photo_upload_convert.py`, and stored as optimized 64x64 PNG files
-under `image_folder`; uploaded originals are discarded.
+The plugin also serves a phone-friendly photo manager. The default URL is
+`http://volumio.local:3018/photos`, and the port is stored in Volumio plugin config as
+`photo_manager_port` rather than in daemon `config.toml`. Users can change it from the
+Idle Image settings page if port `3018` conflicts with another local service. The manager
+can upload, list, select, delete, and enable random idle photos. Uploads are written to a
+temporary file, converted by the bundled Python/Pillow helper `photo_upload_convert.py`,
+and stored as optimized 64x64 PNG files under `image_folder`; uploaded originals are
+discarded.
 
 ### Display Schedule
 
