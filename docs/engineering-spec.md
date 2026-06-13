@@ -65,7 +65,7 @@ in `/boot/userconfig.txt`, and `/boot/cmdline.txt` must not contain
 default `cmdline.txt` includes the `enable_*` args, which re-enable the module). As of
 v0.2.4, `install.sh` makes both changes automatically and idempotently (backs up the
 originals as `cmdline.txt.vinyltron-orig` and `userconfig.txt.vinyltron-orig`) and
-prints a reboot reminder if anything changed — no SSH required. Confirmed 2026-06-10 on Volumio 4.119 / kernel
+prints a reboot reminder if anything changed — no manual boot-file editing required. Confirmed 2026-06-10 on Volumio 4.119 / kernel
 `6.12.74-v7+`: `snd_bcm2835` stays absent from `/proc/modules` and `rpi-rgb-led-matrix`
 runs with `disable_hardware_pulsing = False` without flicker.
 

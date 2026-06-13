@@ -1,7 +1,9 @@
 # Install Guide
 
-Vinyltron installs as a Volumio `user_interface` plugin. The normal path is the Volumio
-web UI; no SSH is required for a standard install.
+Vinyltron installs as a Volumio `user_interface` plugin. Vinyltron is not yet in the
+Volumio Plugins store (see [roadmap](roadmap.md#m6--plugin-store-submission)), and
+Volumio's web UI no longer has a plugin-zip upload option, so installing or updating it
+means SSHing into the Pi and running `volumio plugin install`.
 
 ## Before You Install
 
@@ -13,18 +15,36 @@ Confirm the hardware basics first:
 - Separate 5V high-current supply for the matrix
 - Bonnet E-address jumper closed for 64-row panels, if using the Bonnet
 - GPIO4-to-GPIO18 quality jumper installed if using Bonnet `adafruit-hat-pwm` quality mode
+- SSH access to the Pi (enabled in Volumio under `Settings -> System`)
 
 See [hardware setup](hardware.md) for wiring, power, and Bonnet details.
 
-## Install From Volumio
+## Install Over SSH
 
 1. Download the latest `vinyltron.zip` from
    [Releases](https://github.com/emuck/vinyltron/releases/latest).
-2. Open the Volumio web UI.
-3. Go to `Plugins -> Upload Plugin -> Manual Install`.
-4. Upload `vinyltron.zip`.
-5. Wait for Volumio to report that the plugin installed successfully.
-6. Reboot if the installer says boot configuration changed.
+2. Copy it to the Pi and install it:
+
+   ```bash
+   scp vinyltron.zip volumio@volumio.local:/tmp/
+   ssh volumio@volumio.local
+   rm -rf /tmp/vinyltron-install && mkdir /tmp/vinyltron-install
+   unzip -q /tmp/vinyltron.zip -d /tmp/vinyltron-install
+   cd /tmp/vinyltron-install && volumio plugin install
+   ```
+
+   `volumio plugin install` shows an unverified-plugin warning and asks
+   `Do you want to install this plugin anyway?` — answer `y`. If Vinyltron is already
+   installed, use `volumio plugin update` instead; `install` fails with
+   `Plugin vinyltron already exists` on an existing install.
+
+3. Wait for `plugininstallend` in the output — Volumio's plugin manager prints this on
+   both success and failure.
+4. Reboot if the install output says boot configuration changed.
+
+If you have this repo cloned, `./tools/install-volumio-plugin-zip.sh [host] [zip]` does
+steps 2-3 for you, automatically choosing `install` or `update` based on whether
+Vinyltron is already installed.
 
 The installer:
 

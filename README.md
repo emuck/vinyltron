@@ -36,18 +36,17 @@ foundation for it.
 
 ## Install
 
-Download the latest `vinyltron.zip` from
-[Releases](https://github.com/emuck/vinyltron/releases/latest), then in Volumio:
-
-`Plugins -> Upload Plugin -> Manual Install`
+Vinyltron is not yet in the Volumio Plugins store, so installing it means SSHing into the
+Pi and running `volumio plugin install` — Volumio's web UI no longer has a plugin-zip
+upload option. Download the latest `vinyltron.zip` from
+[Releases](https://github.com/emuck/vinyltron/releases/latest), then follow the
+[install guide](docs/install.md) for the exact commands.
 
 The installer builds the pinned `rpi-rgb-led-matrix` Python bindings on the Pi, installs
-the `vinyltron` systemd service, and configures the boot settings needed for matrix PWM.
-No SSH is required for a normal install, but a reboot may be needed after the first
-install because boot files are changed.
-
-Read the full [install guide](docs/install.md) before installing. The boot changes disable
-onboard/HDMI audio intentionally so GPIO18/PWM remains free for the matrix.
+the `vinyltron` systemd service, and configures the boot settings needed for matrix PWM. A
+reboot may be needed after the first install because boot files are changed, and the boot
+changes disable onboard/HDMI audio intentionally so GPIO18/PWM remains free for the
+matrix.
 
 ## Hardware Snapshot
 
