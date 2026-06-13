@@ -3,6 +3,22 @@
 All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 `plugin/package.json`, and git tags using the `vX.Y.Z` format.
 
+## [0.2.5] - 2026-06-12
+
+- Plugin lifecycle/robustness fixes from a pre-submission audit:
+  `onRestart`/`onInstall`/`onUninstall`/`setUIConfig` no-ops added;
+  `onStart`/`onRestart` now reject if `systemctl` fails, per Volumio convention;
+  photo manager listen failures are surfaced via `getAdditionalConf`;
+  `saveDisplay`/`saveHardware` guard against malformed UI payloads; photo
+  upload staging errors return a JSON 500 instead of throwing.
+- `install.sh` now also backs up `/boot/userconfig.txt` as
+  `userconfig.txt.vinyltron-orig` before its first edit.
+- Clarified that uninstall intentionally leaves onboard/HDMI audio disabled
+  (for matrix PWM) and documented how to restore it from the `.vinyltron-orig`
+  backups.
+- Moved the manual install walkthrough to `docs/install.md`.
+- Added MIT/provenance headers to the bundled `tools/matrix-build/` helpers.
+
 ## [0.2.4] - 2026-06-11
 
 - `install.sh` now configures `/boot/userconfig.txt` (`dtparam=audio=off`) and
@@ -10,7 +26,8 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
   appends `module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835`)
   automatically and idempotently, so hardware-pulse PWM mode with the Bonnet works
   out of the box without any manual SSH setup. Prints a reboot reminder if either
-  file changed; the original `cmdline.txt` is saved as `cmdline.txt.vinyltron-orig`.
+  file changed; originals are saved as `cmdline.txt.vinyltron-orig` and
+  `userconfig.txt.vinyltron-orig`.
 - The systemd service now sets `Environment=PYTHONDONTWRITEBYTECODE=1`, so the
   root-running daemon no longer leaves `__pycache__/*.pyc` behind in the plugin
   directory. Previously this could make `/bin/mv` fail with "Directory not empty"
