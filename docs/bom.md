@@ -16,8 +16,9 @@
 
 ### Panel (Amazon ~$37)
 - Confirmed specs: P3 pitch, 64×64, 192×192mm, HUB75E (5-bit row addressing), 1/32 scan, 5V/4A
-- Driver IC unknown until arrival — likely ICN2038S or FM6126A
-  - FM6126A requires `--led-panel-type=FM6126A` flag in rpi-rgb-led-matrix
+- Driver IC unknown (not documented by seengreat); behaves correctly with default settings
+  - FM6126A requires `--led-panel-type=FM6126A` flag in rpi-rgb-led-matrix, but this panel
+    didn't need it
 - Adafruit #4732 ($64.95) is the validated alternative if the Amazon panel has issues
 
 ### Bonnet — Adafruit #3211 ($14.95)

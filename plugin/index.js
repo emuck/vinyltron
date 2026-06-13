@@ -26,6 +26,7 @@ function ControllerVinyltron(context) {
     this.logger = this.context.logger;
     this.configManager = this.context.configManager;
     this.photoServer = null;
+    this.photoManagerError = null;
 }
 
 ControllerVinyltron.prototype.onVolumioStart = function() {
@@ -39,12 +40,28 @@ ControllerVinyltron.prototype.onVolumioStart = function() {
 
 ControllerVinyltron.prototype.onStart = function() {
     this._startPhotoManager();
-    return this._service('start', 'plugin start');
+    return this._service('start', 'plugin start', true);
 };
 
 ControllerVinyltron.prototype.onStop = function() {
     this._stopPhotoManager();
     return this._service('stop', 'plugin stop');
+};
+
+ControllerVinyltron.prototype.onRestart = function() {
+    return this._service('restart', 'plugin restart', true);
+};
+
+ControllerVinyltron.prototype.onInstall = function() {
+    return libQ.resolve();
+};
+
+ControllerVinyltron.prototype.onUninstall = function() {
+    return libQ.resolve();
+};
+
+ControllerVinyltron.prototype.setUIConfig = function(data) {
+    return libQ.resolve();
 };
 
 ControllerVinyltron.prototype.getAdditionalConf = function() {
@@ -54,7 +71,8 @@ ControllerVinyltron.prototype.getAdditionalConf = function() {
         defer.resolve({
             service_active: !error && stdout && stdout.trim() === 'active',
             config_path: CONFIG_TOML,
-            photo_manager_url: self._photoManagerUrl()
+            photo_manager_url: self._photoManagerUrl(),
+            photo_manager_error: self.photoManagerError
         });
     });
     return defer.promise;
@@ -144,7 +162,7 @@ ControllerVinyltron.prototype._ensureDaemonConfig = function() {
     }
 };
 
-ControllerVinyltron.prototype._service = function(action, reason) {
+ControllerVinyltron.prototype._service = function(action, reason, rejectOnError) {
     var self = this;
     var defer = libQ.defer();
     var allowed = ['start', 'stop', 'restart', 'reload'];
@@ -156,6 +174,10 @@ ControllerVinyltron.prototype._service = function(action, reason) {
     exec(SYSTEMCTL + ' ' + action + ' vinyltron', function(error) {
         if (error) {
             self.logger.error('Vinyltron: service ' + action + ' failed after ' + reason + ': ' + error);
+            if (rejectOnError) {
+                defer.reject(error);
+                return;
+            }
         } else {
             self.logger.info('Vinyltron: service ' + action + ' requested after ' + reason);
         }
@@ -248,8 +270,11 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
 ControllerVinyltron.prototype.saveDisplay = function(data) {
     var self = this;
 
-    var brightness   = parseInt(data['brightness']['value']);
-    var gamma        = data['gamma']['value'];
+    var brightness_value = data['brightness'] && data['brightness']['value'] !== undefined ? data['brightness']['value'] : data['brightness'];
+    var brightness   = parseInt(brightness_value);
+    if (isNaN(brightness)) brightness = 80;
+    var gamma        = data['gamma'] && data['gamma']['value'] !== undefined ? data['gamma']['value'] : data['gamma'];
+    if (gamma === undefined || gamma === null) gamma = '2.2';
     var volumio_artwork_enabled = data['volumio_artwork_enabled'] !== false && data['volumio_artwork_enabled'] !== 'false';
     var progress_bar_height_value = data['progress_bar_height'] && data['progress_bar_height']['value'] !== undefined ? data['progress_bar_height']['value'] : data['progress_bar_height'];
     var progress_bar_height = progress_bar_height_value !== undefined ? parseInt(progress_bar_height_value) : 0;
@@ -307,7 +332,8 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
 ControllerVinyltron.prototype.saveHardware = function(data) {
     var self = this;
 
-    var rotation = data['rotation']['value'];
+    var rotation = data['rotation'] && data['rotation']['value'] !== undefined ? data['rotation']['value'] : data['rotation'];
+    if (rotation === undefined || rotation === null) rotation = '270';
     var hardware_mapping = data['hardware_mapping'] ? data['hardware_mapping']['value'] : 'adafruit-hat-pwm';
     var limit_refresh_rate_hz_value = data['limit_refresh_rate_hz'] && data['limit_refresh_rate_hz']['value'] !== undefined ? data['limit_refresh_rate_hz']['value'] : data['limit_refresh_rate_hz'];
     var limit_refresh_rate_hz = limit_refresh_rate_hz_value !== undefined ? parseInt(limit_refresh_rate_hz_value) : 0;
@@ -370,11 +396,14 @@ ControllerVinyltron.prototype._startPhotoManager = function() {
     var self = this;
     if (self.photoServer) return;
 
+    self.photoManagerError = null;
     self.photoServer = http.createServer(function(req, res) {
         self._handlePhotoManagerRequest(req, res);
     });
     self.photoServer.on('error', function(e) {
         self.logger.error('Vinyltron: photo manager server failed: ' + e);
+        self.photoManagerError = e.message || String(e);
+        self.photoServer = null;
     });
     self.photoServer.listen(PHOTO_MANAGER_PORT, PHOTO_MANAGER_HOST, function() {
         self.logger.info('Vinyltron: photo manager listening on port ' + PHOTO_MANAGER_PORT);
@@ -501,10 +530,17 @@ ControllerVinyltron.prototype._uploadIdleImage = function(body, res) {
     }
 
     var folder = self._idleFolder();
-    var tmpDir = fs.mkdtempSync('/tmp/vinyltron-upload-');
-    var tmpPath = path.join(tmpDir, filename || 'photo');
-    fs.ensureDirSync(folder);
-    fs.writeFileSync(tmpPath, buffer);
+    var tmpDir, tmpPath;
+    try {
+        tmpDir = fs.mkdtempSync('/tmp/vinyltron-upload-');
+        tmpPath = path.join(tmpDir, filename || 'photo');
+        fs.ensureDirSync(folder);
+        fs.writeFileSync(tmpPath, buffer);
+    } catch (e) {
+        self.logger.error('Vinyltron: photo upload staging failed: ' + e);
+        self._json(res, 500, {ok: false, error: 'Could not save upload'});
+        return;
+    }
 
     execFile('/usr/bin/python3', [
         self._photoConverterPath(),
