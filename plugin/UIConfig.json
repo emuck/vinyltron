@@ -125,7 +125,7 @@
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["fallback_mode", "fallback_image_folder", "fallback_selected_image", "fallback_rotate_seconds"],
+                "data": ["fallback_mode", "fallback_image_folder", "fallback_selected_image", "fallback_rotate_seconds", "photo_manager_port"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -175,6 +175,15 @@
                     "label": "Photo Manager",
                     "value": "http://volumio.local:3018/photos",
                     "doc": "Open this URL in a browser on the same network to add, select, or delete idle photos."
+                },
+                {
+                    "id": "photo_manager_port",
+                    "element": "input",
+                    "label": "Photo Manager Port",
+                    "value": "3018",
+                    "min": 1024,
+                    "max": 65535,
+                    "doc": "TCP port for the Photo Manager web UI. Default 3018. Change this if the port conflicts with another service on the Pi. Valid range: 1024-65535. Takes effect immediately on save."
                 }
             ]
         },

@@ -9,6 +9,7 @@
     "fallback_image_folder": {"type": "string", "value": "/data/INTERNAL/Vinyltron/idle-images"},
     "fallback_selected_image": {"type": "string", "value": ""},
     "fallback_rotate_seconds": {"type": "number", "value": 300},
+    "photo_manager_port": {"type": "number", "value": 3018},
     "progress_bar": {"type": "boolean", "value": false},
     "progress_bar_height": {"type": "number", "value": 0},
     "progress_bar_foreground": {"type": "string", "value": "255,255,255"},
