@@ -76,3 +76,42 @@ _Plugin is live in the Volumio beta channel._
 - [ ] PR opened; submission checklist completed
 - [ ] Respond to Volumio team review feedback
 - [ ] Plugin live in beta channel
+
+---
+
+## Future — Turntable Listening Mode
+
+_The name Vinyltron points here._
+
+The long-term idea is automatic artwork display for records and other analog sources:
+put the needle down, let Vinyltron listen, identify the track, fetch the artwork, and show
+it on the same matrix.
+
+Possible flow:
+
+```text
+IDLE
+  audio level rises above threshold for a few seconds
+DETECTING
+  capture short audio clip and send it to a recognition backend
+MATCHED
+  resolve artist/album/track metadata and fetch artwork
+DISPLAYING
+  keep showing artwork until a long silence suggests the record stopped or the side changed
+IDLE
+```
+
+Open research items:
+
+- [ ] Find a free, low-cost, or self-hostable Shazam-like recognition backend suitable for
+      personal/home use
+- [ ] Prototype USB microphone or line-input capture on the Pi without interfering with
+      Volumio playback or the GPIO matrix timing
+- [ ] Tune onset and silence detection so between-track gaps do not cause false lookups,
+      but flipping a record side does
+- [ ] Fetch artwork from a reliable source such as MusicBrainz / Cover Art Archive after a
+      recognition match
+- [ ] Decide whether this belongs inside the Volumio plugin or as a separate companion
+      service feeding the same display daemon
+
+UX goal: put needle on record, artwork appears a few seconds later, no app interaction.
