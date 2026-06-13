@@ -2,6 +2,8 @@
 
 Album art on a 64×64 HUB75E RGB LED matrix, driven by Volumio.
 
+![Vinyltron mounted in a media cabinet, showing the Vinyltron logo on the LED matrix](docs/images/vinyltron.jpg)
+
 ## Install
 
 Download the latest `vinyltron.zip` from [Releases](../../releases), then in Volumio:
