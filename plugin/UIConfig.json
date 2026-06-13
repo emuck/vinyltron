@@ -116,7 +116,7 @@
         {
             "id": "section_idle",
             "element": "section",
-            "label": "Idle Image — updates instantly",
+            "label": "Idle / Photo Fallback — updates instantly",
             "icon": "fa-picture-o",
             "onSave": {
                 "type": "controller",
@@ -125,7 +125,7 @@
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["fallback_mode", "fallback_image_folder", "fallback_selected_image", "fallback_rotate_seconds", "screensaver_palette", "screensaver_fps", "photo_manager_port"],
+                "data": ["fallback_mode", "fallback_image_folder", "fallback_selected_image", "fallback_rotate_seconds", "photo_manager_port"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -139,10 +139,10 @@
                     "label": "Idle Mode",
                     "value": {},
                     "options": [
-                        {"value": "single",                  "label": "Built-in Idle Image"},
-                        {"value": "selected",                "label": "Selected Folder Image"},
-                        {"value": "random_folder",           "label": "Random Folder Image"},
-                        {"value": "screensaver_brians_brain", "label": "Screensaver: Brian's Brain"}
+                        {"value": "single",        "label": "Built-in Idle Image"},
+                        {"value": "selected",      "label": "Selected Folder Image"},
+                        {"value": "random_folder", "label": "Random Folder Image"},
+                        {"value": "screensaver",   "label": "Screensaver"}
                     ],
                     "doc": "Controls which image is shown when playback is stopped"
                 },
@@ -171,31 +171,6 @@
                     "doc": "When Idle Mode is Random Folder Image, switch photos after this many seconds. 0 disables rotation."
                 },
                 {
-                    "id": "screensaver_palette",
-                    "element": "select",
-                    "label": "Screensaver Palette",
-                    "value": {},
-                    "options": [
-                        {"value": "cyan_amber",    "label": "Cyan / Amber"},
-                        {"value": "green_magenta", "label": "Green / Magenta"},
-                        {"value": "blue_red",      "label": "Blue / Red"},
-                        {"value": "white_violet",  "label": "White / Violet"}
-                    ],
-                    "doc": "Color pair used by the Brian's Brain screensaver."
-                },
-                {
-                    "id": "screensaver_fps",
-                    "element": "select",
-                    "label": "Screensaver Speed",
-                    "value": {},
-                    "options": [
-                        {"value": "6",  "label": "Slow"},
-                        {"value": "12", "label": "Medium"},
-                        {"value": "18", "label": "Fast"}
-                    ],
-                    "doc": "Animation speed for the Brian's Brain screensaver."
-                },
-                {
                     "id": "photo_manager_url",
                     "element": "input",
                     "label": "Photo Manager",
@@ -210,6 +185,71 @@
                     "min": 1024,
                     "max": 65535,
                     "doc": "TCP port for the Photo Manager web UI. Default 3018. Change this if the port conflicts with another service on the Pi. Valid range: 1024-65535. Takes effect immediately on save."
+                }
+            ]
+        },
+        {
+            "id": "section_screensaver",
+            "element": "section",
+            "label": "Screensaver — updates instantly",
+            "icon": "fa-magic",
+            "onSave": {
+                "type": "controller",
+                "endpoint": "user_interface/vinyltron",
+                "method": "saveScreensaver"
+            },
+            "saveButton": {
+                "label": "Save",
+                "data": ["screensaver_engine", "screensaver_palette", "screensaver_fps", "screensaver_reset_seconds"],
+                "popup": {
+                    "allowClose": true,
+                    "type": "success",
+                    "message": "Screensaver settings updated"
+                }
+            },
+            "content": [
+                {
+                    "id": "screensaver_engine",
+                    "element": "select",
+                    "label": "Screensaver",
+                    "value": {},
+                    "options": [
+                        {"value": "brians_brain", "label": "Brian's Brain"}
+                    ],
+                    "doc": "Generated display used when Idle Mode is Screensaver."
+                },
+                {
+                    "id": "screensaver_palette",
+                    "element": "select",
+                    "label": "Palette",
+                    "value": {},
+                    "options": [
+                        {"value": "cyan_amber",    "label": "Cyan / Amber"},
+                        {"value": "green_magenta", "label": "Green / Magenta"},
+                        {"value": "blue_red",      "label": "Blue / Red"},
+                        {"value": "white_violet",  "label": "White / Violet"}
+                    ],
+                    "doc": "Color pair used by the selected screensaver."
+                },
+                {
+                    "id": "screensaver_fps",
+                    "element": "select",
+                    "label": "Speed",
+                    "value": {},
+                    "options": [
+                        {"value": "4",  "label": "Slow"},
+                        {"value": "6",  "label": "Medium"},
+                        {"value": "10", "label": "Fast"}
+                    ],
+                    "doc": "Animation speed for the selected screensaver."
+                },
+                {
+                    "id": "screensaver_reset_seconds",
+                    "element": "input",
+                    "label": "Reset Interval (seconds)",
+                    "value": "300",
+                    "min": 0,
+                    "doc": "Seconds between random state resets. Set to 0 to disable periodic resets."
                 }
             ]
         },

@@ -207,15 +207,18 @@ off_time = "23:00"
 [fallback]
 image = "assets/idle.png"
 image_folder = "/data/INTERNAL/Vinyltron/idle-images"
-mode = "single"          # single | selected | random_folder | screensaver_brians_brain
+mode = "single"          # single | selected | random_folder | screensaver
 selected_image = ""      # basename inside image_folder
 rotate_seconds = 300
 
 [screensaver]
+engine = "brians_brain"  # brians_brain
 palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
-fps = 12                 # clamped to 2-24
-density = 0.22
-seed = ""
+fps = 6                  # clamped to 2-24
+reset_seconds = 300      # 0 disables periodic random reset
+startup_delay_seconds = 120 # show built-in image before starting screensaver after service start
+density = 0.22           # advanced Brian's Brain initial ready-cell density
+seed = ""                # advanced deterministic seed; blank = random each daemon start
 
 [overlays]
 progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar
@@ -259,18 +262,23 @@ Fallback image behavior is controlled by `[fallback]`:
 | `single` | Use `assets/idle.png`. |
 | `selected` | Load `image_folder / selected_image`; fall back to `assets/idle.png` on error. |
 | `random_folder` | Pick a random supported image from `image_folder` at real fallback time. |
-| `screensaver_brians_brain` | Run the Brian's Brain animated cellular automaton as the fallback background. |
+| `screensaver` | Run the selected `[screensaver].engine` as the fallback background. |
 
 Folder images are not modified on disk. `display.py` opens them on demand, applies EXIF
 transpose, converts to RGB, center-crops to square, resizes to 64x64, applies the active
 gamma LUT, and renders them. Random selection happens only when the fallback state is
 entered after debounce, not on every render.
 
-Screensaver fallback is controlled by `[screensaver]`. The MVP uses Brian's Brain: a
-three-state cellular automaton backed by two 4096-byte grids and precomputed neighbor
-indexes. It renders generated RGB frames through the same `display.py` image path as static
-fallbacks, so progress and format overlays still compose on top. The frame timer is owned
-by `vinyltron.py` and is cancelled on playback artwork, display-off, config reload, and
+Screensaver fallback is controlled by `[screensaver]`. The plugin UI exposes generic
+controls (`engine`, `palette`, `fps`, `reset_seconds`) while boot/performance and
+engine-specific tuning such as `startup_delay_seconds`, Brian's Brain `density`, and
+`seed` remain config-file-only. The MVP engine is Brian's Brain: a three-state cellular
+automaton backed by two 4096-byte grids and precomputed neighbor indexes. It renders
+generated RGB frames through the same `display.py` image path as static fallbacks, so
+progress and format overlays still compose on top. During early service startup,
+`vinyltron.py` shows the built-in fallback image and delays the screensaver until the
+startup grace period has elapsed. The frame, reset, and delayed-start timers are owned by
+`vinyltron.py` and are cancelled on playback artwork, display-off, config reload, and
 shutdown.
 
 For visual tuning before hardware deployment, `tools/matrix-sim.py` exposes the same

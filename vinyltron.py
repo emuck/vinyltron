@@ -61,9 +61,11 @@ FALLBACK_DELAY_SECONDS = 1.5
 MPD_HOST = '127.0.0.1'
 MPD_PORT = 6600
 MPD_TIMEOUT_SECONDS = 0.75
-SCREENSAVER_FPS_DEFAULT = 12
+SCREENSAVER_FPS_DEFAULT = 6
 SCREENSAVER_FPS_MIN = 2
 SCREENSAVER_FPS_MAX = 24
+SCREENSAVER_RESET_SECONDS_DEFAULT = 300
+SCREENSAVER_STARTUP_DELAY_SECONDS_DEFAULT = 120
 
 
 class Vinyltron:
@@ -95,6 +97,10 @@ class Vinyltron:
         self._idle_rotation_timer_id = 0
         self._screensaver_timer: Optional[threading.Timer] = None
         self._screensaver_timer_id = 0
+        self._screensaver_start_timer: Optional[threading.Timer] = None
+        self._screensaver_start_timer_id = 0
+        self._screensaver_reset_timer: Optional[threading.Timer] = None
+        self._screensaver_reset_timer_id = 0
         self._screensaver: Optional[BriansBrain] = None
         self._progress_timer: Optional[threading.Timer] = None
         self._progress_seek_ms = 0
@@ -102,6 +108,7 @@ class Vinyltron:
         self._progress_last_width: Optional[int] = None
         self._progress_playing = False
         self._progress_last_update = time.monotonic()
+        self._service_started_at = time.monotonic()
         self._running = True
         log.info("Vinyltron version %s", self._version)
         self._log_runtime_config("startup")
@@ -535,7 +542,15 @@ class Vinyltron:
     def _screensaver_enabled(self) -> bool:
         fallback = self._cfg.get('fallback', {})
         mode = str(fallback.get('mode', 'single')).strip().lower()
-        return mode == 'screensaver_brians_brain'
+        return mode in ('screensaver', 'screensaver_brians_brain')
+
+    def _screensaver_engine(self) -> str:
+        cfg = self._cfg.get('screensaver', {})
+        engine = str(cfg.get('engine', 'brians_brain')).strip().lower()
+        if engine == 'brians_brain':
+            return engine
+        log.warning("Unknown screensaver engine %r; using brians_brain", engine)
+        return 'brians_brain'
 
     def _screensaver_fps(self) -> int:
         try:
@@ -543,6 +558,32 @@ class Vinyltron:
         except (TypeError, ValueError):
             fps = SCREENSAVER_FPS_DEFAULT
         return max(SCREENSAVER_FPS_MIN, min(SCREENSAVER_FPS_MAX, fps))
+
+    def _screensaver_reset_seconds(self) -> int:
+        try:
+            seconds = int(self._cfg.get('screensaver', {}).get(
+                'reset_seconds',
+                SCREENSAVER_RESET_SECONDS_DEFAULT,
+            ))
+        except (TypeError, ValueError):
+            seconds = SCREENSAVER_RESET_SECONDS_DEFAULT
+        return max(0, seconds)
+
+    def _screensaver_startup_delay_seconds(self) -> int:
+        try:
+            seconds = int(self._cfg.get('screensaver', {}).get(
+                'startup_delay_seconds',
+                SCREENSAVER_STARTUP_DELAY_SECONDS_DEFAULT,
+            ))
+        except (TypeError, ValueError):
+            seconds = SCREENSAVER_STARTUP_DELAY_SECONDS_DEFAULT
+        return max(0, seconds)
+
+    def _screensaver_startup_delay_remaining(self) -> float:
+        remaining = self._screensaver_startup_delay_seconds() - (
+            time.monotonic() - self._service_started_at
+        )
+        return max(0.0, remaining)
 
     def _new_screensaver(self) -> BriansBrain:
         cfg = self._cfg.get('screensaver', {})
@@ -557,7 +598,10 @@ class Vinyltron:
 
     def _show_or_start_fallback_locked(self, status: str):
         if self._screensaver_enabled():
-            self._start_screensaver_locked(status)
+            if self._screensaver_startup_delay_remaining() > 0:
+                self._show_startup_screensaver_placeholder_locked(status)
+            else:
+                self._start_screensaver_locked(status)
             return
         self._cancel_screensaver_locked()
         self._display.show_fallback()
@@ -568,6 +612,8 @@ class Vinyltron:
         if self._screensaver_enabled():
             if self._screensaver:
                 self._schedule_screensaver_frame_locked(status)
+            elif self._screensaver_startup_delay_remaining() > 0:
+                self._show_startup_screensaver_placeholder_locked(status)
             else:
                 self._start_screensaver_locked(status)
             return
@@ -576,12 +622,47 @@ class Vinyltron:
 
     def _start_screensaver_locked(self, status: str):
         self._cancel_idle_rotation_locked()
+        self._cancel_screensaver_start_locked()
         if self._screensaver is None:
             self._screensaver = self._new_screensaver()
-            log.info("Starting Brian's Brain screensaver at %s FPS", self._screensaver_fps())
+            log.info(
+                "Starting %s screensaver at %s FPS; reset interval=%ss",
+                self._screensaver_engine(),
+                self._screensaver_fps(),
+                self._screensaver_reset_seconds(),
+            )
         self._display.show_screensaver_frame(self._screensaver.frame())
         self._fallback_visible = True
         self._schedule_screensaver_frame_locked(status)
+        self._schedule_screensaver_reset_locked(status)
+
+    def _show_startup_screensaver_placeholder_locked(self, status: str):
+        self._cancel_screensaver_locked()
+        self._cancel_idle_rotation_locked()
+        self._display.show_fallback()
+        self._fallback_visible = True
+        self._schedule_screensaver_start_locked(status)
+
+    def _schedule_screensaver_start_locked(self, status: str):
+        if self._screensaver_start_timer:
+            return
+        seconds = self._screensaver_startup_delay_remaining()
+        if seconds <= 0:
+            self._start_screensaver_locked(status)
+            return
+        self._screensaver_start_timer_id += 1
+        timer_id = self._screensaver_start_timer_id
+        log.info(
+            "Showing built-in fallback for %.1fs before starting screensaver",
+            seconds,
+        )
+        self._screensaver_start_timer = threading.Timer(
+            seconds,
+            self._start_screensaver_from_timer,
+            args=(timer_id, status),
+        )
+        self._screensaver_start_timer.daemon = True
+        self._screensaver_start_timer.start()
 
     def _schedule_screensaver_frame_locked(self, status: str):
         if self._screensaver_timer or not self._screensaver:
@@ -597,12 +678,49 @@ class Vinyltron:
         self._screensaver_timer.daemon = True
         self._screensaver_timer.start()
 
+    def _schedule_screensaver_reset_locked(self, status: str):
+        if self._screensaver_reset_timer or not self._screensaver:
+            return
+        seconds = self._screensaver_reset_seconds()
+        if seconds <= 0:
+            return
+        self._screensaver_reset_timer_id += 1
+        timer_id = self._screensaver_reset_timer_id
+        self._screensaver_reset_timer = threading.Timer(
+            seconds,
+            self._reset_screensaver_from_timer,
+            args=(timer_id, status),
+        )
+        self._screensaver_reset_timer.daemon = True
+        self._screensaver_reset_timer.start()
+
+    def _cancel_screensaver_start_locked(self):
+        if self._screensaver_start_timer:
+            self._screensaver_start_timer.cancel()
+            self._screensaver_start_timer = None
+        self._screensaver_start_timer_id += 1
+
     def _cancel_screensaver_locked(self):
+        self._cancel_screensaver_start_locked()
         if self._screensaver_timer:
             self._screensaver_timer.cancel()
             self._screensaver_timer = None
         self._screensaver_timer_id += 1
+        if self._screensaver_reset_timer:
+            self._screensaver_reset_timer.cancel()
+            self._screensaver_reset_timer = None
+        self._screensaver_reset_timer_id += 1
         self._screensaver = None
+
+    def _start_screensaver_from_timer(self, timer_id: int, status: str):
+        with self._overlay_lock:
+            if timer_id != self._screensaver_start_timer_id:
+                return
+            self._screensaver_start_timer = None
+            if not self._display_on or not self._fallback_visible or not self._screensaver_enabled():
+                self._cancel_screensaver_locked()
+                return
+            self._start_screensaver_locked(status)
 
     def _show_screensaver_frame_from_timer(self, timer_id: int, status: str):
         with self._overlay_lock:
@@ -614,8 +732,23 @@ class Vinyltron:
                 return
             if not self._screensaver:
                 self._screensaver = self._new_screensaver()
+                self._schedule_screensaver_reset_locked(status)
             self._display.show_screensaver_frame(self._screensaver.frame())
             self._schedule_screensaver_frame_locked(status)
+
+    def _reset_screensaver_from_timer(self, timer_id: int, status: str):
+        with self._overlay_lock:
+            if timer_id != self._screensaver_reset_timer_id:
+                return
+            self._screensaver_reset_timer = None
+            if not self._display_on or not self._fallback_visible or not self._screensaver_enabled():
+                self._cancel_screensaver_locked()
+                return
+            log.info("Resetting %s screensaver state", self._screensaver_engine())
+            self._screensaver = self._new_screensaver()
+            self._display.show_screensaver_frame(self._screensaver.frame())
+            self._schedule_screensaver_frame_locked(status)
+            self._schedule_screensaver_reset_locked(status)
 
     def _rotate_idle_image_from_timer(self, timer_id: int, status: str):
         with self._overlay_lock:
@@ -830,7 +963,9 @@ class Vinyltron:
                 "limit_refresh_rate_hz=%r schedule_enabled=%r schedule_on=%r schedule_off=%r "
                 "effective_display_on=%r volumio_artwork_enabled=%r "
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
-                "fallback_selected=%r fallback_rotate_seconds=%r screensaver_palette=%r screensaver_fps=%r "
+                "fallback_selected=%r fallback_rotate_seconds=%r screensaver_engine=%r "
+                "screensaver_palette=%r screensaver_fps=%r screensaver_reset_seconds=%r "
+                "screensaver_startup_delay_seconds=%r "
                 "progress_height=%r progress_foreground=%r "
                 "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
             ),
@@ -853,8 +988,11 @@ class Vinyltron:
             fallback.get('image_folder'),
             fallback.get('selected_image'),
             fallback.get('rotate_seconds', 300),
+            screensaver.get('engine', 'brians_brain'),
             screensaver.get('palette', 'cyan_amber'),
-            screensaver.get('fps', 12),
+            screensaver.get('fps', SCREENSAVER_FPS_DEFAULT),
+            screensaver.get('reset_seconds', SCREENSAVER_RESET_SECONDS_DEFAULT),
+            screensaver.get('startup_delay_seconds', SCREENSAVER_STARTUP_DELAY_SECONDS_DEFAULT),
             overlays.get('progress_bar_height'),
             overlays.get('progress_bar_foreground'),
             overlays.get('progress_bar_background'),
