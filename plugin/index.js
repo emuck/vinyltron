@@ -15,7 +15,9 @@ var IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'];
 var SYSTEMCTL = '/usr/bin/sudo /bin/systemctl';
 // Binds to all interfaces — designed for trusted home LAN use, no authentication
 var PHOTO_MANAGER_HOST = '0.0.0.0';
-var PHOTO_MANAGER_PORT = 3018;
+var PHOTO_MANAGER_PORT_DEFAULT = 3018;
+var PHOTO_MANAGER_PORT_MIN = 1024;
+var PHOTO_MANAGER_PORT_MAX = 65535;
 var PHOTO_MANAGER_MAX_BYTES = 32 * 1024 * 1024;
 
 module.exports = ControllerVinyltron;
@@ -120,7 +122,13 @@ ControllerVinyltron.prototype.getUIConfig = function() {
             label: self._labelForIdleImage(fallback_selected_image, idle_options)
         };
         s[1].content[3].value = fallback_rotate_seconds.toString();
-        s[1].content[4].value = self._photoManagerUrl();
+        var photo_manager_port = self._photoManagerPort();
+        if (self.photoManagerError) {
+            s[1].content[4].value = 'Unavailable on port ' + photo_manager_port + ': ' + self.photoManagerError + '. Change Photo Manager Port below and save.';
+        } else {
+            s[1].content[4].value = self._photoManagerUrl();
+        }
+        s[1].content[5].value = photo_manager_port.toString();
 
         var rotation = self.config.get('rotation');
         s[2].content[0].value = {value: rotation, label: rotation + '°'};
@@ -235,6 +243,8 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
     var fallback_selected_image = data['fallback_selected_image'] ? data['fallback_selected_image']['value'] : '';
     var fallback_rotate_seconds_value = data['fallback_rotate_seconds'] && data['fallback_rotate_seconds']['value'] !== undefined ? data['fallback_rotate_seconds']['value'] : data['fallback_rotate_seconds'];
     var fallback_rotate_seconds = self._validFallbackRotateSeconds(fallback_rotate_seconds_value);
+    var photo_manager_port_value = data['photo_manager_port'] && data['photo_manager_port']['value'] !== undefined ? data['photo_manager_port']['value'] : data['photo_manager_port'];
+    var photo_manager_port = self._validPhotoManagerPort(photo_manager_port_value);
 
     fallback_mode = self._validFallbackMode(fallback_mode);
     fallback_image_folder = fallback_image_folder || DEFAULT_IDLE_FOLDER;
@@ -242,16 +252,20 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
 
     fs.ensureDirSync(fallback_image_folder);
 
+    var photo_manager_port_changed = photo_manager_port !== self._photoManagerPort();
+
     self.config.set('fallback_mode', fallback_mode);
     self.config.set('fallback_image_folder', fallback_image_folder);
     self.config.set('fallback_selected_image', fallback_selected_image);
     self.config.set('fallback_rotate_seconds', fallback_rotate_seconds);
+    self.config.set('photo_manager_port', photo_manager_port);
 
     self.logger.info('Vinyltron: saving idle settings: ' + JSON.stringify({
         fallback_mode: fallback_mode,
         fallback_image_folder: fallback_image_folder,
         fallback_selected_image: fallback_selected_image,
-        fallback_rotate_seconds: fallback_rotate_seconds
+        fallback_rotate_seconds: fallback_rotate_seconds,
+        photo_manager_port: photo_manager_port
     }));
 
     self._patchConfigToml({
@@ -260,6 +274,12 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
         fallback_selected_image: fallback_selected_image,
         fallback_rotate_seconds: fallback_rotate_seconds
     });
+
+    if (photo_manager_port_changed) {
+        self.logger.info('Vinyltron: restarting photo manager on port ' + photo_manager_port);
+        self._stopPhotoManager();
+        self._startPhotoManager();
+    }
 
     self._service('reload', 'idle settings save');
 
@@ -403,10 +423,17 @@ ControllerVinyltron.prototype._startPhotoManager = function() {
     self.photoServer.on('error', function(e) {
         self.logger.error('Vinyltron: photo manager server failed: ' + e);
         self.photoManagerError = e.message || String(e);
+        var failedServer = self.photoServer;
         self.photoServer = null;
+        try {
+            failedServer.close();
+        } catch (closeErr) {
+            // already not listening after a bind error — nothing to clean up
+        }
     });
-    self.photoServer.listen(PHOTO_MANAGER_PORT, PHOTO_MANAGER_HOST, function() {
-        self.logger.info('Vinyltron: photo manager listening on port ' + PHOTO_MANAGER_PORT);
+    var port = self._photoManagerPort();
+    self.photoServer.listen(port, PHOTO_MANAGER_HOST, function() {
+        self.logger.info('Vinyltron: photo manager listening on port ' + port);
     });
 };
 
@@ -683,7 +710,17 @@ ControllerVinyltron.prototype._photoManagerHostLabel = function() {
 };
 
 ControllerVinyltron.prototype._photoManagerUrl = function() {
-    return 'http://' + this._photoManagerHostLabel() + ':' + PHOTO_MANAGER_PORT + '/photos';
+    return 'http://' + this._photoManagerHostLabel() + ':' + this._photoManagerPort() + '/photos';
+};
+
+ControllerVinyltron.prototype._photoManagerPort = function() {
+    return this._validPhotoManagerPort(this.config.get('photo_manager_port'));
+};
+
+ControllerVinyltron.prototype._validPhotoManagerPort = function(value) {
+    value = parseInt(value);
+    if (isNaN(value) || value < PHOTO_MANAGER_PORT_MIN || value > PHOTO_MANAGER_PORT_MAX) return PHOTO_MANAGER_PORT_DEFAULT;
+    return value;
 };
 
 // Patch specific keys in config.toml without touching unmanaged values
