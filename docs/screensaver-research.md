@@ -21,7 +21,14 @@ User-facing model:
 - **Idle Mode = Built-in Idle Image**
 - **Idle Mode = Selected Folder Image**
 - **Idle Mode = Random Folder Image**
-- **Idle Mode = Screensaver: Brian's Brain**
+- **Idle Mode = Screensaver**
+
+Screensaver section model:
+
+- **Screensaver = Brian's Brain**
+- **Palette = Cyan / Amber**, etc.
+- **Speed = Slow / Medium / Fast**
+- **Reset Interval = seconds**, with `0` disabling periodic resets
 
 The screensaver should run whenever Vinyltron would otherwise show fallback art:
 
@@ -97,19 +104,26 @@ Implemented options:
 
 ```toml
 [screensaver]
+engine = "brians_brain"
 palette = "cyan_amber"
-fps = 12
+fps = 6
+reset_seconds = 300
+startup_delay_seconds = 120
 density = 0.22
 seed = ""
 ```
 
-For the UI, keep MVP options sparse:
+For the UI, keep options generic across screensaver engines:
 
-- Idle Mode
-- Screensaver Palette
-- Screensaver Speed
+- Screensaver
+- Palette
+- Speed
+- Reset Interval
 
-Do not expose density/seed unless there is a clear user need.
+Do not expose boot/performance and Brian's Brain-specific keys such as
+`startup_delay_seconds`, `density`, or `seed` in the plugin UI unless there is a clear user
+need. Advanced users can edit those keys directly in
+`/data/configuration/user_interface/vinyltron/config.toml`.
 
 ## Where It Fits In The Current Code
 
@@ -145,8 +159,11 @@ Target frame rate should be modest. A 64x64 matrix does not need 60 FPS.
 
 Good defaults:
 
-- 10-12 FPS for organic motion
-- cap UI selection around 5, 8, 12, 16, 20 FPS
+- 6 FPS for Pi 3B safety; faster presets can be exposed for users who prefer motion over
+  idle CPU headroom
+- 120 seconds of startup delay before the screensaver starts, with the built-in fallback
+  image shown during the grace period
+- cap UI selection around low Pi-friendly presets such as 4, 6, and 10 FPS
 - log a warning and clamp invalid values
 
 Pure Python loops are acceptable at this size if they avoid per-cell object churn. If
