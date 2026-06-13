@@ -24,9 +24,15 @@ off_time = "23:00"
 [fallback]
 image = "assets/idle.png"
 image_folder = "/data/INTERNAL/Vinyltron/idle-images"
-mode = "single"          # single | selected | random_folder
+mode = "single"          # single | selected | random_folder | screensaver_brians_brain
 selected_image = ""      # basename inside image_folder
 rotate_seconds = 300     # random_folder only; 0 disables idle photo rotation
+
+[screensaver]
+palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
+fps = 12                 # clamped to 2-24
+density = 0.22           # initial ready-cell density for Brian's Brain
+seed = ""                # optional deterministic seed; blank = random each daemon start
 
 [overlays]
 progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar

@@ -13,6 +13,7 @@ import toml
 from PIL import Image
 
 from display import Display
+from screensavers import BriansBrain
 from volumio_client import VolumioClient
 
 logging.basicConfig(
@@ -60,6 +61,9 @@ FALLBACK_DELAY_SECONDS = 1.5
 MPD_HOST = '127.0.0.1'
 MPD_PORT = 6600
 MPD_TIMEOUT_SECONDS = 0.75
+SCREENSAVER_FPS_DEFAULT = 12
+SCREENSAVER_FPS_MIN = 2
+SCREENSAVER_FPS_MAX = 24
 
 
 class Vinyltron:
@@ -89,6 +93,9 @@ class Vinyltron:
         self._fallback_timer_id = 0
         self._idle_rotation_timer: Optional[threading.Timer] = None
         self._idle_rotation_timer_id = 0
+        self._screensaver_timer: Optional[threading.Timer] = None
+        self._screensaver_timer_id = 0
+        self._screensaver: Optional[BriansBrain] = None
         self._progress_timer: Optional[threading.Timer] = None
         self._progress_seek_ms = 0
         self._progress_duration_ms = 0
@@ -139,6 +146,7 @@ class Vinyltron:
         with self._overlay_lock:
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
+            self._cancel_screensaver_locked()
 
         if not albumart:
             return
@@ -242,8 +250,7 @@ class Vinyltron:
                 self._cancel_overlay_locked()
                 self._cancel_progress_locked(clear_visible=album_changed)
                 self._badge_visible = False
-                self._display.show_fallback()
-                self._fallback_visible = True
+                self._show_or_start_fallback_locked('albumart unavailable')
             log.info("Album art unavailable; showing fallback for current track")
             with self._state_lock:
                 if seq != self._state_seq or track_key != self._current_track_key:
@@ -480,9 +487,7 @@ class Vinyltron:
         if self._fallback_visible:
             return
         self._cancel_fallback_locked()
-        self._display.show_fallback()
-        self._fallback_visible = True
-        self._schedule_idle_rotation_locked(status)
+        self._show_or_start_fallback_locked(status)
 
     def _clear_playback_overlays_on_fallback_locked(self, status: str):
         self._cancel_overlay_locked()
@@ -490,7 +495,7 @@ class Vinyltron:
         if self._badge_visible:
             self._display.clear_badge()
         self._badge_visible = False
-        self._schedule_idle_rotation_locked(status)
+        self._schedule_active_fallback_locked(status)
 
     def _clear_current_track_state(self):
         with self._state_lock:
@@ -501,6 +506,9 @@ class Vinyltron:
             self._pending_track_key = None
 
     def _schedule_idle_rotation_locked(self, status: str):
+        if self._screensaver_enabled():
+            self._cancel_idle_rotation_locked()
+            return
         if not self._fallback_rotation_enabled():
             self._cancel_idle_rotation_locked()
             return
@@ -524,6 +532,91 @@ class Vinyltron:
             self._idle_rotation_timer = None
         self._idle_rotation_timer_id += 1
 
+    def _screensaver_enabled(self) -> bool:
+        fallback = self._cfg.get('fallback', {})
+        mode = str(fallback.get('mode', 'single')).strip().lower()
+        return mode == 'screensaver_brians_brain'
+
+    def _screensaver_fps(self) -> int:
+        try:
+            fps = int(self._cfg.get('screensaver', {}).get('fps', SCREENSAVER_FPS_DEFAULT))
+        except (TypeError, ValueError):
+            fps = SCREENSAVER_FPS_DEFAULT
+        return max(SCREENSAVER_FPS_MIN, min(SCREENSAVER_FPS_MAX, fps))
+
+    def _new_screensaver(self) -> BriansBrain:
+        cfg = self._cfg.get('screensaver', {})
+        display_cfg = self._cfg.get('display', {})
+        return BriansBrain(
+            width=int(display_cfg.get('cols', 64)),
+            height=int(display_cfg.get('rows', 64)),
+            palette=str(cfg.get('palette', 'cyan_amber')).strip().lower(),
+            density=cfg.get('density', 0.22),
+            seed=str(cfg.get('seed', '') or ''),
+        )
+
+    def _show_or_start_fallback_locked(self, status: str):
+        if self._screensaver_enabled():
+            self._start_screensaver_locked(status)
+            return
+        self._cancel_screensaver_locked()
+        self._display.show_fallback()
+        self._fallback_visible = True
+        self._schedule_idle_rotation_locked(status)
+
+    def _schedule_active_fallback_locked(self, status: str):
+        if self._screensaver_enabled():
+            if self._screensaver:
+                self._schedule_screensaver_frame_locked(status)
+            else:
+                self._start_screensaver_locked(status)
+            return
+        self._cancel_screensaver_locked()
+        self._schedule_idle_rotation_locked(status)
+
+    def _start_screensaver_locked(self, status: str):
+        self._cancel_idle_rotation_locked()
+        if self._screensaver is None:
+            self._screensaver = self._new_screensaver()
+            log.info("Starting Brian's Brain screensaver at %s FPS", self._screensaver_fps())
+        self._display.show_screensaver_frame(self._screensaver.frame())
+        self._fallback_visible = True
+        self._schedule_screensaver_frame_locked(status)
+
+    def _schedule_screensaver_frame_locked(self, status: str):
+        if self._screensaver_timer or not self._screensaver:
+            return
+        self._screensaver_timer_id += 1
+        timer_id = self._screensaver_timer_id
+        seconds = 1.0 / self._screensaver_fps()
+        self._screensaver_timer = threading.Timer(
+            seconds,
+            self._show_screensaver_frame_from_timer,
+            args=(timer_id, status),
+        )
+        self._screensaver_timer.daemon = True
+        self._screensaver_timer.start()
+
+    def _cancel_screensaver_locked(self):
+        if self._screensaver_timer:
+            self._screensaver_timer.cancel()
+            self._screensaver_timer = None
+        self._screensaver_timer_id += 1
+        self._screensaver = None
+
+    def _show_screensaver_frame_from_timer(self, timer_id: int, status: str):
+        with self._overlay_lock:
+            if timer_id != self._screensaver_timer_id:
+                return
+            self._screensaver_timer = None
+            if not self._display_on or not self._fallback_visible or not self._screensaver_enabled():
+                self._cancel_screensaver_locked()
+                return
+            if not self._screensaver:
+                self._screensaver = self._new_screensaver()
+            self._display.show_screensaver_frame(self._screensaver.frame())
+            self._schedule_screensaver_frame_locked(status)
+
     def _rotate_idle_image_from_timer(self, timer_id: int, status: str):
         with self._overlay_lock:
             if timer_id != self._idle_rotation_timer_id:
@@ -533,7 +626,7 @@ class Vinyltron:
                 return
             self._display.show_fallback()
             self._fallback_visible = True
-            self._schedule_idle_rotation_locked(status)
+            self._schedule_active_fallback_locked(status)
         log.info("Status: %s — rotated idle random image", status)
 
     def _show_fallback_from_timer(self, timer_id: int, status: str):
@@ -544,9 +637,7 @@ class Vinyltron:
             self._cancel_overlay_locked()
             self._cancel_progress_locked()
             self._badge_visible = False
-            self._display.show_fallback()
-            self._fallback_visible = True
-            self._schedule_idle_rotation_locked(status)
+            self._show_or_start_fallback_locked(status)
         with self._state_lock:
             self._state_seq += 1
             self._current_albumart = None
@@ -730,6 +821,7 @@ class Vinyltron:
         schedule = self._cfg.get('schedule', {})
         overlays = self._cfg.get('overlays', {})
         fallback = self._cfg.get('fallback', {})
+        screensaver = self._cfg.get('screensaver', {})
         volumio = self._cfg.get('volumio', {})
         log.info(
             (
@@ -738,7 +830,8 @@ class Vinyltron:
                 "limit_refresh_rate_hz=%r schedule_enabled=%r schedule_on=%r schedule_off=%r "
                 "effective_display_on=%r volumio_artwork_enabled=%r "
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
-                "fallback_selected=%r fallback_rotate_seconds=%r progress_height=%r progress_foreground=%r "
+                "fallback_selected=%r fallback_rotate_seconds=%r screensaver_palette=%r screensaver_fps=%r "
+                "progress_height=%r progress_foreground=%r "
                 "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
             ),
             source,
@@ -760,6 +853,8 @@ class Vinyltron:
             fallback.get('image_folder'),
             fallback.get('selected_image'),
             fallback.get('rotate_seconds', 300),
+            screensaver.get('palette', 'cyan_amber'),
+            screensaver.get('fps', 12),
             overlays.get('progress_bar_height'),
             overlays.get('progress_bar_foreground'),
             overlays.get('progress_bar_background'),
@@ -794,6 +889,7 @@ class Vinyltron:
         with self._overlay_lock:
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
+            self._cancel_screensaver_locked()
             self._cancel_overlay_locked()
             self._cancel_progress_locked()
             self._badge_visible = False
@@ -816,6 +912,7 @@ class Vinyltron:
             with self._overlay_lock:
                 self._cancel_fallback_locked()
                 self._cancel_idle_rotation_locked()
+                self._cancel_screensaver_locked()
                 self._cancel_overlay_locked()
                 self._cancel_progress_locked(clear_visible=True)
                 if not new_format_badge and self._badge_visible:
@@ -889,6 +986,7 @@ class Vinyltron:
         with self._overlay_lock:
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
+            self._cancel_screensaver_locked()
             self._cancel_overlay_locked()
             self._cancel_progress_locked(clear_visible=True)
             self._badge_visible = False
@@ -905,9 +1003,7 @@ class Vinyltron:
     def run(self):
         if self._display_on:
             with self._overlay_lock:
-                self._display.show_fallback()
-                self._fallback_visible = True
-                self._schedule_idle_rotation_locked('startup')
+                self._show_or_start_fallback_locked('startup')
         else:
             with self._overlay_lock:
                 self._display.clear()
