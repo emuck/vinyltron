@@ -12,6 +12,16 @@ It is built as a Volumio `user_interface` plugin: install the zip from Volumio's
 manager, configure it from the plugin settings page, and let the companion daemon handle
 the matrix.
 
+## Why Vinyltron?
+
+Right now, Vinyltron follows Volumio: when Volumio knows what is playing, the matrix shows
+the artwork. The longer-term dream is broader than that. The name points at the turntable
+version of the idea: listen to records through a microphone, identify the track with a
+Shazam-like service, fetch the album art, and put that artwork on the matrix too.
+
+That part is still a carrot, not a shipped feature. The current plugin is the Volumio-first
+foundation for it.
+
 ## Features
 
 - Live Volumio album art from `pushState`, resized and cropped for a 64x64 matrix
