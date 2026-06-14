@@ -38,11 +38,16 @@ See [hardware setup](hardware.md) for wiring, power, and Bonnet details.
    installed, use `volumio plugin update` instead; `install` fails with
    `Plugin vinyltron already exists` on an existing install.
 
-   `volumio plugin update` does not restart the running daemon, so after an update run:
+   `volumio plugin update` copies the new files into place but does not reload them into
+   the running processes, so after an update run:
 
    ```bash
+   sudo systemctl restart volumio
    sudo systemctl restart vinyltron
    ```
+
+   `volumio` runs the plugin's settings UI code (`index.js`); `vinyltron` is the matrix
+   daemon. Both need restarting to pick up an update.
 
 3. Wait for `plugininstallend` in the output — Volumio's plugin manager prints this on
    both success and failure.

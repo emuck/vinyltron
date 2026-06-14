@@ -20,7 +20,10 @@ echo "Copying $ZIP_PATH to ${PI_USER}@${PI_HOST}:${REMOTE_ZIP}..."
 scp "$ZIP_PATH" "${PI_USER}@${PI_HOST}:${REMOTE_ZIP}"
 
 echo "Installing plugin on ${PI_HOST}..."
-ssh -t "${PI_USER}@${PI_HOST}" "rm -rf ${REMOTE_DIR} && mkdir -p ${REMOTE_DIR} && unzip -q ${REMOTE_ZIP} -d ${REMOTE_DIR} && cd ${REMOTE_DIR} && if volumio plugin list 2>/dev/null | grep -q \"name: 'vinyltron'\"; then volumio plugin update; else volumio plugin install; fi && sudo systemctl restart vinyltron"
+# `volumio plugin update` copies the new index.js/UIConfig.json into place but does not
+# reload them into the running volumio Node process, so plugin UI/save code stays on the
+# old version until volumio itself restarts.
+ssh -t "${PI_USER}@${PI_HOST}" "rm -rf ${REMOTE_DIR} && mkdir -p ${REMOTE_DIR} && unzip -q ${REMOTE_ZIP} -d ${REMOTE_DIR} && cd ${REMOTE_DIR} && if volumio plugin list 2>/dev/null | grep -q \"name: 'vinyltron'\"; then volumio plugin update; else volumio plugin install; fi && sudo systemctl restart volumio && sudo systemctl restart vinyltron"
 
 echo ""
 echo "Done. Watch install/service logs with:"
