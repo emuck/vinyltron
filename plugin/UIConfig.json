@@ -6,7 +6,7 @@
         {
             "id": "section_display",
             "element": "section",
-            "label": "Display — updates instantly",
+            "label": "Display",
             "icon": "fa-television",
             "onSave": {
                 "type": "controller",
@@ -124,7 +124,7 @@
         {
             "id": "section_idle",
             "element": "section",
-            "label": "Idle / Photo Fallback — updates instantly",
+            "label": "Idle / Photo Fallback",
             "icon": "fa-picture-o",
             "onSave": {
                 "type": "controller",
@@ -199,7 +199,7 @@
         {
             "id": "section_screensaver",
             "element": "section",
-            "label": "Screensaver — updates instantly",
+            "label": "Screensaver",
             "icon": "fa-magic",
             "onSave": {
                 "type": "controller",
@@ -318,7 +318,7 @@
         {
             "id": "section_power",
             "element": "section",
-            "label": "Power — updates instantly",
+            "label": "Power",
             "icon": "fa-power-off",
             "onSave": {
                 "type": "controller",
