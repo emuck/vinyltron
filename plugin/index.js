@@ -142,6 +142,16 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         var screensaver_reset_seconds = self._validScreensaverResetSeconds(self.config.get('screensaver_reset_seconds'));
         s[2].content[3].value = screensaver_reset_seconds.toString();
 
+        var weather_mock_condition = self._validWeatherCondition(self.config.get('weather_mock_condition') || 'partly_cloudy');
+        s[5].content[0].value = {value: weather_mock_condition, label: self._labelForWeatherCondition(weather_mock_condition)};
+        s[5].content[1].value = self.config.get('weather_mock_night') === true;
+        var weather_mock_moon_phase = self._validWeatherMoonPhase(self.config.get('weather_mock_moon_phase'));
+        s[5].content[2].value = weather_mock_moon_phase.toString();
+        var weather_secondary_metric = self._validWeatherSecondaryMetric(self.config.get('weather_secondary_metric') || 'humidity');
+        s[5].content[3].value = {value: weather_secondary_metric, label: self._labelForWeatherSecondaryMetric(weather_secondary_metric)};
+        var weather_fps = self._validWeatherFps(self.config.get('weather_fps'));
+        s[5].content[4].value = {value: weather_fps.toString(), label: self._labelForWeatherFps(weather_fps)};
+
         var rotation = self.config.get('rotation');
         s[3].content[0].value = {value: rotation, label: rotation + '°'};
         var hardware_mapping = self.config.get('hardware_mapping') || 'adafruit-hat-pwm';
@@ -226,6 +236,11 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['screensaver', 'palette', 'screensaver_palette', 'string'],
             ['screensaver', 'fps', 'screensaver_fps', 'number'],
             ['screensaver', 'reset_seconds', 'screensaver_reset_seconds', 'number'],
+            ['weather', 'fps', 'weather_fps', 'number'],
+            ['weather', 'mock_condition', 'weather_mock_condition', 'string'],
+            ['weather', 'mock_night', 'weather_mock_night', 'boolean'],
+            ['weather', 'mock_moon_phase', 'weather_mock_moon_phase', 'number'],
+            ['weather', 'secondary_metric', 'weather_secondary_metric', 'string'],
             ['overlays', 'progress_bar', 'progress_bar', 'boolean'],
             ['overlays', 'progress_bar_height', 'progress_bar_height', 'number'],
             ['overlays', 'progress_bar_foreground', 'progress_bar_foreground', 'rgb'],
@@ -338,6 +353,48 @@ ControllerVinyltron.prototype.saveScreensaver = function(data) {
     });
 
     self._service('reload', 'screensaver settings save');
+
+    return libQ.resolve();
+};
+
+// Save weather settings — hot via SIGHUP, no restart needed
+ControllerVinyltron.prototype.saveWeather = function(data) {
+    var self = this;
+    data = data || {};
+
+    var condition_value = data['weather_mock_condition'] && data['weather_mock_condition']['value'] !== undefined ? data['weather_mock_condition']['value'] : data['weather_mock_condition'];
+    var condition = self._validWeatherCondition(condition_value);
+    var night = data['weather_mock_night'] === true || data['weather_mock_night'] === 'true';
+    var moon_phase_value = data['weather_mock_moon_phase'] && data['weather_mock_moon_phase']['value'] !== undefined ? data['weather_mock_moon_phase']['value'] : data['weather_mock_moon_phase'];
+    var moon_phase = self._validWeatherMoonPhase(moon_phase_value);
+    var metric_value = data['weather_secondary_metric'] && data['weather_secondary_metric']['value'] !== undefined ? data['weather_secondary_metric']['value'] : data['weather_secondary_metric'];
+    var metric = self._validWeatherSecondaryMetric(metric_value);
+    var fps_value = data['weather_fps'] && data['weather_fps']['value'] !== undefined ? data['weather_fps']['value'] : data['weather_fps'];
+    var fps = self._validWeatherFps(fps_value);
+
+    self.config.set('weather_mock_condition', condition);
+    self.config.set('weather_mock_night', night);
+    self.config.set('weather_mock_moon_phase', moon_phase);
+    self.config.set('weather_secondary_metric', metric);
+    self.config.set('weather_fps', fps);
+
+    self.logger.info('Vinyltron: saving weather settings: ' + JSON.stringify({
+        weather_mock_condition: condition,
+        weather_mock_night: night,
+        weather_mock_moon_phase: moon_phase,
+        weather_secondary_metric: metric,
+        weather_fps: fps
+    }));
+
+    self._patchConfigToml({
+        weather_mock_condition: condition,
+        weather_mock_night: night,
+        weather_mock_moon_phase: moon_phase,
+        weather_secondary_metric: metric,
+        weather_fps: fps
+    });
+
+    self._service('reload', 'weather settings save');
 
     return libQ.resolve();
 };
@@ -810,6 +867,11 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.screensaver_palette !== undefined) content = this._patchTomlInSection(content, 'screensaver', 'palette', this._tomlString(fields.screensaver_palette), 'engine');
         if (fields.screensaver_fps !== undefined) content = this._patchTomlInSection(content, 'screensaver', 'fps', fields.screensaver_fps, 'palette');
         if (fields.screensaver_reset_seconds !== undefined) content = this._patchTomlInSection(content, 'screensaver', 'reset_seconds', fields.screensaver_reset_seconds, 'fps');
+        if (fields.weather_fps !== undefined) content = this._patchTomlInSection(content, 'weather', 'fps', fields.weather_fps);
+        if (fields.weather_mock_condition !== undefined) content = this._patchTomlInSection(content, 'weather', 'mock_condition', this._tomlString(fields.weather_mock_condition), 'fps');
+        if (fields.weather_mock_night !== undefined) content = this._patchTomlInSection(content, 'weather', 'mock_night', fields.weather_mock_night, 'mock_condition');
+        if (fields.weather_mock_moon_phase !== undefined) content = this._patchTomlInSection(content, 'weather', 'mock_moon_phase', fields.weather_mock_moon_phase, 'mock_night');
+        if (fields.weather_secondary_metric !== undefined) content = this._patchTomlInSection(content, 'weather', 'secondary_metric', this._tomlString(fields.weather_secondary_metric), 'mock_moon_phase');
         if (fields.progress_bar !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar', fields.progress_bar);
         if (fields.progress_bar_height !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_height', fields.progress_bar_height, 'progress_bar');
         if (fields.progress_bar_foreground !== undefined) content = this._patchTomlInSection(content, 'overlays', 'progress_bar_foreground', this._tomlRgb(fields.progress_bar_foreground), 'progress_bar_height');
@@ -925,7 +987,7 @@ ControllerVinyltron.prototype._sanitizeFilename = function(value) {
 
 ControllerVinyltron.prototype._validFallbackMode = function(value) {
     if (value === 'screensaver_brians_brain') return 'screensaver';
-    if (value === 'selected' || value === 'random_folder' || value === 'screensaver') return value;
+    if (value === 'selected' || value === 'random_folder' || value === 'screensaver' || value === 'weather') return value;
     return 'single';
 };
 
@@ -955,6 +1017,28 @@ ControllerVinyltron.prototype._validScreensaverResetSeconds = function(value) {
     value = parseInt(value);
     if (isNaN(value) || value < 0) return 0;
     return value;
+};
+
+ControllerVinyltron.prototype._validWeatherCondition = function(value) {
+    if (value === 'clear' || value === 'partly_cloudy' || value === 'cloudy' || value === 'rain' || value === 'storm' || value === 'snow' || value === 'fog') return value;
+    return 'partly_cloudy';
+};
+
+ControllerVinyltron.prototype._validWeatherSecondaryMetric = function(value) {
+    if (value === 'aqi' || value === 'wind') return value;
+    return 'humidity';
+};
+
+ControllerVinyltron.prototype._validWeatherFps = function(value) {
+    value = parseInt(value);
+    if (isNaN(value)) return 1;
+    return Math.max(1, Math.min(10, value));
+};
+
+ControllerVinyltron.prototype._validWeatherMoonPhase = function(value) {
+    value = parseFloat(value);
+    if (isNaN(value)) return 0.55;
+    return Math.max(0, Math.min(1, value));
 };
 
 ControllerVinyltron.prototype._validStartupDelaySeconds = function(value) {
@@ -989,7 +1073,8 @@ ControllerVinyltron.prototype._labelForFallbackMode = function(value) {
         'single': 'Built-in Idle Image',
         'selected': 'Selected Folder Image',
         'random_folder': 'Random Folder Image',
-        'screensaver': 'Screensaver'
+        'screensaver': 'Screensaver',
+        'weather': 'Current Weather'
     };
     return labels[value] || labels['single'];
 };
@@ -1017,6 +1102,34 @@ ControllerVinyltron.prototype._labelForScreensaverPalette = function(value) {
 ControllerVinyltron.prototype._labelForScreensaverFps = function(value) {
     if (value <= 4) return 'Slow';
     if (value >= 10) return 'Fast';
+    return 'Medium';
+};
+
+ControllerVinyltron.prototype._labelForWeatherCondition = function(value) {
+    var labels = {
+        'clear': 'Clear',
+        'partly_cloudy': 'Partly Cloudy',
+        'cloudy': 'Cloudy',
+        'rain': 'Rain',
+        'storm': 'Storm',
+        'snow': 'Snow',
+        'fog': 'Fog'
+    };
+    return labels[value] || labels['partly_cloudy'];
+};
+
+ControllerVinyltron.prototype._labelForWeatherSecondaryMetric = function(value) {
+    var labels = {
+        'humidity': 'Humidity',
+        'aqi': 'AQI',
+        'wind': 'Wind'
+    };
+    return labels[value] || labels['humidity'];
+};
+
+ControllerVinyltron.prototype._labelForWeatherFps = function(value) {
+    if (value <= 1) return 'Slow';
+    if (value >= 4) return 'Fast';
     return 'Medium';
 };
 
