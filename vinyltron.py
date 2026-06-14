@@ -15,6 +15,7 @@ from PIL import Image
 from display import Display
 from screensavers import BriansBrain, ChaosGame, GrayScott, LangtonsAnt
 from volumio_client import VolumioClient
+from weather import MockWeatherRenderer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -65,6 +66,9 @@ SCREENSAVER_FPS_DEFAULT = 6
 SCREENSAVER_FPS_MIN = 2
 SCREENSAVER_FPS_MAX = 24
 SCREENSAVER_RESET_SECONDS_DEFAULT = 300
+WEATHER_FPS_DEFAULT = 1
+WEATHER_FPS_MIN = 1
+WEATHER_FPS_MAX = 10
 STARTUP_DELAY_SECONDS_DEFAULT = 5
 VOLUMIO_READY_POLL_SECONDS = 10
 VOLUMIO_READY_TIMEOUT_SECONDS = 3
@@ -105,6 +109,9 @@ class Vinyltron:
         self._screensaver_reset_timer: Optional[threading.Timer] = None
         self._screensaver_reset_timer_id = 0
         self._screensaver: Optional[object] = None
+        self._weather_timer: Optional[threading.Timer] = None
+        self._weather_timer_id = 0
+        self._weather_renderer: Optional[MockWeatherRenderer] = None
         self._volumio_ready = False
         self._volumio_ready_at: Optional[float] = None
         self._volumio_ready_timeout_logged = False
@@ -178,6 +185,7 @@ class Vinyltron:
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
             self._cancel_screensaver_locked()
+            self._cancel_weather_locked()
 
         if not albumart:
             return
@@ -537,7 +545,7 @@ class Vinyltron:
             self._pending_track_key = None
 
     def _schedule_idle_rotation_locked(self, status: str):
-        if self._screensaver_enabled():
+        if self._screensaver_enabled() or self._weather_enabled():
             self._cancel_idle_rotation_locked()
             return
         if not self._fallback_rotation_enabled():
@@ -568,6 +576,11 @@ class Vinyltron:
         mode = str(fallback.get('mode', 'single')).strip().lower()
         return mode in ('screensaver', 'screensaver_brians_brain')
 
+    def _weather_enabled(self) -> bool:
+        fallback = self._cfg.get('fallback', {})
+        mode = str(fallback.get('mode', 'single')).strip().lower()
+        return mode == 'weather'
+
     def _screensaver_engine(self) -> str:
         cfg = self._cfg.get('screensaver', {})
         engine = str(cfg.get('engine', 'brians_brain')).strip().lower()
@@ -592,6 +605,13 @@ class Vinyltron:
         except (TypeError, ValueError):
             seconds = SCREENSAVER_RESET_SECONDS_DEFAULT
         return max(0, seconds)
+
+    def _weather_fps(self) -> int:
+        try:
+            fps = int(self._cfg.get('weather', {}).get('fps', WEATHER_FPS_DEFAULT))
+        except (TypeError, ValueError):
+            fps = WEATHER_FPS_DEFAULT
+        return max(WEATHER_FPS_MIN, min(WEATHER_FPS_MAX, fps))
 
     def _startup_delay_seconds(self) -> int:
         display_cfg = self._cfg.get('display', {})
@@ -709,6 +729,27 @@ class Vinyltron:
             seed=seed,
         )
 
+    def _new_weather_renderer(self) -> MockWeatherRenderer:
+        cfg = self._cfg.get('weather', {})
+        display_cfg = self._cfg.get('display', {})
+        width = int(display_cfg.get('cols', 64))
+        height = int(display_cfg.get('rows', 64))
+        condition = str(cfg.get('mock_condition', 'partly_cloudy')).strip().lower()
+        night = bool(cfg.get('mock_night', False))
+        try:
+            moon_phase = float(cfg.get('mock_moon_phase', 0.55))
+        except (TypeError, ValueError):
+            moon_phase = 0.55
+        secondary_metric = str(cfg.get('secondary_metric', 'humidity')).strip().lower()
+        return MockWeatherRenderer(
+            width=width,
+            height=height,
+            condition=condition,
+            night=night,
+            moon_phase=moon_phase,
+            secondary_metric=secondary_metric,
+        )
+
     def _show_or_start_fallback_locked(self, status: str):
         if not self._idle_ready_to_start():
             self._show_startup_idle_placeholder_locked(status)
@@ -716,9 +757,13 @@ class Vinyltron:
         self._start_idle_locked(status)
 
     def _start_idle_locked(self, status: str):
+        if self._weather_enabled():
+            self._start_weather_locked(status)
+            return
         if self._screensaver_enabled():
             self._start_screensaver_locked(status)
             return
+        self._cancel_weather_locked()
         self._cancel_screensaver_locked()
         self._ensure_display().show_fallback()
         self._fallback_visible = True
@@ -728,18 +773,43 @@ class Vinyltron:
         if not self._idle_ready_to_start():
             self._show_startup_idle_placeholder_locked(status)
             return
+        if self._weather_enabled():
+            if self._weather_renderer:
+                self._schedule_weather_frame_locked(status)
+            else:
+                self._start_weather_locked(status)
+            return
         if self._screensaver_enabled():
             if self._screensaver:
                 self._schedule_screensaver_frame_locked(status)
             else:
                 self._start_screensaver_locked(status)
             return
+        self._cancel_weather_locked()
         self._cancel_screensaver_locked()
         self._schedule_idle_rotation_locked(status)
+
+    def _start_weather_locked(self, status: str):
+        self._cancel_idle_rotation_locked()
+        self._cancel_idle_start_locked()
+        self._cancel_screensaver_locked()
+        if self._weather_renderer is None:
+            self._weather_renderer = self._new_weather_renderer()
+            log.info(
+                "Starting mock weather idle display at %s FPS; condition=%s night=%r metric=%s",
+                self._weather_fps(),
+                self._cfg.get('weather', {}).get('mock_condition', 'partly_cloudy'),
+                self._cfg.get('weather', {}).get('mock_night', False),
+                self._cfg.get('weather', {}).get('secondary_metric', 'humidity'),
+            )
+        self._ensure_display().show_screensaver_frame(self._weather_renderer.frame())
+        self._fallback_visible = True
+        self._schedule_weather_frame_locked(status)
 
     def _start_screensaver_locked(self, status: str):
         self._cancel_idle_rotation_locked()
         self._cancel_idle_start_locked()
+        self._cancel_weather_locked()
         if self._screensaver is None:
             self._screensaver = self._new_screensaver()
             log.info(
@@ -755,6 +825,7 @@ class Vinyltron:
 
     def _show_startup_idle_placeholder_locked(self, status: str):
         self._cancel_screensaver_locked()
+        self._cancel_weather_locked()
         self._cancel_idle_rotation_locked()
         self._fallback_visible = True
         self._schedule_idle_start_locked(status)
@@ -795,6 +866,20 @@ class Vinyltron:
         self._screensaver_timer.daemon = True
         self._screensaver_timer.start()
 
+    def _schedule_weather_frame_locked(self, status: str):
+        if self._weather_timer or not self._weather_renderer:
+            return
+        self._weather_timer_id += 1
+        timer_id = self._weather_timer_id
+        seconds = 1.0 / self._weather_fps()
+        self._weather_timer = threading.Timer(
+            seconds,
+            self._show_weather_frame_from_timer,
+            args=(timer_id, status),
+        )
+        self._weather_timer.daemon = True
+        self._weather_timer.start()
+
     def _schedule_screensaver_reset_locked(self, status: str):
         if self._screensaver_reset_timer or not self._screensaver:
             return
@@ -829,6 +914,14 @@ class Vinyltron:
         self._screensaver_reset_timer_id += 1
         self._screensaver = None
 
+    def _cancel_weather_locked(self):
+        self._cancel_idle_start_locked()
+        if self._weather_timer:
+            self._weather_timer.cancel()
+            self._weather_timer = None
+        self._weather_timer_id += 1
+        self._weather_renderer = None
+
     def _start_idle_from_timer(self, timer_id: int, status: str):
         with self._overlay_lock:
             if timer_id != self._idle_start_timer_id:
@@ -855,6 +948,19 @@ class Vinyltron:
                 self._schedule_screensaver_reset_locked(status)
             self._ensure_display().show_screensaver_frame(self._screensaver.frame())
             self._schedule_screensaver_frame_locked(status)
+
+    def _show_weather_frame_from_timer(self, timer_id: int, status: str):
+        with self._overlay_lock:
+            if timer_id != self._weather_timer_id:
+                return
+            self._weather_timer = None
+            if not self._display_on or not self._fallback_visible or not self._weather_enabled():
+                self._cancel_weather_locked()
+                return
+            if not self._weather_renderer:
+                self._weather_renderer = self._new_weather_renderer()
+            self._ensure_display().show_screensaver_frame(self._weather_renderer.frame())
+            self._schedule_weather_frame_locked(status)
 
     def _reset_screensaver_from_timer(self, timer_id: int, status: str):
         with self._overlay_lock:
@@ -1075,6 +1181,7 @@ class Vinyltron:
         overlays = self._cfg.get('overlays', {})
         fallback = self._cfg.get('fallback', {})
         screensaver = self._cfg.get('screensaver', {})
+        weather = self._cfg.get('weather', {})
         volumio = self._cfg.get('volumio', {})
         log.info(
             (
@@ -1085,6 +1192,8 @@ class Vinyltron:
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
                 "fallback_selected=%r fallback_rotate_seconds=%r screensaver_engine=%r "
                 "screensaver_palette=%r screensaver_fps=%r screensaver_reset_seconds=%r "
+                "weather_fps=%r weather_mock_condition=%r weather_mock_night=%r "
+                "weather_mock_moon_phase=%r weather_secondary_metric=%r "
                 "startup_delay_seconds=%r "
                 "progress_height=%r progress_foreground=%r "
                 "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
@@ -1112,6 +1221,11 @@ class Vinyltron:
             screensaver.get('palette', 'cyan_amber'),
             screensaver.get('fps', SCREENSAVER_FPS_DEFAULT),
             screensaver.get('reset_seconds', SCREENSAVER_RESET_SECONDS_DEFAULT),
+            weather.get('fps', WEATHER_FPS_DEFAULT),
+            weather.get('mock_condition', 'partly_cloudy'),
+            weather.get('mock_night', False),
+            weather.get('mock_moon_phase', 0.55),
+            weather.get('secondary_metric', 'humidity'),
             self._startup_delay_seconds(),
             overlays.get('progress_bar_height'),
             overlays.get('progress_bar_foreground'),
@@ -1148,6 +1262,7 @@ class Vinyltron:
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
             self._cancel_screensaver_locked()
+            self._cancel_weather_locked()
             self._cancel_overlay_locked()
             self._cancel_progress_locked()
             self._badge_visible = False
@@ -1174,6 +1289,7 @@ class Vinyltron:
                 self._cancel_fallback_locked()
                 self._cancel_idle_rotation_locked()
                 self._cancel_screensaver_locked()
+                self._cancel_weather_locked()
                 self._cancel_overlay_locked()
                 self._cancel_progress_locked(clear_visible=True)
                 if not new_format_badge and self._badge_visible:
@@ -1249,6 +1365,7 @@ class Vinyltron:
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
             self._cancel_screensaver_locked()
+            self._cancel_weather_locked()
             self._cancel_overlay_locked()
             self._cancel_progress_locked(clear_visible=True)
             self._badge_visible = False

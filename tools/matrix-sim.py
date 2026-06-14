@@ -12,6 +12,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 
 from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES, ChaosGame, GrayScott, LangtonsAnt  # noqa: E402
+from weather import MockWeatherRenderer  # noqa: E402
 
 
 WIDTH = 64
@@ -235,6 +236,44 @@ HTML = """<!doctype html>
       </div>
     </div>
 
+    <div id="weatherConditionField" class="field" hidden>
+      <label for="weatherCondition">Weather Condition</label>
+      <select id="weatherCondition">
+        <option value="clear">Clear</option>
+        <option value="partly_cloudy" selected>Partly Cloudy</option>
+        <option value="cloudy">Cloudy</option>
+        <option value="rain">Rain</option>
+        <option value="storm">Storm</option>
+        <option value="snow">Snow</option>
+        <option value="fog">Fog</option>
+      </select>
+    </div>
+
+    <div id="weatherNightField" class="field" hidden>
+      <label for="weatherNight">Weather Time</label>
+      <select id="weatherNight">
+        <option value="0" selected>Daytime</option>
+        <option value="1">Night / Moon</option>
+      </select>
+    </div>
+
+    <div id="moonPhaseField" class="field" hidden>
+      <label for="moonPhase">Moon Phase</label>
+      <div class="row">
+        <input id="moonPhase" type="range" min="0" max="100" value="55">
+        <output id="moonPhaseOut">0.55</output>
+      </div>
+    </div>
+
+    <div id="secondaryMetricField" class="field" hidden>
+      <label for="secondaryMetric">Bottom Metric</label>
+      <select id="secondaryMetric">
+        <option value="humidity" selected>Humidity</option>
+        <option value="aqi">AQI</option>
+        <option value="wind">Wind</option>
+      </select>
+    </div>
+
     <label for="seed">Seed</label>
     <input id="seed" type="text" value="" placeholder="blank = random">
 
@@ -293,6 +332,15 @@ HTML = """<!doctype html>
     const gridScale = $('gridScale');
     const gridScaleOut = $('gridScaleOut');
     const gridScaleField = $('gridScaleField');
+    const weatherCondition = $('weatherCondition');
+    const weatherConditionField = $('weatherConditionField');
+    const weatherNight = $('weatherNight');
+    const weatherNightField = $('weatherNightField');
+    const moonPhase = $('moonPhase');
+    const moonPhaseOut = $('moonPhaseOut');
+    const moonPhaseField = $('moonPhaseField');
+    const secondaryMetric = $('secondaryMetric');
+    const secondaryMetricField = $('secondaryMetricField');
     const seed = $('seed');
     const toml = $('toml');
     const status = $('status');
@@ -312,6 +360,10 @@ HTML = """<!doctype html>
         feed: (parseInt(feed.value, 10) / 1000).toFixed(3),
         kill: (parseInt(kill.value, 10) / 1000).toFixed(3),
         grid_scale: gridScale.value,
+        weather_condition: weatherCondition.value,
+        weather_night: weatherNight.value,
+        moon_phase: (parseInt(moonPhase.value, 10) / 100).toFixed(2),
+        secondary_metric: secondaryMetric.value,
         seed: seed.value,
       });
     }
@@ -352,6 +404,11 @@ HTML = """<!doctype html>
       feedOut.textContent = (parseInt(feed.value, 10) / 1000).toFixed(3);
       killOut.textContent = (parseInt(kill.value, 10) / 1000).toFixed(3);
       gridScaleOut.textContent = gridScale.value;
+      moonPhaseOut.textContent = (parseInt(moonPhase.value, 10) / 100).toFixed(2);
+      resetSeconds.hidden = engine.value === 'weather';
+      resetSeconds.previousElementSibling.hidden = engine.value === 'weather';
+      seed.hidden = engine.value === 'weather';
+      seed.previousElementSibling.hidden = engine.value === 'weather';
       densityField.hidden = engine.value !== 'brians_brain';
       antCountField.hidden = engine.value !== 'langtons_ant';
       stepsPerFrameField.hidden = engine.value !== 'langtons_ant';
@@ -361,6 +418,10 @@ HTML = """<!doctype html>
       feedField.hidden = engine.value !== 'gray_scott';
       killField.hidden = engine.value !== 'gray_scott';
       gridScaleField.hidden = engine.value !== 'gray_scott';
+      weatherConditionField.hidden = engine.value !== 'weather';
+      weatherNightField.hidden = engine.value !== 'weather';
+      moonPhaseField.hidden = engine.value !== 'weather' || weatherNight.value !== '1';
+      secondaryMetricField.hidden = engine.value !== 'weather';
       updateToml();
     }
 
@@ -369,6 +430,19 @@ HTML = """<!doctype html>
     }
 
     function configSnippet() {
+      if (engine.value === 'weather') {
+        return [
+          '[fallback]',
+          'mode = "weather"',
+          '',
+          '[weather]',
+          `fps = ${parseInt(fps.value, 10)}`,
+          `mock_condition = ${tomlString(weatherCondition.value)}`,
+          `mock_night = ${weatherNight.value === '1' ? 'true' : 'false'}`,
+          `mock_moon_phase = ${(parseInt(moonPhase.value, 10) / 100).toFixed(2)}`,
+          `secondary_metric = ${tomlString(secondaryMetric.value)}`,
+        ].join('\\n');
+      }
       const lines = [
         '[fallback]',
         'mode = "screensaver"',
@@ -439,6 +513,10 @@ HTML = """<!doctype html>
         `feed=${feedOut.textContent}`,
         `kill=${killOut.textContent}`,
         `grid_scale=${gridScale.value}`,
+        `weather_condition=${weatherCondition.value}`,
+        `weather_night=${weatherNight.value}`,
+        `moon_phase=${moonPhaseOut.textContent}`,
+        `secondary_metric=${secondaryMetric.value}`,
       ].join('\\n');
     }
 
@@ -487,7 +565,7 @@ HTML = """<!doctype html>
       $('copyToml').textContent = 'Copied';
       setTimeout(() => { $('copyToml').textContent = 'Copy Config Snippet'; }, 1000);
     });
-    for (const input of [engine, palette, fps, resetSeconds, density, antCount, stepsPerFrame, pointsPerFrame, fade, rotationSpeed, feed, kill, gridScale, seed]) {
+    for (const input of [engine, palette, fps, resetSeconds, density, antCount, stepsPerFrame, pointsPerFrame, fade, rotationSpeed, feed, kill, gridScale, weatherCondition, weatherNight, moonPhase, secondaryMetric, seed]) {
       input.addEventListener('change', async () => {
         updateLabels();
         await resetEngine();
@@ -540,6 +618,10 @@ class EngineRegistry:
             params['feed'],
             params['kill'],
             params['grid_scale'],
+            params['weather_condition'],
+            params['weather_night'],
+            params['moon_phase'],
+            params['secondary_metric'],
             params['seed'],
         )
 
@@ -580,6 +662,15 @@ class EngineRegistry:
                 kill=params['kill'],
                 grid_scale=params['grid_scale'],
                 seed=params['seed'],
+            )
+        if params['engine'] == 'weather':
+            return MockWeatherRenderer(
+                WIDTH,
+                HEIGHT,
+                condition=params['weather_condition'],
+                night=params['weather_night'],
+                moon_phase=params['moon_phase'],
+                secondary_metric=params['secondary_metric'],
             )
         raise ValueError('unsupported engine')
 
@@ -627,6 +718,13 @@ def request_params(query):
         grid_scale = int(values.get('grid_scale', ['2'])[0])
     except ValueError:
         grid_scale = 2
+    weather_condition = values.get('weather_condition', ['partly_cloudy'])[0]
+    weather_night = values.get('weather_night', ['0'])[0] in ('1', 'true', 'yes', 'on')
+    try:
+        moon_phase = float(values.get('moon_phase', ['0.55'])[0])
+    except ValueError:
+        moon_phase = 0.55
+    secondary_metric = values.get('secondary_metric', ['humidity'])[0]
     seed = values.get('seed', [''])[0]
     return {
         'engine': engine,
@@ -640,6 +738,10 @@ def request_params(query):
         'feed': max(0.0, min(0.1, feed)),
         'kill': max(0.0, min(0.12, kill)),
         'grid_scale': max(1, min(4, grid_scale)),
+        'weather_condition': weather_condition,
+        'weather_night': weather_night,
+        'moon_phase': max(0.0, min(1.0, moon_phase)),
+        'secondary_metric': secondary_metric,
         'seed': seed,
     }
 
@@ -659,6 +761,7 @@ class Handler(BaseHTTPRequestHandler):
                     {'id': 'langtons_ant', 'label': "Langton's Ant"},
                     {'id': 'chaos_game', 'label': "Chaos Game"},
                     {'id': 'gray_scott', 'label': "Reaction-Diffusion"},
+                    {'id': 'weather', 'label': "Weather"},
                 ],
                 'palettes': [
                     {'id': name, 'label': labelize(name)}

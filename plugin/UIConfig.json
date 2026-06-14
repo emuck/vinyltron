@@ -150,7 +150,8 @@
                         {"value": "single",        "label": "Built-in Idle Image"},
                         {"value": "selected",      "label": "Selected Folder Image"},
                         {"value": "random_folder", "label": "Random Folder Image"},
-                        {"value": "screensaver",   "label": "Screensaver"}
+                        {"value": "screensaver",   "label": "Screensaver"},
+                        {"value": "weather",       "label": "Current Weather"}
                     ],
                     "doc": "Controls which image is shown when playback is stopped"
                 },
@@ -365,6 +366,82 @@
                     "label": "Off Time",
                     "value": "23:00",
                     "doc": "Daily local time to turn the matrix off, using 24-hour HH:MM format."
+                }
+            ]
+        },
+        {
+            "id": "section_weather",
+            "element": "section",
+            "label": "Weather",
+            "icon": "fa-cloud",
+            "onSave": {
+                "type": "controller",
+                "endpoint": "user_interface/vinyltron",
+                "method": "saveWeather"
+            },
+            "saveButton": {
+                "label": "Save",
+                "data": ["weather_mock_condition", "weather_mock_night", "weather_mock_moon_phase", "weather_secondary_metric", "weather_fps"],
+                "popup": {
+                    "allowClose": true,
+                    "type": "success",
+                    "message": "Weather settings updated"
+                }
+            },
+            "content": [
+                {
+                    "id": "weather_mock_condition",
+                    "element": "select",
+                    "label": "Mock Condition",
+                    "value": {},
+                    "options": [
+                        {"value": "clear", "label": "Clear"},
+                        {"value": "partly_cloudy", "label": "Partly Cloudy"},
+                        {"value": "cloudy", "label": "Cloudy"},
+                        {"value": "rain", "label": "Rain"},
+                        {"value": "storm", "label": "Storm"},
+                        {"value": "snow", "label": "Snow"},
+                        {"value": "fog", "label": "Fog"}
+                    ],
+                    "doc": "Temporary renderer test condition. Live weather will replace this in the MVP data pass."
+                },
+                {
+                    "id": "weather_mock_night",
+                    "element": "switch",
+                    "label": "Mock Night / Moon",
+                    "value": false,
+                    "doc": "Show moon phase instead of the large weather icon."
+                },
+                {
+                    "id": "weather_mock_moon_phase",
+                    "element": "input",
+                    "label": "Mock Moon Phase",
+                    "value": "0.55",
+                    "doc": "0.0 new, 0.5 full, 1.0 new."
+                },
+                {
+                    "id": "weather_secondary_metric",
+                    "element": "select",
+                    "label": "Bottom Metric",
+                    "value": {},
+                    "options": [
+                        {"value": "humidity", "label": "Humidity"},
+                        {"value": "aqi", "label": "AQI"},
+                        {"value": "wind", "label": "Wind"}
+                    ],
+                    "doc": "Temporary renderer test metric for the bottom-left slot."
+                },
+                {
+                    "id": "weather_fps",
+                    "element": "select",
+                    "label": "Animation Speed",
+                    "value": {},
+                    "options": [
+                        {"value": "1", "label": "Slow"},
+                        {"value": "2", "label": "Medium"},
+                        {"value": "4", "label": "Fast"}
+                    ],
+                    "doc": "Weather renderer animation rate."
                 }
             ]
         }
