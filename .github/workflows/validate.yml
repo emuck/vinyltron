@@ -1,0 +1,40 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Python syntax check
+        run: python3 -m py_compile *.py tools/*.py
+
+      - name: Validate plugin JSON
+        run: |
+          python3 -m json.tool plugin/UIConfig.json > /dev/null
+          python3 -m json.tool plugin/config.json > /dev/null
+
+      - name: Validate plugin JS syntax
+        run: node -c plugin/index.js
+
+      - name: Validate shell scripts
+        run: bash -n plugin/install.sh plugin/uninstall.sh dev-install-plugin.sh tools/build-volumio-plugin.sh tools/install-volumio-plugin-zip.sh
+
+      - name: Validate config.toml
+        run: python3 -c "import tomllib; tomllib.load(open('config.toml','rb')); print('config.toml OK')"
+
+      - name: Build plugin package
+        run: ./tools/build-volumio-plugin.sh

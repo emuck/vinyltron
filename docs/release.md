@@ -20,7 +20,7 @@ Keep these in sync for every release:
 3. Update `plugin/package.json` `version`.
 4. Update `plugin/package.json` `volumio_info.changelog`.
 5. Update `CHANGELOG.md`.
-6. Run validation:
+6. Run validation (also enforced by `.github/workflows/validate.yml` on every push/PR):
    ```bash
    python3 -m py_compile display.py vinyltron.py volumio_client.py test_matrix.py
    python3 -m json.tool plugin/UIConfig.json
