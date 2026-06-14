@@ -936,7 +936,7 @@ ControllerVinyltron.prototype._validFallbackRotateSeconds = function(value) {
 };
 
 ControllerVinyltron.prototype._validScreensaverEngine = function(value) {
-    if (value === 'brians_brain' || value === 'langtons_ant' || value === 'chaos_game') return value;
+    if (value === 'brians_brain' || value === 'langtons_ant' || value === 'chaos_game' || value === 'gray_scott') return value;
     return 'brians_brain';
 };
 
@@ -998,7 +998,8 @@ ControllerVinyltron.prototype._labelForScreensaverEngine = function(value) {
     var labels = {
         'brians_brain': 'Brian\'s Brain',
         'langtons_ant': 'Langton\'s Ant',
-        'chaos_game': 'Chaos Game'
+        'chaos_game': 'Chaos Game',
+        'gray_scott': 'Reaction-Diffusion'
     };
     return labels[value] || labels['brians_brain'];
 };

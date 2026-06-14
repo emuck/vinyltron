@@ -13,7 +13,7 @@ import toml
 from PIL import Image
 
 from display import Display
-from screensavers import BriansBrain, ChaosGame, LangtonsAnt
+from screensavers import BriansBrain, ChaosGame, GrayScott, LangtonsAnt
 from volumio_client import VolumioClient
 
 logging.basicConfig(
@@ -571,7 +571,7 @@ class Vinyltron:
     def _screensaver_engine(self) -> str:
         cfg = self._cfg.get('screensaver', {})
         engine = str(cfg.get('engine', 'brians_brain')).strip().lower()
-        if engine in ('brians_brain', 'langtons_ant', 'chaos_game'):
+        if engine in ('brians_brain', 'langtons_ant', 'chaos_game', 'gray_scott'):
             return engine
         log.warning("Unknown screensaver engine %r; using brians_brain", engine)
         return 'brians_brain'
@@ -688,6 +688,16 @@ class Vinyltron:
                 points_per_frame=cfg.get('points_per_frame', 320),
                 fade=cfg.get('fade', 12),
                 rotation_speed=cfg.get('rotation_speed', 2),
+                seed=seed,
+            )
+        if engine == 'gray_scott':
+            return GrayScott(
+                width=width,
+                height=height,
+                palette=palette,
+                feed=cfg.get('feed', 0.055),
+                kill=cfg.get('kill', 0.062),
+                grid_scale=cfg.get('grid_scale', 2),
                 seed=seed,
             )
 

@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 
-from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES, ChaosGame, LangtonsAnt  # noqa: E402
+from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES, ChaosGame, GrayScott, LangtonsAnt  # noqa: E402
 
 
 WIDTH = 64
@@ -211,6 +211,30 @@ HTML = """<!doctype html>
       </div>
     </div>
 
+    <div id="feedField" class="field" hidden>
+      <label for="feed">Feed Rate</label>
+      <div class="row">
+        <input id="feed" type="range" min="1" max="100" value="55">
+        <output id="feedOut">0.055</output>
+      </div>
+    </div>
+
+    <div id="killField" class="field" hidden>
+      <label for="kill">Kill Rate</label>
+      <div class="row">
+        <input id="kill" type="range" min="1" max="120" value="62">
+        <output id="killOut">0.062</output>
+      </div>
+    </div>
+
+    <div id="gridScaleField" class="field" hidden>
+      <label for="gridScale">Grid Scale</label>
+      <div class="row">
+        <input id="gridScale" type="range" min="1" max="4" value="2">
+        <output id="gridScaleOut">2</output>
+      </div>
+    </div>
+
     <label for="seed">Seed</label>
     <input id="seed" type="text" value="" placeholder="blank = random">
 
@@ -260,6 +284,15 @@ HTML = """<!doctype html>
     const rotationSpeed = $('rotationSpeed');
     const rotationSpeedOut = $('rotationSpeedOut');
     const rotationSpeedField = $('rotationSpeedField');
+    const feed = $('feed');
+    const feedOut = $('feedOut');
+    const feedField = $('feedField');
+    const kill = $('kill');
+    const killOut = $('killOut');
+    const killField = $('killField');
+    const gridScale = $('gridScale');
+    const gridScaleOut = $('gridScaleOut');
+    const gridScaleField = $('gridScaleField');
     const seed = $('seed');
     const toml = $('toml');
     const status = $('status');
@@ -276,6 +309,9 @@ HTML = """<!doctype html>
         points_per_frame: pointsPerFrame.value,
         fade: fade.value,
         rotation_speed: rotationSpeed.value,
+        feed: (parseInt(feed.value, 10) / 1000).toFixed(3),
+        kill: (parseInt(kill.value, 10) / 1000).toFixed(3),
+        grid_scale: gridScale.value,
         seed: seed.value,
       });
     }
@@ -313,12 +349,18 @@ HTML = """<!doctype html>
       pointsPerFrameOut.textContent = pointsPerFrame.value;
       fadeOut.textContent = fade.value;
       rotationSpeedOut.textContent = rotationSpeed.value;
+      feedOut.textContent = (parseInt(feed.value, 10) / 1000).toFixed(3);
+      killOut.textContent = (parseInt(kill.value, 10) / 1000).toFixed(3);
+      gridScaleOut.textContent = gridScale.value;
       densityField.hidden = engine.value !== 'brians_brain';
       antCountField.hidden = engine.value !== 'langtons_ant';
       stepsPerFrameField.hidden = engine.value !== 'langtons_ant';
       pointsPerFrameField.hidden = engine.value !== 'chaos_game';
       fadeField.hidden = engine.value !== 'chaos_game';
       rotationSpeedField.hidden = engine.value !== 'chaos_game';
+      feedField.hidden = engine.value !== 'gray_scott';
+      killField.hidden = engine.value !== 'gray_scott';
+      gridScaleField.hidden = engine.value !== 'gray_scott';
       updateToml();
     }
 
@@ -348,6 +390,11 @@ HTML = """<!doctype html>
         lines.push(`points_per_frame = ${parseInt(pointsPerFrame.value, 10)}`);
         lines.push(`fade = ${parseInt(fade.value, 10)}`);
         lines.push(`rotation_speed = ${parseInt(rotationSpeed.value, 10)}`);
+      }
+      if (engine.value === 'gray_scott') {
+        lines.push(`feed = ${(parseInt(feed.value, 10) / 1000).toFixed(3)}`);
+        lines.push(`kill = ${(parseInt(kill.value, 10) / 1000).toFixed(3)}`);
+        lines.push(`grid_scale = ${parseInt(gridScale.value, 10)}`);
       }
       lines.push(`seed = ${tomlString(seed.value)}`);
       return lines.join('\\n');
@@ -389,6 +436,9 @@ HTML = """<!doctype html>
         `points_per_frame=${pointsPerFrame.value}`,
         `fade=${fade.value}`,
         `rotation_speed=${rotationSpeed.value}`,
+        `feed=${feedOut.textContent}`,
+        `kill=${killOut.textContent}`,
+        `grid_scale=${gridScale.value}`,
       ].join('\\n');
     }
 
@@ -437,7 +487,7 @@ HTML = """<!doctype html>
       $('copyToml').textContent = 'Copied';
       setTimeout(() => { $('copyToml').textContent = 'Copy Config Snippet'; }, 1000);
     });
-    for (const input of [engine, palette, fps, resetSeconds, density, antCount, stepsPerFrame, pointsPerFrame, fade, rotationSpeed, seed]) {
+    for (const input of [engine, palette, fps, resetSeconds, density, antCount, stepsPerFrame, pointsPerFrame, fade, rotationSpeed, feed, kill, gridScale, seed]) {
       input.addEventListener('change', async () => {
         updateLabels();
         await resetEngine();
@@ -487,6 +537,9 @@ class EngineRegistry:
             params['points_per_frame'],
             params['fade'],
             params['rotation_speed'],
+            params['feed'],
+            params['kill'],
+            params['grid_scale'],
             params['seed'],
         )
 
@@ -516,6 +569,16 @@ class EngineRegistry:
                 points_per_frame=params['points_per_frame'],
                 fade=params['fade'],
                 rotation_speed=params['rotation_speed'],
+                seed=params['seed'],
+            )
+        if params['engine'] == 'gray_scott':
+            return GrayScott(
+                WIDTH,
+                HEIGHT,
+                palette=params['palette'],
+                feed=params['feed'],
+                kill=params['kill'],
+                grid_scale=params['grid_scale'],
                 seed=params['seed'],
             )
         raise ValueError('unsupported engine')
@@ -552,6 +615,18 @@ def request_params(query):
         rotation_speed = int(values.get('rotation_speed', ['2'])[0])
     except ValueError:
         rotation_speed = 2
+    try:
+        feed = float(values.get('feed', ['0.055'])[0])
+    except ValueError:
+        feed = 0.055
+    try:
+        kill = float(values.get('kill', ['0.062'])[0])
+    except ValueError:
+        kill = 0.062
+    try:
+        grid_scale = int(values.get('grid_scale', ['2'])[0])
+    except ValueError:
+        grid_scale = 2
     seed = values.get('seed', [''])[0]
     return {
         'engine': engine,
@@ -562,6 +637,9 @@ def request_params(query):
         'points_per_frame': max(8, min(2048, points_per_frame)),
         'fade': max(0, min(64, fade)),
         'rotation_speed': max(-16, min(16, rotation_speed)),
+        'feed': max(0.0, min(0.1, feed)),
+        'kill': max(0.0, min(0.12, kill)),
+        'grid_scale': max(1, min(4, grid_scale)),
         'seed': seed,
     }
 
@@ -580,6 +658,7 @@ class Handler(BaseHTTPRequestHandler):
                     {'id': 'brians_brain', 'label': "Brian's Brain"},
                     {'id': 'langtons_ant', 'label': "Langton's Ant"},
                     {'id': 'chaos_game', 'label': "Chaos Game"},
+                    {'id': 'gray_scott', 'label': "Reaction-Diffusion"},
                 ],
                 'palettes': [
                     {'id': name, 'label': labelize(name)}
