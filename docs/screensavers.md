@@ -9,7 +9,7 @@ screensaver stops immediately and the matrix returns to album art.
 Open Vinyltron Settings and set:
 
 - **Idle Mode**: `Screensaver`
-- **Screensaver**: `Brian's Brain`
+- **Screensaver**: `Brian's Brain`, `Langton's Ant`, or `Chaos Game`
 - **Palette**: choose a color pair
 - **Speed**: `Slow`, `Medium`, or `Fast`
 - **Reset Interval**: seconds between random state resets, or `0` to disable
@@ -26,15 +26,16 @@ During early service startup, Vinyltron keeps the matrix display uninitialized f
 idle fallback mode. It polls Volumio's local `/status` endpoint and only starts the idle
 display after Volumio reports `ready` plus a short extra grace period. Playback artwork can
 still initialize the matrix immediately. This keeps boot lighter while Volumio, networking,
-and the web UI finish coming up.
+and the web UI finish coming up. If `/status` never reports `ready`, Vinyltron starts the
+idle display anyway after 5 minutes so the matrix doesn't stay blank indefinitely.
 
 It stops on playback artwork, display off, config reload, service stop, and shutdown.
 
 ## Brian's Brain
 
-The first screensaver is **Brian's Brain**, a cellular automaton invented by Brian
-Silverman. It has a more active, neon-circuit look than Conway's Game of Life, which makes
-it a good fit for a 64x64 LED matrix.
+**Brian's Brain** is a cellular automaton invented by Brian Silverman. It has a more
+active, neon-circuit look than Conway's Game of Life, which makes it a good fit for a 64x64
+LED matrix.
 
 Each LED is one cell with three states:
 
@@ -76,6 +77,33 @@ the automaton gets too quiet, Vinyltron reseeds it so the idle display does not 
 black during long listening sessions. The reset interval also forces a fresh random state
 periodically, which helps if a run condenses into a less interesting pattern.
 
+## Langton's Ant
+
+Langton's Ant is a two-state cellular automaton with a moving agent. Vinyltron runs several
+ants at once so their paths collide and keep changing instead of settling into a single
+predictable highway.
+
+Each ant follows simple rules:
+
+1. On an off cell, turn right, switch the cell on, then move forward.
+2. On an on cell, turn left, switch the cell off, then move forward.
+3. At panel edges, wrap around to the opposite side.
+
+Each ant uses a different color from the selected palette. The result is a neon trail maze:
+mostly geometric, very lightweight, and visually distinct from Brian's Brain.
+
+## Chaos Game
+
+Chaos Game is a fractal generator. It starts with a point, repeatedly chooses one triangle
+vertex at random, then moves halfway from the current point toward that vertex and lights
+the new point. Random choices gradually reveal a structured Sierpinski-style triangle.
+
+Vinyltron keeps it screensaver-like by rotating the triangle vertices and fading old
+points. That makes the fractal breathe instead of settling into a static picture.
+
+Advanced tuning controls how many random points are plotted per rendered frame, how quickly
+older pixels fade, and how fast the triangle vertices rotate.
+
 ## Configuration Model
 
 The Volumio plugin UI only exposes controls that make sense across screensavers:
@@ -99,6 +127,16 @@ reset_seconds = 300
 
 # Advanced Brian's Brain tuning
 density = 0.22
+
+# Advanced Langton's Ant tuning
+ant_count = 4
+steps_per_frame = 96
+
+# Advanced Chaos Game tuning
+points_per_frame = 320
+fade = 12
+rotation_speed = 2
+
 seed = ""
 ```
 
@@ -125,7 +163,7 @@ The implementation is deliberately small and Pi 3B-friendly:
 
 - no NumPy
 - no compiled dependency
-- two `bytearray` grids for current and next state
+- compact `bytearray` grids for automaton state
 - precomputed neighbor indexes
 - one RGB byte buffer per frame
 - modest default speed: 6 FPS

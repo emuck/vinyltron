@@ -5,9 +5,15 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
-- Added a Brian's Brain animated screensaver fallback mode with a dedicated Screensaver
-  settings section, generic engine/palette/speed/reset controls, and advanced
-  Brian's Brain tuning kept in `config.toml`.
+- Added animated screensaver fallback modes with a dedicated Screensaver settings section,
+  generic engine/palette/speed/reset controls, and advanced tuning kept in `config.toml`.
+  Engines currently include Brian's Brain, multi-ant Langton's Ant, and a rotating Chaos
+  Game / Sierpinski-style fractal.
+- The idle display now starts after 5 minutes even if Volumio's `/status` endpoint never
+  reports `ready`, instead of leaving the matrix uninitialized indefinitely.
+- `tools/matrix-sim.py`'s Speed control is now a Slow/Medium/Fast dropdown (4/6/10 fps),
+  matching the plugin's Screensaver "Speed" setting exactly. Its Chaos Game Rotation Speed
+  slider range was also widened from -8..8 to -16..16 to match the engine's actual clamp.
 - Added HEIC/HEIF support to the photo upload converter via `heif-convert`. Previously,
   uploading an iPhone-format `.HEIC` photo failed with "Could not convert image"
   (`PIL.UnidentifiedImageError`), since Pillow has no built-in HEIF decoder.

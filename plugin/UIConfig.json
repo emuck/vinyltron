@@ -222,7 +222,9 @@
                     "label": "Screensaver",
                     "value": {},
                     "options": [
-                        {"value": "brians_brain", "label": "Brian's Brain"}
+                        {"value": "brians_brain", "label": "Brian's Brain"},
+                        {"value": "langtons_ant", "label": "Langton's Ant"},
+                        {"value": "chaos_game", "label": "Chaos Game"}
                     ],
                     "doc": "Generated display used when Idle Mode is Screensaver."
                 },

@@ -29,8 +29,8 @@ foundation for it.
 - Pause, stop, track-change, reboot, and reconnect handling without flashing stale art
 - Optional progress strip with configurable height and RGB colors
 - Optional compact format overlay for bitrate, sample rate, lossless, and DSD labels
-- Idle modes: built-in image, selected folder image, random photo rotation, or Brian's
-  Brain screensaver
+- Idle modes: built-in image, selected folder image, random photo rotation, or animated
+  screensavers
 - Phone-friendly photo manager for adding, selecting, deleting, and randomizing idle photos,
   with a configurable port if it conflicts with another service
 - Daily display schedule for photo-frame use when music is not playing
