@@ -113,6 +113,11 @@ same album may not show a new badge.
 
 ## Matrix Is Blank
 
+During boot, a blank matrix can be normal. Vinyltron keeps the matrix uninitialized until
+Volumio's local `/status` endpoint reports `ready`, then waits the configured **Startup
+Delay (seconds)** before showing any idle fallback mode. Playback artwork can still wake
+the matrix immediately.
+
 First check hardware:
 
 - Matrix power supply is on and polarity is correct.

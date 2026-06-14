@@ -5,6 +5,7 @@
     "rotation":     {"type": "string",  "value": "270"},
     "hardware_mapping": {"type": "string", "value": "adafruit-hat-pwm"},
     "limit_refresh_rate_hz": {"type": "number", "value": 0},
+    "startup_delay_seconds": {"type": "number", "value": 5},
     "fallback_mode": {"type": "string", "value": "single"},
     "fallback_image_folder": {"type": "string", "value": "/data/INTERNAL/Vinyltron/idle-images"},
     "fallback_selected_image": {"type": "string", "value": ""},

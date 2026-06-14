@@ -103,12 +103,14 @@ Avoid per-frame:
 Implemented options:
 
 ```toml
+[display]
+startup_delay_seconds = 5
+
 [screensaver]
 engine = "brians_brain"
 palette = "cyan_amber"
 fps = 6
 reset_seconds = 300
-startup_delay_seconds = 120
 density = 0.22
 seed = ""
 ```
@@ -120,9 +122,8 @@ For the UI, keep options generic across screensaver engines:
 - Speed
 - Reset Interval
 
-Do not expose boot/performance and Brian's Brain-specific keys such as
-`startup_delay_seconds`, `density`, or `seed` in the plugin UI unless there is a clear user
-need. Advanced users can edit those keys directly in
+Keep Brian's Brain-specific keys such as `density` or `seed` out of the plugin UI unless
+there is a clear user need. Advanced users can edit those keys directly in
 `/data/configuration/user_interface/vinyltron/config.toml`.
 
 ## Where It Fits In The Current Code
@@ -144,9 +145,11 @@ Concrete integration points:
 
 - Calls that previously showed fallback directly now go through
   `_show_or_start_fallback_locked(status)`.
-- If fallback mode is an image mode, keep current behavior.
-- If fallback mode is a screensaver, render one frame immediately and schedule repeated
-  frames with a timer.
+- Before Volumio reports `ready`, leave the matrix uninitialized for all idle fallback
+  modes.
+- If fallback mode is an image mode, render the selected fallback after the startup gate.
+- If fallback mode is a screensaver, render one frame after the startup gate and schedule
+  repeated frames with a timer.
 - Cancel the screensaver timer anywhere idle rotation is currently cancelled:
   playback artwork arrival, config reload, display off, shutdown, and hardware restart.
 
@@ -161,8 +164,9 @@ Good defaults:
 
 - 6 FPS for Pi 3B safety; faster presets can be exposed for users who prefer motion over
   idle CPU headroom
-- 120 seconds of startup delay before the screensaver starts, with the built-in fallback
-  image shown during the grace period
+- keep the matrix uninitialized during boot for idle fallback modes, wait for Volumio's
+  `/status` endpoint to report `ready`, then apply a short `startup_delay_seconds` grace
+  period before starting the idle display
 - cap UI selection around low Pi-friendly presets such as 4, 6, and 10 FPS
 - log a warning and clamp invalid values
 
