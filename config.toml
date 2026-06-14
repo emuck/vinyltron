@@ -46,11 +46,18 @@ grid_scale = 2           # Gray-Scott simulation downscale factor (2 = 32x32 gri
 seed = ""                # optional deterministic seed; blank = random each daemon start
 
 [weather]
-fps = 1                          # mock weather animation rate; clamped to 1-10
+source = "mock"                  # mock | open_meteo
+latitude = 0.0                   # required for source = open_meteo
+longitude = 0.0                  # required for source = open_meteo
+location_label = ""              # optional display/log label for the configured location
+units = "imperial"               # imperial | metric
+refresh_minutes = 10             # live weather refresh cadence; clamped to 5-60
+night_icon = "moon"              # moon | weather
+secondary_metric = "humidity"    # humidity | aqi | wind
+fps = 1                          # weather animation rate; clamped to 1-10
 mock_condition = "partly_cloudy" # clear | partly_cloudy | cloudy | rain | storm | snow | fog
 mock_night = false               # true shows moon phase instead of the weather icon
 mock_moon_phase = 0.55           # 0.0 new, 0.5 full, 1.0 new
-secondary_metric = "humidity"    # humidity | aqi | wind
 
 [overlays]
 progress_bar = false       # legacy compatibility; progress_bar_height = 0 disables the bar

@@ -1,11 +1,16 @@
 import math
 import os
-from typing import Dict, NamedTuple, Tuple
+import threading
+import time
+from typing import Dict, NamedTuple, Optional, Tuple
 
+import requests
 from PIL import Image, ImageDraw
 
 
 RGB = Tuple[int, int, int]
+FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
+AQI_URL = 'https://air-quality-api.open-meteo.com/v1/air-quality'
 
 
 class WeatherHour(NamedTuple):
@@ -46,6 +51,9 @@ class MockWeather(NamedTuple):
     sun_event: str
     sun_event_min: int
     hours: Tuple[WeatherHour, ...]
+
+
+WeatherData = MockWeather
 
 
 FONT_3X5: Dict[str, Tuple[int, ...]] = {
@@ -104,6 +112,225 @@ CONDITION_COLORS: Dict[str, Tuple[RGB, RGB]] = {
     'snow': ((235, 250, 255), (105, 210, 255)),
     'fog': ((160, 190, 205), (70, 100, 120)),
 }
+
+
+def wmo_condition(code: int) -> str:
+    if code in (0, 1):
+        return 'clear'
+    if code == 2:
+        return 'partly_cloudy'
+    if code == 3:
+        return 'cloudy'
+    if code in (45, 48):
+        return 'fog'
+    if 71 <= code <= 77 or 85 <= code <= 86:
+        return 'snow'
+    if code >= 95:
+        return 'storm'
+    return 'rain'
+
+
+def current_moon_phase(now: Optional[float] = None) -> float:
+    # Known new moon near 2000-01-06 18:14 UTC. Good enough for display art.
+    now = time.time() if now is None else now
+    synodic_month = 29.53058867 * 86400.0
+    known_new_moon = 947182440.0
+    return ((now - known_new_moon) % synodic_month) / synodic_month
+
+
+def _parse_iso_time_minutes(value) -> int:
+    text = str(value or '')
+    if 'T' in text:
+        text = text.split('T', 1)[1]
+    if len(text) < 5 or text[2] != ':':
+        return 0
+    try:
+        hour = int(text[0:2])
+        minute = int(text[3:5])
+    except ValueError:
+        return 0
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+        return 0
+    return hour * 60 + minute
+
+
+def _now_minutes_from_api(value) -> int:
+    parsed = _parse_iso_time_minutes(value)
+    if parsed:
+        return parsed
+    local = time.localtime()
+    return local.tm_hour * 60 + local.tm_min
+
+
+class WeatherService:
+    def __init__(
+        self,
+        latitude: float,
+        longitude: float,
+        units: str = 'imperial',
+        refresh_minutes: int = 10,
+        secondary_metric: str = 'humidity',
+        night_icon: str = 'moon',
+        timeout_seconds: float = 8.0,
+    ):
+        self.latitude = float(latitude)
+        self.longitude = float(longitude)
+        self.units = 'metric' if str(units).lower() == 'metric' else 'imperial'
+        self.refresh_seconds = max(5, min(60, int(refresh_minutes))) * 60
+        self.secondary_metric = str(secondary_metric or 'humidity').strip().lower()
+        self.night_icon = str(night_icon or 'moon').strip().lower()
+        self.timeout_seconds = max(1.0, float(timeout_seconds))
+        self._lock = threading.Lock()
+        self._data: Optional[WeatherData] = None
+        self._last_attempt = 0.0
+        self._last_success = 0.0
+        self._fetching = False
+        self._last_error = ''
+
+    def snapshot(self) -> Optional[WeatherData]:
+        self._start_fetch_if_needed()
+        with self._lock:
+            return self._data
+
+    def last_error(self) -> str:
+        with self._lock:
+            return self._last_error
+
+    def _start_fetch_if_needed(self):
+        now = time.monotonic()
+        with self._lock:
+            stale = self._data is None or now - self._last_success >= self.refresh_seconds
+            retry_ok = now - self._last_attempt >= min(60, self.refresh_seconds)
+            if self._fetching or not stale or not retry_ok:
+                return
+            self._fetching = True
+            self._last_attempt = now
+
+        worker = threading.Thread(target=self._fetch_worker, daemon=True, name='weather-fetch')
+        worker.start()
+
+    def _fetch_worker(self):
+        try:
+            data = self._fetch()
+            with self._lock:
+                self._data = data
+                self._last_success = time.monotonic()
+                self._last_error = ''
+        except Exception as e:
+            with self._lock:
+                self._last_error = str(e)
+        finally:
+            with self._lock:
+                self._fetching = False
+
+    def _fetch(self) -> WeatherData:
+        temp_unit = 'celsius' if self.units == 'metric' else 'fahrenheit'
+        wind_unit = 'kmh' if self.units == 'metric' else 'mph'
+        params = {
+            'latitude': '%.6f' % self.latitude,
+            'longitude': '%.6f' % self.longitude,
+            'current': ','.join((
+                'temperature_2m',
+                'relative_humidity_2m',
+                'is_day',
+                'weather_code',
+                'wind_speed_10m',
+                'wind_direction_10m',
+            )),
+            'daily': ','.join((
+                'temperature_2m_max',
+                'temperature_2m_min',
+                'sunrise',
+                'sunset',
+            )),
+            'forecast_days': '1',
+            'temperature_unit': temp_unit,
+            'wind_speed_unit': wind_unit,
+            'timezone': 'auto',
+        }
+        response = requests.get(
+            FORECAST_URL,
+            params=params,
+            timeout=self.timeout_seconds,
+            headers={'User-Agent': 'Vinyltron weather idle display'},
+        )
+        response.raise_for_status()
+        payload = response.json()
+        data = self._parse_forecast(payload)
+
+        if self.secondary_metric == 'aqi':
+            aqi = self._fetch_aqi()
+            if aqi is not None:
+                data = data._replace(aqi=aqi, aqi_valid=True)
+
+        return data
+
+    def _fetch_aqi(self) -> Optional[int]:
+        params = {
+            'latitude': '%.6f' % self.latitude,
+            'longitude': '%.6f' % self.longitude,
+            'current': 'us_aqi',
+        }
+        response = requests.get(
+            AQI_URL,
+            params=params,
+            timeout=self.timeout_seconds,
+            headers={'User-Agent': 'Vinyltron weather idle display'},
+        )
+        response.raise_for_status()
+        payload = response.json()
+        value = payload.get('current', {}).get('us_aqi')
+        return int(round(float(value))) if value is not None else None
+
+    def _parse_forecast(self, payload: Dict) -> WeatherData:
+        current = payload.get('current') or {}
+        daily = payload.get('daily') or {}
+
+        temp = int(round(float(current.get('temperature_2m'))))
+        humidity = int(round(float(current.get('relative_humidity_2m', 0))))
+        weather_code = int(current.get('weather_code', current.get('weathercode', 0)) or 0)
+        condition = wmo_condition(weather_code)
+        wind = int(round(float(current.get('wind_speed_10m', 0))))
+        is_day = bool(int(current.get('is_day', 1) or 0))
+
+        highs = daily.get('temperature_2m_max') or []
+        lows = daily.get('temperature_2m_min') or []
+        high = int(round(float(highs[0]))) if highs else temp
+        low = int(round(float(lows[0]))) if lows else temp
+        sunrises = daily.get('sunrise') or []
+        sunsets = daily.get('sunset') or []
+        sunrise_min = _parse_iso_time_minutes(sunrises[0]) if sunrises else 0
+        sunset_min = _parse_iso_time_minutes(sunsets[0]) if sunsets else 0
+
+        now_min = _now_minutes_from_api(current.get('time'))
+        if sunrise_min and now_min < sunrise_min:
+            sun_event = 'rise'
+            sun_event_min = sunrise_min
+        elif sunset_min and now_min < sunset_min:
+            sun_event = 'set'
+            sun_event_min = sunset_min
+        else:
+            sun_event = 'rise'
+            sun_event_min = sunrise_min
+
+        return WeatherData(
+            location='',
+            condition=condition,
+            is_day=is_day,
+            temperature=temp,
+            high=high,
+            low=low,
+            precipitation=0,
+            humidity=max(0, min(100, humidity)),
+            aqi=0,
+            aqi_valid=False,
+            wind_mph=wind,
+            sunrise_min=sunrise_min,
+            sunset_min=sunset_min,
+            sun_event=sun_event,
+            sun_event_min=sun_event_min,
+            hours=tuple(),
+        )
 
 
 SUN_EVENT_GLYPHS: Dict[str, Tuple[int, ...]] = {
@@ -236,6 +463,12 @@ class MockWeatherRenderer:
         night: bool = False,
         moon_phase: float = 0.55,
         secondary_metric: str = 'humidity',
+        source: str = 'mock',
+        latitude: float = 0.0,
+        longitude: float = 0.0,
+        units: str = 'imperial',
+        refresh_minutes: int = 10,
+        night_icon: str = 'moon',
     ):
         self.width = int(width)
         self.height = int(height)
@@ -243,27 +476,59 @@ class MockWeatherRenderer:
         self.night = bool(night)
         self.moon_phase = max(0.0, min(1.0, float(moon_phase)))
         self.secondary_metric = self._normalize_secondary_metric(secondary_metric)
+        self.source = str(source or 'mock').strip().lower()
+        self.night_icon = str(night_icon or 'moon').strip().lower()
         self.frame_count = 0
         self.font = self._load_small_font()
+        self.moon_texture = self._load_moon_texture()
         self.weather = self._mock_weather(self.condition)
+        self.service: Optional[WeatherService] = None
+        if self.source == 'open_meteo':
+            self.service = WeatherService(
+                latitude=latitude,
+                longitude=longitude,
+                units=units,
+                refresh_minutes=refresh_minutes,
+                secondary_metric=self.secondary_metric,
+                night_icon=self.night_icon,
+            )
 
     def frame(self) -> Image.Image:
+        self.weather = self._current_weather()
         img = Image.new('RGB', (self.width, self.height), (0, 0, 0))
         draw = ImageDraw.Draw(img)
         self._draw_background(draw)
-        if self.night:
-            self._draw_moon(draw, 18, 22, 13, self.moon_phase)
+        show_moon = self.night or (self.source == 'open_meteo' and self.night_icon == 'moon' and not self.weather.is_day)
+        if show_moon:
+            phase = current_moon_phase() if self.source == 'open_meteo' else self.moon_phase
+            self._draw_moon(draw, 18, 22, 13, phase)
         else:
             self._draw_condition_icon(draw, self.weather.condition, self.weather.is_day)
         self._draw_current(draw)
         self.frame_count += 1
         return img
 
+    def _current_weather(self) -> WeatherData:
+        if self.service is not None:
+            data = self.service.snapshot()
+            if data is not None:
+                return data
+        return self._mock_weather(self.condition)
+
     def _load_small_font(self) -> PixelFont:
         path = 'assets/fonts/spleen-5x8.bdf'
         if not os.path.exists(path):
             return PixelFont(name='fallback_3x5', glyphs={}, height=5, trim_right=1)
         return _load_bdf_font(path, 'spleen')
+
+    def _load_moon_texture(self) -> Optional[Image.Image]:
+        path = 'assets/weather/fullmoon-27.png'
+        if not os.path.exists(path):
+            return None
+        try:
+            return Image.open(path).convert('RGBA')
+        except OSError:
+            return None
 
     def _normalize_condition(self, condition: str) -> str:
         value = str(condition or '').strip().lower()
@@ -369,13 +634,11 @@ class MockWeatherRenderer:
             self._draw_sun(draw, 18, 20, 11)
 
     def _draw_moon(self, draw: ImageDraw.ImageDraw, cx: int, cy: int, radius: int, phase: float):
-        rim = (170, 205, 235)
         lit_color = (232, 246, 255)
         shade_color = (16, 24, 45)
-        glow = (35, 55, 85)
+        texture = self.moon_texture
 
-        draw.ellipse((cx - radius - 2, cy - radius - 2, cx + radius + 2, cy + radius + 2), fill=glow)
-        draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=shade_color, outline=rim)
+        draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=shade_color)
 
         b = math.cos(phase * 2.0 * math.pi)
         for py in range(cy - radius, cy + radius + 1):
@@ -390,7 +653,18 @@ class MockWeatherRenderer:
                     continue
                 lit = dx >= b * limit if phase <= 0.5 else dx <= -b * limit
                 if lit:
-                    draw.point((px, py), fill=lit_color)
+                    fill = lit_color
+                    if texture is not None:
+                        tx = int((px - (cx - radius)) * (texture.width - 1) / max(1, radius * 2))
+                        ty = int((py - (cy - radius)) * (texture.height - 1) / max(1, radius * 2))
+                        sample = texture.getpixel((tx, ty))
+                        if sample[3] > 0:
+                            fill = (
+                                int(lit_color[0] * 0.52 + sample[0] * 0.48),
+                                int(lit_color[1] * 0.52 + sample[1] * 0.48),
+                                int(lit_color[2] * 0.52 + sample[2] * 0.48),
+                            )
+                    draw.point((px, py), fill=fill)
 
         for x, y in ((5, 8), (9, 44), (28, 9), (31, 37)):
             if (self.frame_count + x + y) % 18 < 10:
