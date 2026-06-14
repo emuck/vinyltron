@@ -112,6 +112,11 @@ palette = "cyan_amber"
 fps = 6
 reset_seconds = 300
 density = 0.22
+ant_count = 4
+steps_per_frame = 96
+points_per_frame = 320
+fade = 12
+rotation_speed = 2
 seed = ""
 ```
 
@@ -122,8 +127,10 @@ For the UI, keep options generic across screensaver engines:
 - Speed
 - Reset Interval
 
-Keep Brian's Brain-specific keys such as `density` or `seed` out of the plugin UI unless
-there is a clear user need. Advanced users can edit those keys directly in
+Keep engine-specific keys such as Brian's Brain `density`, Langton's Ant `ant_count` /
+`steps_per_frame`, Chaos Game `points_per_frame` / `fade` / `rotation_speed`, or
+deterministic `seed` out of the plugin UI unless there is a clear user need. Advanced users
+can edit those keys directly in
 `/data/configuration/user_interface/vinyltron/config.toml`.
 
 ## Where It Fits In The Current Code
@@ -181,10 +188,10 @@ profiling on the Pi 3B shows missed frames, optimize in this order:
 
 ## Other Candidate Screensavers
 
-Brian's Brain should be the first implementation. Other ideas worth exploring later:
+Brian's Brain, multi-ant Langton's Ant, and Chaos Game are implemented. Other ideas worth
+exploring later:
 
 - **Cyclic cellular automata**: color-wheel waves, very cheap and highly animated.
-- **Langton's Ant variants**: iconic, but can look sparse on a 64x64 display until it warms up.
 - **Sine plasma**: classic demoscene look; use precomputed sine lookup tables.
 - **Reaction-diffusion inspired pattern**: visually strong, but likely too heavy unless
   simplified aggressively.

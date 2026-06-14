@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 
-from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES  # noqa: E402
+from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES, ChaosGame, LangtonsAnt  # noqa: E402
 
 
 WIDTH = 64
@@ -118,6 +118,21 @@ HTML = """<!doctype html>
       font-size: 12px;
       white-space: pre-wrap;
     }
+    .field[hidden] {
+      display: none;
+    }
+    pre {
+      margin: 10px 0 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0d1114;
+      color: var(--text);
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      white-space: pre;
+    }
     @media (max-width: 860px) {
       body { grid-template-columns: 1fr; }
       aside { border-left: 0; border-top: 1px solid var(--line); }
@@ -138,21 +153,74 @@ HTML = """<!doctype html>
     <label for="palette">Palette</label>
     <select id="palette"></select>
 
-    <label for="fps">FPS</label>
-    <div class="row">
-      <input id="fps" type="range" min="1" max="30" value="12">
-      <output id="fpsOut">12</output>
+    <label for="fps">Speed</label>
+    <select id="fps">
+      <option value="4">Slow</option>
+      <option value="6" selected>Medium</option>
+      <option value="10">Fast</option>
+    </select>
+
+    <label for="resetSeconds">Reset Interval</label>
+    <input id="resetSeconds" type="number" min="0" value="300">
+
+    <div id="densityField" class="field">
+      <label for="density">Density</label>
+      <div class="row">
+        <input id="density" type="range" min="2" max="45" value="22">
+        <output id="densityOut">0.22</output>
+      </div>
     </div>
 
-    <label for="density">Density</label>
-    <div class="row">
-      <input id="density" type="range" min="2" max="45" value="22">
-      <output id="densityOut">0.22</output>
+    <div id="antCountField" class="field" hidden>
+      <label for="antCount">Ant Count</label>
+      <div class="row">
+        <input id="antCount" type="range" min="1" max="8" value="4">
+        <output id="antCountOut">4</output>
+      </div>
     </div>
+
+    <div id="stepsPerFrameField" class="field" hidden>
+      <label for="stepsPerFrame">Steps Per Frame</label>
+      <div class="row">
+        <input id="stepsPerFrame" type="range" min="8" max="256" step="8" value="96">
+        <output id="stepsPerFrameOut">96</output>
+      </div>
+    </div>
+
+    <div id="pointsPerFrameField" class="field" hidden>
+      <label for="pointsPerFrame">Points Per Frame</label>
+      <div class="row">
+        <input id="pointsPerFrame" type="range" min="32" max="1024" step="32" value="320">
+        <output id="pointsPerFrameOut">320</output>
+      </div>
+    </div>
+
+    <div id="fadeField" class="field" hidden>
+      <label for="fade">Fade</label>
+      <div class="row">
+        <input id="fade" type="range" min="0" max="40" value="12">
+        <output id="fadeOut">12</output>
+      </div>
+    </div>
+
+    <div id="rotationSpeedField" class="field" hidden>
+      <label for="rotationSpeed">Rotation Speed</label>
+      <div class="row">
+        <input id="rotationSpeed" type="range" min="-16" max="16" value="2">
+        <output id="rotationSpeedOut">2</output>
+      </div>
+    </div>
+
+    <label for="seed">Seed</label>
+    <input id="seed" type="text" value="" placeholder="blank = random">
 
     <button id="reset" class="primary">Reset Engine</button>
     <button id="pause">Pause</button>
     <button id="grid">Toggle Grid</button>
+    <button id="copyToml">Copy Config Snippet</button>
+
+    <label for="toml">Config Snippet</label>
+    <pre id="toml"></pre>
 
     <div id="status" class="status">loading...</div>
   </aside>
@@ -173,9 +241,27 @@ HTML = """<!doctype html>
     const engine = $('engine');
     const palette = $('palette');
     const fps = $('fps');
-    const fpsOut = $('fpsOut');
+    const resetSeconds = $('resetSeconds');
     const density = $('density');
     const densityOut = $('densityOut');
+    const densityField = $('densityField');
+    const antCount = $('antCount');
+    const antCountOut = $('antCountOut');
+    const antCountField = $('antCountField');
+    const stepsPerFrame = $('stepsPerFrame');
+    const stepsPerFrameOut = $('stepsPerFrameOut');
+    const stepsPerFrameField = $('stepsPerFrameField');
+    const pointsPerFrame = $('pointsPerFrame');
+    const pointsPerFrameOut = $('pointsPerFrameOut');
+    const pointsPerFrameField = $('pointsPerFrameField');
+    const fade = $('fade');
+    const fadeOut = $('fadeOut');
+    const fadeField = $('fadeField');
+    const rotationSpeed = $('rotationSpeed');
+    const rotationSpeedOut = $('rotationSpeedOut');
+    const rotationSpeedField = $('rotationSpeedField');
+    const seed = $('seed');
+    const toml = $('toml');
     const status = $('status');
 
     function qs() {
@@ -183,7 +269,14 @@ HTML = """<!doctype html>
         engine: engine.value,
         palette: palette.value,
         fps: fps.value,
+        reset_seconds: resetSeconds.value,
         density: (parseInt(density.value, 10) / 100).toFixed(2),
+        ant_count: antCount.value,
+        steps_per_frame: stepsPerFrame.value,
+        points_per_frame: pointsPerFrame.value,
+        fade: fade.value,
+        rotation_speed: rotationSpeed.value,
+        seed: seed.value,
       });
     }
 
@@ -214,8 +307,54 @@ HTML = """<!doctype html>
     }
 
     function updateLabels() {
-      fpsOut.textContent = fps.value;
       densityOut.textContent = (parseInt(density.value, 10) / 100).toFixed(2);
+      antCountOut.textContent = antCount.value;
+      stepsPerFrameOut.textContent = stepsPerFrame.value;
+      pointsPerFrameOut.textContent = pointsPerFrame.value;
+      fadeOut.textContent = fade.value;
+      rotationSpeedOut.textContent = rotationSpeed.value;
+      densityField.hidden = engine.value !== 'brians_brain';
+      antCountField.hidden = engine.value !== 'langtons_ant';
+      stepsPerFrameField.hidden = engine.value !== 'langtons_ant';
+      pointsPerFrameField.hidden = engine.value !== 'chaos_game';
+      fadeField.hidden = engine.value !== 'chaos_game';
+      rotationSpeedField.hidden = engine.value !== 'chaos_game';
+      updateToml();
+    }
+
+    function tomlString(value) {
+      return '"' + value.split('\\\\').join('\\\\\\\\').split('"').join('\\\\"') + '"';
+    }
+
+    function configSnippet() {
+      const lines = [
+        '[fallback]',
+        'mode = "screensaver"',
+        '',
+        '[screensaver]',
+        `engine = ${tomlString(engine.value)}`,
+        `palette = ${tomlString(palette.value)}`,
+        `fps = ${parseInt(fps.value, 10)}`,
+        `reset_seconds = ${Math.max(0, parseInt(resetSeconds.value || '0', 10) || 0)}`,
+      ];
+      if (engine.value === 'brians_brain') {
+        lines.push(`density = ${(parseInt(density.value, 10) / 100).toFixed(2)}`);
+      }
+      if (engine.value === 'langtons_ant') {
+        lines.push(`ant_count = ${parseInt(antCount.value, 10)}`);
+        lines.push(`steps_per_frame = ${parseInt(stepsPerFrame.value, 10)}`);
+      }
+      if (engine.value === 'chaos_game') {
+        lines.push(`points_per_frame = ${parseInt(pointsPerFrame.value, 10)}`);
+        lines.push(`fade = ${parseInt(fade.value, 10)}`);
+        lines.push(`rotation_speed = ${parseInt(rotationSpeed.value, 10)}`);
+      }
+      lines.push(`seed = ${tomlString(seed.value)}`);
+      return lines.join('\\n');
+    }
+
+    function updateToml() {
+      toml.textContent = configSnippet();
     }
 
     async function drawFrame() {
@@ -243,7 +382,13 @@ HTML = """<!doctype html>
         `palette=${palette.value}`,
         `target_fps=${fps.value}`,
         `measured_fps=${state.measuredFps.toFixed(1)}`,
+        `reset_seconds=${resetSeconds.value}`,
         `density=${densityOut.textContent}`,
+        `ant_count=${antCount.value}`,
+        `steps_per_frame=${stepsPerFrame.value}`,
+        `points_per_frame=${pointsPerFrame.value}`,
+        `fade=${fade.value}`,
+        `rotation_speed=${rotationSpeed.value}`,
       ].join('\\n');
     }
 
@@ -287,7 +432,12 @@ HTML = """<!doctype html>
       state.grid = !state.grid;
       drawFrame();
     });
-    for (const input of [engine, palette, fps, density]) {
+    $('copyToml').addEventListener('click', async () => {
+      await navigator.clipboard.writeText(configSnippet());
+      $('copyToml').textContent = 'Copied';
+      setTimeout(() => { $('copyToml').textContent = 'Copy Config Snippet'; }, 1000);
+    });
+    for (const input of [engine, palette, fps, resetSeconds, density, antCount, stepsPerFrame, pointsPerFrame, fade, rotationSpeed, seed]) {
       input.addEventListener('change', async () => {
         updateLabels();
         await resetEngine();
@@ -332,17 +482,43 @@ class EngineRegistry:
             params['engine'],
             params['palette'],
             params['density'],
+            params['ant_count'],
+            params['steps_per_frame'],
+            params['points_per_frame'],
+            params['fade'],
+            params['rotation_speed'],
+            params['seed'],
         )
 
     def _new_engine(self, params):
-        if params['engine'] != 'brians_brain':
-            raise ValueError('unsupported engine')
-        return BriansBrain(
-            WIDTH,
-            HEIGHT,
-            palette=params['palette'],
-            density=params['density'],
-        )
+        if params['engine'] == 'langtons_ant':
+            return LangtonsAnt(
+                WIDTH,
+                HEIGHT,
+                palette=params['palette'],
+                ant_count=params['ant_count'],
+                steps_per_frame=params['steps_per_frame'],
+                seed=params['seed'],
+            )
+        if params['engine'] == 'brians_brain':
+            return BriansBrain(
+                WIDTH,
+                HEIGHT,
+                palette=params['palette'],
+                density=params['density'],
+                seed=params['seed'],
+            )
+        if params['engine'] == 'chaos_game':
+            return ChaosGame(
+                WIDTH,
+                HEIGHT,
+                palette=params['palette'],
+                points_per_frame=params['points_per_frame'],
+                fade=params['fade'],
+                rotation_speed=params['rotation_speed'],
+                seed=params['seed'],
+            )
+        raise ValueError('unsupported engine')
 
 
 REGISTRY = EngineRegistry()
@@ -356,10 +532,37 @@ def request_params(query):
         density = float(values.get('density', ['0.22'])[0])
     except ValueError:
         density = 0.22
+    try:
+        ant_count = int(values.get('ant_count', ['4'])[0])
+    except ValueError:
+        ant_count = 4
+    try:
+        steps_per_frame = int(values.get('steps_per_frame', ['96'])[0])
+    except ValueError:
+        steps_per_frame = 96
+    try:
+        points_per_frame = int(values.get('points_per_frame', ['320'])[0])
+    except ValueError:
+        points_per_frame = 320
+    try:
+        fade = int(values.get('fade', ['12'])[0])
+    except ValueError:
+        fade = 12
+    try:
+        rotation_speed = int(values.get('rotation_speed', ['2'])[0])
+    except ValueError:
+        rotation_speed = 2
+    seed = values.get('seed', [''])[0]
     return {
         'engine': engine,
         'palette': palette,
         'density': max(0.02, min(0.45, density)),
+        'ant_count': max(1, min(8, ant_count)),
+        'steps_per_frame': max(1, min(512, steps_per_frame)),
+        'points_per_frame': max(8, min(2048, points_per_frame)),
+        'fade': max(0, min(64, fade)),
+        'rotation_speed': max(-16, min(16, rotation_speed)),
+        'seed': seed,
     }
 
 
@@ -375,6 +578,8 @@ class Handler(BaseHTTPRequestHandler):
                 'height': HEIGHT,
                 'engines': [
                     {'id': 'brians_brain', 'label': "Brian's Brain"},
+                    {'id': 'langtons_ant', 'label': "Langton's Ant"},
+                    {'id': 'chaos_game', 'label': "Chaos Game"},
                 ],
                 'palettes': [
                     {'id': name, 'label': labelize(name)}

@@ -13,7 +13,7 @@ import toml
 from PIL import Image
 
 from display import Display
-from screensavers import BriansBrain
+from screensavers import BriansBrain, ChaosGame, LangtonsAnt
 from volumio_client import VolumioClient
 
 logging.basicConfig(
@@ -68,6 +68,7 @@ SCREENSAVER_RESET_SECONDS_DEFAULT = 300
 STARTUP_DELAY_SECONDS_DEFAULT = 5
 VOLUMIO_READY_POLL_SECONDS = 10
 VOLUMIO_READY_TIMEOUT_SECONDS = 3
+VOLUMIO_READY_MAX_WAIT_SECONDS = 300
 
 
 class Vinyltron:
@@ -103,9 +104,10 @@ class Vinyltron:
         self._idle_start_timer_id = 0
         self._screensaver_reset_timer: Optional[threading.Timer] = None
         self._screensaver_reset_timer_id = 0
-        self._screensaver: Optional[BriansBrain] = None
+        self._screensaver: Optional[object] = None
         self._volumio_ready = False
         self._volumio_ready_at: Optional[float] = None
+        self._volumio_ready_timeout_logged = False
         self._progress_timer: Optional[threading.Timer] = None
         self._progress_seek_ms = 0
         self._progress_duration_ms = 0
@@ -569,7 +571,7 @@ class Vinyltron:
     def _screensaver_engine(self) -> str:
         cfg = self._cfg.get('screensaver', {})
         engine = str(cfg.get('engine', 'brians_brain')).strip().lower()
-        if engine == 'brians_brain':
+        if engine in ('brians_brain', 'langtons_ant', 'chaos_game'):
             return engine
         log.warning("Unknown screensaver engine %r; using brians_brain", engine)
         return 'brians_brain'
@@ -612,6 +614,10 @@ class Vinyltron:
         return max(0.0, remaining)
 
     def _volumio_status_url(self) -> str:
+        # Always 127.0.0.1, not the configured [volumio].host: Vinyltron only ever runs
+        # alongside Volumio on the same Pi, and checking readiness via the loopback
+        # address avoids depending on mDNS (volumio.local) being resolvable this early
+        # in boot.
         volumio = self._cfg.get('volumio', {})
         port = volumio.get('port', 3000)
         return "http://127.0.0.1:%s/status" % port
@@ -639,20 +645,58 @@ class Vinyltron:
             log.info("Volumio status is %r; keeping idle display deferred", text or 'unavailable')
         return False
 
-    def _idle_ready_to_start(self) -> bool:
-        if not self._refresh_volumio_ready():
+    def _volumio_ready_wait_exceeded(self) -> bool:
+        elapsed = time.monotonic() - self._service_started_at
+        if elapsed < VOLUMIO_READY_MAX_WAIT_SECONDS:
             return False
-        return self._startup_delay_remaining() <= 0
+        if not self._volumio_ready_timeout_logged:
+            log.warning(
+                "Volumio not ready after %ss; showing idle display anyway",
+                VOLUMIO_READY_MAX_WAIT_SECONDS,
+            )
+            self._volumio_ready_timeout_logged = True
+        return True
 
-    def _new_screensaver(self) -> BriansBrain:
+    def _idle_ready_to_start(self) -> bool:
+        if self._refresh_volumio_ready():
+            return self._startup_delay_remaining() <= 0
+        return self._volumio_ready_wait_exceeded()
+
+    def _new_screensaver(self):
         cfg = self._cfg.get('screensaver', {})
         display_cfg = self._cfg.get('display', {})
+        width = int(display_cfg.get('cols', 64))
+        height = int(display_cfg.get('rows', 64))
+        palette = str(cfg.get('palette', 'cyan_amber')).strip().lower()
+        seed = str(cfg.get('seed', '') or '')
+        engine = self._screensaver_engine()
+
+        if engine == 'langtons_ant':
+            return LangtonsAnt(
+                width=width,
+                height=height,
+                palette=palette,
+                ant_count=cfg.get('ant_count', 4),
+                steps_per_frame=cfg.get('steps_per_frame', 96),
+                seed=seed,
+            )
+        if engine == 'chaos_game':
+            return ChaosGame(
+                width=width,
+                height=height,
+                palette=palette,
+                points_per_frame=cfg.get('points_per_frame', 320),
+                fade=cfg.get('fade', 12),
+                rotation_speed=cfg.get('rotation_speed', 2),
+                seed=seed,
+            )
+
         return BriansBrain(
-            width=int(display_cfg.get('cols', 64)),
-            height=int(display_cfg.get('rows', 64)),
-            palette=str(cfg.get('palette', 'cyan_amber')).strip().lower(),
+            width=width,
+            height=height,
+            palette=palette,
             density=cfg.get('density', 0.22),
-            seed=str(cfg.get('seed', '') or ''),
+            seed=seed,
         )
 
     def _show_or_start_fallback_locked(self, status: str):
@@ -1111,6 +1155,7 @@ class Vinyltron:
             self._cfg = toml.load(self._config_path)
             self._volumio_ready = False
             self._volumio_ready_at = None
+            self._volumio_ready_timeout_logged = False
             self._log_runtime_config("reload")
             was_on = self._display_on
             self._display_on = self._effective_display_on()
