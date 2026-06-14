@@ -5,6 +5,15 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-06-13
+
+- Fixed `tools/install-volumio-plugin-zip.sh` and `docs/install.md` to restart the
+  `volumio` service (in addition to `vinyltron`) after `volumio plugin update`/`install`.
+  `volumio` runs the plugin's settings UI code (`index.js`), and `plugin update` does not
+  reload it into the running process — so after an update, Screensaver settings saves kept
+  validating against the *previous* version's `_validScreensaverEngine` and silently fell
+  back to Brian's Brain no matter what was selected.
+
 ## [0.2.7] - 2026-06-13
 
 - Added animated screensaver fallback modes with a dedicated Screensaver settings section,
