@@ -30,11 +30,16 @@ selected_image = ""      # basename inside image_folder
 rotate_seconds = 300     # random_folder only; 0 disables idle photo rotation
 
 [screensaver]
-engine = "brians_brain"  # brians_brain
+engine = "brians_brain"  # brians_brain | langtons_ant | chaos_game
 palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
 fps = 6                  # clamped to 2-24
 reset_seconds = 300      # 0 disables periodic random reset
 density = 0.22           # initial ready-cell density for Brian's Brain
+ant_count = 4            # Langton's Ant count
+steps_per_frame = 96     # Langton's Ant simulation steps per rendered frame
+points_per_frame = 320   # Chaos Game plotted points per rendered frame
+fade = 12                # Chaos Game per-frame fade; 0 disables fading
+rotation_speed = 2       # Chaos Game vertex rotation degrees per rendered frame
 seed = ""                # optional deterministic seed; blank = random each daemon start
 
 [overlays]
