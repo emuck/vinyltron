@@ -1,6 +1,6 @@
 {
     "name": "vinyltron",
-    "version": "0.2.6",
+    "version": "0.2.7",
     "description": "64×64 HUB75 LED matrix album art display for Volumio",
     "main": "index.js",
     "scripts": {},
@@ -15,7 +15,7 @@
         "architectures": ["armhf"],
         "os": ["bookworm"],
         "details": "Real-time album art on a 64×64 HUB75E LED matrix, driven by Volumio pushState.",
-        "changelog": "0.2.6: configurable Photo Manager port, new built-in idle image, corrected SSH-based install docs, and additional UI-payload guards"
+        "changelog": "0.2.7: animated screensaver fallback modes (Brian's Brain, Langton's Ant, Chaos Game), 5-minute idle-display startup fallback, and HEIC photo upload support"
     },
     "author": "Martin Raumann",
     "license": "MIT",

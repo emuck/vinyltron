@@ -5,6 +5,8 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-06-13
+
 - Added animated screensaver fallback modes with a dedicated Screensaver settings section,
   generic engine/palette/speed/reset controls, and advanced tuning kept in `config.toml`.
   Engines currently include Brian's Brain, multi-ant Langton's Ant, and a rotating Chaos
