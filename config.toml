@@ -8,6 +8,7 @@ brightness = 80
 gamma = 2.2
 slowdown_gpio = 2
 limit_refresh_rate_hz = 0 # 0 = uncapped; tune if a panel shows flicker or refresh hiccups
+startup_delay_seconds = 5 # extra grace period after Volumio /status returns ready before idle display starts
 rows = 64
 cols = 64
 rotation = 270
@@ -33,7 +34,6 @@ engine = "brians_brain"  # brians_brain
 palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
 fps = 6                  # clamped to 2-24
 reset_seconds = 300      # 0 disables periodic random reset
-startup_delay_seconds = 120 # show built-in image before starting screensaver after service start
 density = 0.22           # initial ready-cell density for Brian's Brain
 seed = ""                # optional deterministic seed; blank = random each daemon start
 

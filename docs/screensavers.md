@@ -22,10 +22,11 @@ The screensaver appears anywhere Vinyltron would otherwise show fallback art:
 - album-art fetch failure
 - playback with Volumio artwork disabled
 
-When Idle Mode is `Screensaver`, Vinyltron shows the built-in fallback image during early
-service startup and waits before starting the generated screensaver. This grace period does
-not affect the built-in, selected-folder, or random-folder idle modes. It keeps boot lighter
-while Volumio, networking, and the web UI finish coming up.
+During early service startup, Vinyltron keeps the matrix display uninitialized for every
+idle fallback mode. It polls Volumio's local `/status` endpoint and only starts the idle
+display after Volumio reports `ready` plus a short extra grace period. Playback artwork can
+still initialize the matrix immediately. This keeps boot lighter while Volumio, networking,
+and the web UI finish coming up.
 
 It stops on playback artwork, display off, config reload, service stop, and shutdown.
 
@@ -87,12 +88,14 @@ The Volumio plugin UI only exposes controls that make sense across screensavers:
 Engine-specific tuning stays in the daemon config file for advanced users:
 
 ```toml
+[display]
+startup_delay_seconds = 5
+
 [screensaver]
 engine = "brians_brain"
 palette = "cyan_amber"
 fps = 6
 reset_seconds = 300
-startup_delay_seconds = 120
 
 # Advanced Brian's Brain tuning
 density = 0.22
@@ -105,10 +108,10 @@ The config file lives at:
 /data/configuration/user_interface/vinyltron/config.toml
 ```
 
-`startup_delay_seconds` is also config-file-only. When Idle Mode is `Screensaver`, it
-controls how long Vinyltron waits after service start before replacing the built-in
-fallback image with the selected screensaver. Set it to `0` to start the screensaver
-immediately.
+`[display].startup_delay_seconds` is exposed in the plugin UI as **Startup Delay
+(seconds)**. It is an extra grace period after Volumio's `/status` endpoint reports
+`ready`, before any idle fallback mode starts the matrix. Set it to `0` to start the idle
+display as soon as Volumio reports ready.
 
 After editing the config over SSH, reload the daemon:
 
