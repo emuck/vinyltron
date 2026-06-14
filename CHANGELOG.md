@@ -5,6 +5,16 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-06-13
+
+- Added a fourth screensaver engine: Reaction-Diffusion, a Gray-Scott two-chemical
+  simulation that produces slowly evolving coral/spot/worm patterns. Runs on a
+  downscaled grid (32x32 by default, `grid_scale`) bilinear-upscaled to the panel size,
+  with color mapped through the selected palette. Advanced tuning (`feed`, `kill`,
+  `grid_scale`) is config-file-only, matching the other engines' advanced parameters.
+  Prototyped and tuned in `tools/matrix-sim.py` before wiring into `vinyltron.py` and the
+  plugin Settings UI.
+
 ## [0.2.8] - 2026-06-13
 
 - Fixed `tools/install-volumio-plugin-zip.sh` and `docs/install.md` to restart the

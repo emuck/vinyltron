@@ -1,5 +1,6 @@
 import math
 import random
+from array import array
 from typing import Dict, List, NamedTuple, Tuple
 
 from PIL import Image
@@ -26,6 +27,13 @@ CHAOS_GAME_PALETTES: Dict[str, Tuple[RGB, ...]] = {
     'green_magenta': ((60, 255, 80), (255, 40, 220), (40, 200, 255)),
     'blue_red': ((50, 120, 255), (255, 35, 45), (0, 230, 210)),
     'white_violet': ((245, 245, 255), (160, 70, 255), (70, 210, 255)),
+}
+
+GRAY_SCOTT_PALETTES: Dict[str, Tuple[RGB, ...]] = {
+    'cyan_amber': ((5, 10, 25), (0, 70, 110), (0, 200, 255), (255, 210, 90), (255, 140, 30)),
+    'green_magenta': ((10, 0, 20), (90, 0, 110), (200, 20, 160), (120, 230, 120), (60, 255, 80)),
+    'blue_red': ((5, 5, 25), (20, 50, 140), (40, 110, 255), (255, 90, 70), (255, 50, 50)),
+    'white_violet': ((10, 0, 30), (70, 0, 90), (200, 20, 160), (80, 180, 255), (140, 255, 255)),
 }
 
 
@@ -313,3 +321,136 @@ class ChaosGame:
         rgb[idx] = max(rgb[idx], color[0])
         rgb[idx + 1] = max(rgb[idx + 1], color[1])
         rgb[idx + 2] = max(rgb[idx + 2], color[2])
+
+
+class GrayScott:
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        palette: str = 'cyan_amber',
+        feed: float = 0.055,
+        kill: float = 0.062,
+        grid_scale: int = 2,
+        seed: str = '',
+    ):
+        self.width = int(width)
+        self.height = int(height)
+        self.grid_scale = max(1, min(4, int(grid_scale)))
+        self.gw = max(8, self.width // self.grid_scale)
+        self.gh = max(8, self.height // self.grid_scale)
+        self.size = self.gw * self.gh
+        self.a = array('d', [1.0]) * self.size
+        self.b = array('d', [0.0]) * self.size
+        self.next_a = array('d', [0.0]) * self.size
+        self.next_b = array('d', [0.0]) * self.size
+        self.neighbors = self._build_neighbors()
+        self.feed = max(0.0, min(0.1, float(feed)))
+        self.kill = max(0.0, min(0.12, float(kill)))
+        self.da = 1.0
+        self.db = 0.5
+        self.lut = self._build_lut(palette)
+        self.value_scale = 255 / 0.45
+        self.random = random.Random(seed or None)
+        self._seed_spots()
+
+    def _build_neighbors(self):
+        neighbors = []
+        for y in range(self.gh):
+            y_up = (y - 1) % self.gh
+            y_down = (y + 1) % self.gh
+            row = y * self.gw
+            row_up = y_up * self.gw
+            row_down = y_down * self.gw
+            for x in range(self.gw):
+                x_left = (x - 1) % self.gw
+                x_right = (x + 1) % self.gw
+                neighbors.append((
+                    row_up + x_left,
+                    row_up + x,
+                    row_up + x_right,
+                    row + x_left,
+                    row + x_right,
+                    row_down + x_left,
+                    row_down + x,
+                    row_down + x_right,
+                ))
+        return neighbors
+
+    def _build_lut(self, name: str) -> List[RGB]:
+        stops = GRAY_SCOTT_PALETTES.get(name, GRAY_SCOTT_PALETTES['cyan_amber'])
+        steps = len(stops) - 1
+        lut = []
+        for i in range(256):
+            pos = i / 255 * steps
+            j = min(int(pos), steps - 1)
+            t = pos - j
+            c0, c1 = stops[j], stops[j + 1]
+            lut.append((
+                round(c0[0] + (c1[0] - c0[0]) * t),
+                round(c0[1] + (c1[1] - c0[1]) * t),
+                round(c0[2] + (c1[2] - c0[2]) * t),
+            ))
+        return lut
+
+    def _seed_spots(self):
+        rand = self.random
+        for _ in range(4):
+            cx = rand.randrange(self.gw)
+            cy = rand.randrange(self.gh)
+            for dy in range(-3, 4):
+                for dx in range(-3, 4):
+                    x = (cx + dx) % self.gw
+                    y = (cy + dy) % self.gh
+                    idx = y * self.gw + x
+                    self.b[idx] = 1.0
+                    self.a[idx] = 0.0
+
+    def frame(self) -> Image.Image:
+        self._step()
+        img = self._render()
+        if self.grid_scale != 1:
+            img = img.resize((self.width, self.height), Image.BILINEAR)
+        return img
+
+    def _step(self):
+        a, b = self.a, self.b
+        na, nb = self.next_a, self.next_b
+        neighbors = self.neighbors
+        feed, kill, da, db = self.feed, self.kill, self.da, self.db
+        for i in range(self.size):
+            ai = a[i]
+            bi = b[i]
+            n0, n1, n2, n3, n4, n5, n6, n7 = neighbors[i]
+            lap_a = (
+                -ai
+                + 0.2 * (a[n1] + a[n3] + a[n4] + a[n6])
+                + 0.05 * (a[n0] + a[n2] + a[n5] + a[n7])
+            )
+            lap_b = (
+                -bi
+                + 0.2 * (b[n1] + b[n3] + b[n4] + b[n6])
+                + 0.05 * (b[n0] + b[n2] + b[n5] + b[n7])
+            )
+            reaction = ai * bi * bi
+            new_a = ai + da * lap_a - reaction + feed * (1.0 - ai)
+            new_b = bi + db * lap_b + reaction - (kill + feed) * bi
+            na[i] = 0.0 if new_a < 0.0 else (1.0 if new_a > 1.0 else new_a)
+            nb[i] = 0.0 if new_b < 0.0 else (1.0 if new_b > 1.0 else new_b)
+        self.a, self.next_a = self.next_a, self.a
+        self.b, self.next_b = self.next_b, self.b
+
+    def _render(self) -> Image.Image:
+        rgb = bytearray(self.size * 3)
+        lut = self.lut
+        scale = self.value_scale
+        j = 0
+        for val in self.b:
+            g = int(val * scale)
+            g = 0 if g < 0 else (255 if g > 255 else g)
+            color = lut[g]
+            rgb[j] = color[0]
+            rgb[j + 1] = color[1]
+            rgb[j + 2] = color[2]
+            j += 3
+        return Image.frombytes('RGB', (self.gw, self.gh), bytes(rgb))
