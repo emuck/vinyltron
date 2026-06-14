@@ -734,6 +734,7 @@ class Vinyltron:
         display_cfg = self._cfg.get('display', {})
         width = int(display_cfg.get('cols', 64))
         height = int(display_cfg.get('rows', 64))
+        source = str(cfg.get('source', 'mock')).strip().lower()
         condition = str(cfg.get('mock_condition', 'partly_cloudy')).strip().lower()
         night = bool(cfg.get('mock_night', False))
         try:
@@ -741,6 +742,19 @@ class Vinyltron:
         except (TypeError, ValueError):
             moon_phase = 0.55
         secondary_metric = str(cfg.get('secondary_metric', 'humidity')).strip().lower()
+        try:
+            latitude = float(cfg.get('latitude', 0.0))
+            longitude = float(cfg.get('longitude', 0.0))
+        except (TypeError, ValueError):
+            latitude = 0.0
+            longitude = 0.0
+            source = 'mock'
+        units = str(cfg.get('units', 'imperial')).strip().lower()
+        night_icon = str(cfg.get('night_icon', 'moon')).strip().lower()
+        try:
+            refresh_minutes = int(cfg.get('refresh_minutes', 10))
+        except (TypeError, ValueError):
+            refresh_minutes = 10
         return MockWeatherRenderer(
             width=width,
             height=height,
@@ -748,6 +762,12 @@ class Vinyltron:
             night=night,
             moon_phase=moon_phase,
             secondary_metric=secondary_metric,
+            source=source,
+            latitude=latitude,
+            longitude=longitude,
+            units=units,
+            refresh_minutes=refresh_minutes,
+            night_icon=night_icon,
         )
 
     def _show_or_start_fallback_locked(self, status: str):
@@ -796,8 +816,9 @@ class Vinyltron:
         if self._weather_renderer is None:
             self._weather_renderer = self._new_weather_renderer()
             log.info(
-                "Starting mock weather idle display at %s FPS; condition=%s night=%r metric=%s",
+                "Starting weather idle display at %s FPS; source=%s condition=%s night=%r metric=%s",
                 self._weather_fps(),
+                self._cfg.get('weather', {}).get('source', 'mock'),
                 self._cfg.get('weather', {}).get('mock_condition', 'partly_cloudy'),
                 self._cfg.get('weather', {}).get('mock_night', False),
                 self._cfg.get('weather', {}).get('secondary_metric', 'humidity'),
@@ -1192,7 +1213,9 @@ class Vinyltron:
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
                 "fallback_selected=%r fallback_rotate_seconds=%r screensaver_engine=%r "
                 "screensaver_palette=%r screensaver_fps=%r screensaver_reset_seconds=%r "
-                "weather_fps=%r weather_mock_condition=%r weather_mock_night=%r "
+                "weather_source=%r weather_location=%r weather_units=%r "
+                "weather_refresh_minutes=%r weather_night_icon=%r weather_fps=%r "
+                "weather_mock_condition=%r weather_mock_night=%r "
                 "weather_mock_moon_phase=%r weather_secondary_metric=%r "
                 "startup_delay_seconds=%r "
                 "progress_height=%r progress_foreground=%r "
@@ -1221,6 +1244,11 @@ class Vinyltron:
             screensaver.get('palette', 'cyan_amber'),
             screensaver.get('fps', SCREENSAVER_FPS_DEFAULT),
             screensaver.get('reset_seconds', SCREENSAVER_RESET_SECONDS_DEFAULT),
+            weather.get('source', 'mock'),
+            weather.get('location_label', ''),
+            weather.get('units', 'imperial'),
+            weather.get('refresh_minutes', 10),
+            weather.get('night_icon', 'moon'),
             weather.get('fps', WEATHER_FPS_DEFAULT),
             weather.get('mock_condition', 'partly_cloudy'),
             weather.get('mock_night', False),
