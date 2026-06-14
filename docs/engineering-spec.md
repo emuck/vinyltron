@@ -213,7 +213,7 @@ selected_image = ""      # basename inside image_folder
 rotate_seconds = 300
 
 [screensaver]
-engine = "brians_brain"  # brians_brain | langtons_ant | chaos_game
+engine = "brians_brain"  # brians_brain | langtons_ant | chaos_game | gray_scott
 palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
 fps = 6                  # clamped to 2-24
 reset_seconds = 300      # 0 disables periodic random reset
@@ -223,6 +223,9 @@ steps_per_frame = 96     # advanced Langton's Ant simulation steps per rendered 
 points_per_frame = 320   # advanced Chaos Game plotted points per rendered frame
 fade = 12                # advanced Chaos Game per-frame fade
 rotation_speed = 2       # advanced Chaos Game vertex rotation degrees per rendered frame
+feed = 0.055             # advanced Gray-Scott reaction-diffusion feed rate
+kill = 0.062             # advanced Gray-Scott reaction-diffusion kill rate
+grid_scale = 2           # advanced Gray-Scott downscale factor (2 = 32x32 grid upscaled to 64x64)
 seed = ""                # advanced deterministic seed; blank = random each daemon start
 
 [overlays]
@@ -277,13 +280,16 @@ entered after debounce, not on every render.
 Screensaver fallback is controlled by `[screensaver]`. The plugin UI exposes generic
 controls (`engine`, `palette`, `fps`, `reset_seconds`) while engine-specific tuning such as
 Brian's Brain `density`, Langton's Ant `ant_count`/`steps_per_frame`, Chaos Game
-`points_per_frame`/`fade`/`rotation_speed`, and `seed` remains config-file-only. Brian's
-Brain is a three-state cellular automaton backed by two 4096-byte grids and precomputed
-neighbor indexes. Langton's Ant maintains a one-byte grid and a small set of moving ants
-that turn, flip cells, and wrap around the panel edges. Chaos Game plots random midpoint
-steps toward rotating triangle vertices into a decaying RGB buffer. All engines render
-generated RGB frames through the same `display.py` image path as static fallbacks, so
-progress and format overlays still compose on top.
+`points_per_frame`/`fade`/`rotation_speed`, Gray-Scott `feed`/`kill`/`grid_scale`, and `seed`
+remains config-file-only. Brian's Brain is a three-state cellular automaton backed by two
+4096-byte grids and precomputed neighbor indexes. Langton's Ant maintains a one-byte grid
+and a small set of moving ants that turn, flip cells, and wrap around the panel edges.
+Chaos Game plots random midpoint steps toward rotating triangle vertices into a decaying
+RGB buffer. Gray-Scott runs a two-chemical reaction-diffusion simulation (the classic
+Gray-Scott model with a 9-point Laplacian) on a downscaled grid, mapped through a color
+gradient and bilinear-upscaled to the panel size, producing slowly evolving coral/maze
+patterns. All engines render generated RGB frames through the same `display.py` image path
+as static fallbacks, so progress and format overlays still compose on top.
 
 During early service startup, `vinyltron.py` polls Volumio's `/status` endpoint before
 initializing the matrix display for any idle fallback mode. Idle display starts only after
