@@ -1,6 +1,6 @@
 {
     "name": "vinyltron",
-    "version": "0.2.8",
+    "version": "0.2.9",
     "description": "64×64 HUB75 LED matrix album art display for Volumio",
     "main": "index.js",
     "scripts": {},
@@ -15,7 +15,7 @@
         "architectures": ["armhf"],
         "os": ["bookworm"],
         "details": "Real-time album art on a 64×64 HUB75E LED matrix, driven by Volumio pushState.",
-        "changelog": "0.2.8: fix plugin-update install path to restart volumio so Settings UI code (e.g. screensaver engine save) actually reloads"
+        "changelog": "0.2.9: add Reaction-Diffusion (Gray-Scott) screensaver engine"
     },
     "author": "Martin Raumann",
     "license": "MIT",

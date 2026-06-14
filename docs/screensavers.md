@@ -9,7 +9,7 @@ screensaver stops immediately and the matrix returns to album art.
 Open Vinyltron Settings and set:
 
 - **Idle Mode**: `Screensaver`
-- **Screensaver**: `Brian's Brain`, `Langton's Ant`, or `Chaos Game`
+- **Screensaver**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, or `Reaction-Diffusion`
 - **Palette**: choose a color pair
 - **Speed**: `Slow`, `Medium`, or `Fast`
 - **Reset Interval**: seconds between random state resets, or `0` to disable
@@ -104,6 +104,23 @@ points. That makes the fractal breathe instead of settling into a static picture
 Advanced tuning controls how many random points are plotted per rendered frame, how quickly
 older pixels fade, and how fast the triangle vertices rotate.
 
+## Reaction-Diffusion (Gray-Scott)
+
+Reaction-Diffusion runs the classic Gray-Scott two-chemical model: each cell holds
+concentrations of chemicals U and V that diffuse into neighboring cells and react with each
+other according to feed and kill rates. Starting from a few seeded patches, the simulation
+settles into a self-sustaining pattern of spots, worms, or coral-like growth that never
+fully repeats.
+
+To keep this affordable on a Pi 3B, the simulation runs on a downscaled grid (32x32 by
+default, `grid_scale = 2`) and the result is bilinear-upscaled to the panel size. The V
+concentration is mapped through a color gradient using the selected palette, giving a
+"lava lamp" look: dark background, glowing mid-tones, and bright highlights where the
+reaction is most active.
+
+Advanced tuning controls the feed rate, kill rate, and grid scale. Lower kill values tend
+to produce faster-spreading "worm" patterns; higher values tend toward more static spots.
+
 ## Configuration Model
 
 The Volumio plugin UI only exposes controls that make sense across screensavers:
@@ -136,6 +153,11 @@ steps_per_frame = 96
 points_per_frame = 320
 fade = 12
 rotation_speed = 2
+
+# Advanced Reaction-Diffusion (Gray-Scott) tuning
+feed = 0.055
+kill = 0.062
+grid_scale = 2
 
 seed = ""
 ```

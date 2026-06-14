@@ -46,8 +46,8 @@ The raw frame endpoint returns exactly:
 
 ## Current Controls
 
-- **Engine**: `Brian's Brain`, `Langton's Ant`, or `Chaos Game`
-- **Palette**: color pair used by the selected engine
+- **Engine**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, or `Reaction-Diffusion`
+- **Palette**: color pair or gradient used by the selected engine
 - **Speed**: `Slow` / `Medium` / `Fast` (4 / 6 / 10 fps), matching the plugin's Screensaver
   "Speed" setting; controls browser playback target
 - **Density**: initial ready-cell density for Brian's Brain
@@ -56,6 +56,9 @@ The raw frame endpoint returns exactly:
 - **Points Per Frame**: Chaos Game random midpoint plots before each rendered frame
 - **Fade**: Chaos Game per-frame pixel fade
 - **Rotation Speed**: Chaos Game vertex rotation per rendered frame
+- **Feed Rate**: Reaction-Diffusion Gray-Scott feed rate
+- **Kill Rate**: Reaction-Diffusion Gray-Scott kill rate
+- **Grid Scale**: Reaction-Diffusion simulation downscale factor (2 = 32x32 grid upscaled to 64x64)
 - **Seed**: optional deterministic seed; blank means random
 - **Reset Engine**: reseed the current engine
 - **Pause / Resume**
@@ -80,7 +83,6 @@ Good candidates:
 - cyclic cellular automata
 - sine plasma with lookup tables
 - Lissajous / orbit trails
-- simplified reaction-diffusion inspired patterns
 
 The simulator should stay dependency-light. If a future screensaver needs heavy math,
 prototype it here first, then decide whether the daemon should carry that dependency.

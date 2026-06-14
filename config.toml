@@ -30,7 +30,7 @@ selected_image = ""      # basename inside image_folder
 rotate_seconds = 300     # random_folder only; 0 disables idle photo rotation
 
 [screensaver]
-engine = "brians_brain"  # brians_brain | langtons_ant | chaos_game
+engine = "brians_brain"  # brians_brain | langtons_ant | chaos_game | gray_scott
 palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
 fps = 6                  # clamped to 2-24
 reset_seconds = 300      # 0 disables periodic random reset
@@ -40,6 +40,9 @@ steps_per_frame = 96     # Langton's Ant simulation steps per rendered frame
 points_per_frame = 320   # Chaos Game plotted points per rendered frame
 fade = 12                # Chaos Game per-frame fade; 0 disables fading
 rotation_speed = 2       # Chaos Game vertex rotation degrees per rendered frame
+feed = 0.055             # Gray-Scott reaction-diffusion feed rate
+kill = 0.062             # Gray-Scott reaction-diffusion kill rate
+grid_scale = 2           # Gray-Scott simulation downscale factor (2 = 32x32 grid upscaled to 64x64)
 seed = ""                # optional deterministic seed; blank = random each daemon start
 
 [overlays]
