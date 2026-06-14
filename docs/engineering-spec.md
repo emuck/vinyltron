@@ -191,6 +191,7 @@ brightness = 80          # 0-100
 gamma = 2.2
 slowdown_gpio = 2        # Bonnet test value; 4 caused more horizontal flicker on current panel
 limit_refresh_rate_hz = 0      # 0 = uncapped; 90-140 is a practical tuning range
+startup_delay_seconds = 5 # extra grace period after Volumio /status returns ready before idle display starts
 rows = 64
 cols = 64
 rotation = 270           # Rotate:270 corrects panel orientation; change if remounted
@@ -216,7 +217,6 @@ engine = "brians_brain"  # brians_brain
 palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
 fps = 6                  # clamped to 2-24
 reset_seconds = 300      # 0 disables periodic random reset
-startup_delay_seconds = 120 # show built-in image before starting screensaver after service start
 density = 0.22           # advanced Brian's Brain initial ready-cell density
 seed = ""                # advanced deterministic seed; blank = random each daemon start
 
@@ -270,16 +270,18 @@ gamma LUT, and renders them. Random selection happens only when the fallback sta
 entered after debounce, not on every render.
 
 Screensaver fallback is controlled by `[screensaver]`. The plugin UI exposes generic
-controls (`engine`, `palette`, `fps`, `reset_seconds`) while boot/performance and
-engine-specific tuning such as `startup_delay_seconds`, Brian's Brain `density`, and
-`seed` remain config-file-only. The MVP engine is Brian's Brain: a three-state cellular
-automaton backed by two 4096-byte grids and precomputed neighbor indexes. It renders
-generated RGB frames through the same `display.py` image path as static fallbacks, so
-progress and format overlays still compose on top. During early service startup,
-`vinyltron.py` shows the built-in fallback image and delays the screensaver until the
-startup grace period has elapsed. The frame, reset, and delayed-start timers are owned by
-`vinyltron.py` and are cancelled on playback artwork, display-off, config reload, and
-shutdown.
+controls (`engine`, `palette`, `fps`, `reset_seconds`) while engine-specific tuning such as
+Brian's Brain `density` and `seed` remains config-file-only. The MVP engine is Brian's
+Brain: a three-state cellular automaton backed by two 4096-byte grids and precomputed
+neighbor indexes. It renders generated RGB frames through the same `display.py` image path
+as static fallbacks, so progress and format overlays still compose on top.
+
+During early service startup, `vinyltron.py` polls Volumio's `/status` endpoint before
+initializing the matrix display for any idle fallback mode. Idle display starts only after
+`/status` returns `ready` and the extra `[display].startup_delay_seconds` grace period has
+elapsed. Playback artwork is allowed to initialize the matrix immediately. The frame,
+reset, and delayed-start timers are owned by `vinyltron.py` and are cancelled on playback
+artwork, display-off, config reload, and shutdown.
 
 For visual tuning before hardware deployment, `tools/matrix-sim.py` exposes the same
 generated-frame boundary in a browser: engines return 64x64 RGB frames, `/api/frame`

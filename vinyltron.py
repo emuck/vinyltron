@@ -65,7 +65,9 @@ SCREENSAVER_FPS_DEFAULT = 6
 SCREENSAVER_FPS_MIN = 2
 SCREENSAVER_FPS_MAX = 24
 SCREENSAVER_RESET_SECONDS_DEFAULT = 300
-SCREENSAVER_STARTUP_DELAY_SECONDS_DEFAULT = 120
+STARTUP_DELAY_SECONDS_DEFAULT = 5
+VOLUMIO_READY_POLL_SECONDS = 10
+VOLUMIO_READY_TIMEOUT_SECONDS = 3
 
 
 class Vinyltron:
@@ -73,7 +75,7 @@ class Vinyltron:
         self._config_path = config_path
         self._cfg = toml.load(config_path)
         self._version = self._load_version()
-        self._display = Display(self._cfg)
+        self._display: Optional[Display] = None
         self._client = VolumioClient(
             host=self._cfg['volumio']['host'],
             port=self._cfg['volumio']['port'],
@@ -97,11 +99,13 @@ class Vinyltron:
         self._idle_rotation_timer_id = 0
         self._screensaver_timer: Optional[threading.Timer] = None
         self._screensaver_timer_id = 0
-        self._screensaver_start_timer: Optional[threading.Timer] = None
-        self._screensaver_start_timer_id = 0
+        self._idle_start_timer: Optional[threading.Timer] = None
+        self._idle_start_timer_id = 0
         self._screensaver_reset_timer: Optional[threading.Timer] = None
         self._screensaver_reset_timer_id = 0
         self._screensaver: Optional[BriansBrain] = None
+        self._volumio_ready = False
+        self._volumio_ready_at: Optional[float] = None
         self._progress_timer: Optional[threading.Timer] = None
         self._progress_seek_ms = 0
         self._progress_duration_ms = 0
@@ -115,6 +119,24 @@ class Vinyltron:
         signal.signal(signal.SIGTERM, self._shutdown)
         signal.signal(signal.SIGINT, self._shutdown)
         signal.signal(signal.SIGHUP, self._reload)
+
+    def _ensure_display(self) -> Display:
+        if self._display is None:
+            log.info("Initializing matrix display")
+            self._display = Display(self._cfg)
+        return self._display
+
+    def _clear_display_if_initialized(self):
+        if self._display is not None:
+            self._display.clear()
+
+    def _clear_badge_if_initialized(self):
+        if self._display is not None:
+            self._display.clear_badge()
+
+    def _clear_progress_if_initialized(self):
+        if self._display is not None:
+            self._display.clear_progress()
 
     def _on_state(self, state: Dict):
         self._last_state = dict(state)
@@ -185,7 +207,7 @@ class Vinyltron:
             self._cancel_overlay_locked()
             self._cancel_progress_locked(clear_visible=album_changed)
             if album_changed and self._badge_visible:
-                self._display.clear_badge()
+                self._clear_badge_if_initialized()
             self._badge_visible = False
 
         worker = threading.Thread(
@@ -235,7 +257,7 @@ class Vinyltron:
         if img:
             with self._overlay_lock:
                 if album_changed or albumart != self._current_albumart:
-                    self._display.show_image(img)
+                    self._ensure_display().show_image(img)
                     self._fallback_visible = False
             with self._state_lock:
                 self._current_albumart = albumart
@@ -278,7 +300,7 @@ class Vinyltron:
 
         with self._overlay_lock:
             self._cancel_overlay_locked()
-            self._display.show_text(label, color_rgb)
+            self._ensure_display().show_text(label, color_rgb)
             self._badge_visible = True
             self._badge_timer = threading.Timer(duration, self._clear_badge_from_timer)
             self._badge_timer.daemon = True
@@ -458,7 +480,7 @@ class Vinyltron:
         with self._overlay_lock:
             self._badge_timer = None
             if self._badge_visible:
-                self._display.clear_badge()
+                self._clear_badge_if_initialized()
                 self._badge_visible = False
 
     def _cancel_overlay_locked(self):
@@ -500,7 +522,7 @@ class Vinyltron:
         self._cancel_overlay_locked()
         self._cancel_progress_locked(clear_visible=True)
         if self._badge_visible:
-            self._display.clear_badge()
+            self._clear_badge_if_initialized()
         self._badge_visible = False
         self._schedule_active_fallback_locked(status)
 
@@ -569,21 +591,58 @@ class Vinyltron:
             seconds = SCREENSAVER_RESET_SECONDS_DEFAULT
         return max(0, seconds)
 
-    def _screensaver_startup_delay_seconds(self) -> int:
+    def _startup_delay_seconds(self) -> int:
+        display_cfg = self._cfg.get('display', {})
+        screensaver_cfg = self._cfg.get('screensaver', {})
         try:
-            seconds = int(self._cfg.get('screensaver', {}).get(
+            seconds = int(display_cfg.get(
                 'startup_delay_seconds',
-                SCREENSAVER_STARTUP_DELAY_SECONDS_DEFAULT,
+                screensaver_cfg.get('startup_delay_seconds', STARTUP_DELAY_SECONDS_DEFAULT),
             ))
         except (TypeError, ValueError):
-            seconds = SCREENSAVER_STARTUP_DELAY_SECONDS_DEFAULT
+            seconds = STARTUP_DELAY_SECONDS_DEFAULT
         return max(0, seconds)
 
-    def _screensaver_startup_delay_remaining(self) -> float:
-        remaining = self._screensaver_startup_delay_seconds() - (
-            time.monotonic() - self._service_started_at
+    def _startup_delay_remaining(self) -> float:
+        if self._volumio_ready_at is None:
+            return self._startup_delay_seconds()
+        remaining = self._startup_delay_seconds() - (
+            time.monotonic() - self._volumio_ready_at
         )
         return max(0.0, remaining)
+
+    def _volumio_status_url(self) -> str:
+        volumio = self._cfg.get('volumio', {})
+        port = volumio.get('port', 3000)
+        return "http://127.0.0.1:%s/status" % port
+
+    def _refresh_volumio_ready(self) -> bool:
+        if self._volumio_ready:
+            return True
+        try:
+            r = requests.get(self._volumio_status_url(), timeout=VOLUMIO_READY_TIMEOUT_SECONDS)
+            text = r.text.strip().lower() if r.ok else ''
+        except Exception as e:
+            log.info("Volumio readiness check failed: %s", e)
+            return False
+        if text == 'ready':
+            self._volumio_ready = True
+            self._volumio_ready_at = time.monotonic()
+            log.info(
+                "Volumio status ready; startup grace period=%ss",
+                self._startup_delay_seconds(),
+            )
+            return True
+        if text == 'error':
+            log.warning("Volumio status endpoint reports error; keeping idle display deferred")
+        else:
+            log.info("Volumio status is %r; keeping idle display deferred", text or 'unavailable')
+        return False
+
+    def _idle_ready_to_start(self) -> bool:
+        if not self._refresh_volumio_ready():
+            return False
+        return self._startup_delay_remaining() <= 0
 
     def _new_screensaver(self) -> BriansBrain:
         cfg = self._cfg.get('screensaver', {})
@@ -597,23 +656,27 @@ class Vinyltron:
         )
 
     def _show_or_start_fallback_locked(self, status: str):
+        if not self._idle_ready_to_start():
+            self._show_startup_idle_placeholder_locked(status)
+            return
+        self._start_idle_locked(status)
+
+    def _start_idle_locked(self, status: str):
         if self._screensaver_enabled():
-            if self._screensaver_startup_delay_remaining() > 0:
-                self._show_startup_screensaver_placeholder_locked(status)
-            else:
-                self._start_screensaver_locked(status)
+            self._start_screensaver_locked(status)
             return
         self._cancel_screensaver_locked()
-        self._display.show_fallback()
+        self._ensure_display().show_fallback()
         self._fallback_visible = True
         self._schedule_idle_rotation_locked(status)
 
     def _schedule_active_fallback_locked(self, status: str):
+        if not self._idle_ready_to_start():
+            self._show_startup_idle_placeholder_locked(status)
+            return
         if self._screensaver_enabled():
             if self._screensaver:
                 self._schedule_screensaver_frame_locked(status)
-            elif self._screensaver_startup_delay_remaining() > 0:
-                self._show_startup_screensaver_placeholder_locked(status)
             else:
                 self._start_screensaver_locked(status)
             return
@@ -622,7 +685,7 @@ class Vinyltron:
 
     def _start_screensaver_locked(self, status: str):
         self._cancel_idle_rotation_locked()
-        self._cancel_screensaver_start_locked()
+        self._cancel_idle_start_locked()
         if self._screensaver is None:
             self._screensaver = self._new_screensaver()
             log.info(
@@ -631,38 +694,38 @@ class Vinyltron:
                 self._screensaver_fps(),
                 self._screensaver_reset_seconds(),
             )
-        self._display.show_screensaver_frame(self._screensaver.frame())
+        self._ensure_display().show_screensaver_frame(self._screensaver.frame())
         self._fallback_visible = True
         self._schedule_screensaver_frame_locked(status)
         self._schedule_screensaver_reset_locked(status)
 
-    def _show_startup_screensaver_placeholder_locked(self, status: str):
+    def _show_startup_idle_placeholder_locked(self, status: str):
         self._cancel_screensaver_locked()
         self._cancel_idle_rotation_locked()
-        self._display.show_fallback()
         self._fallback_visible = True
-        self._schedule_screensaver_start_locked(status)
+        self._schedule_idle_start_locked(status)
 
-    def _schedule_screensaver_start_locked(self, status: str):
-        if self._screensaver_start_timer:
+    def _schedule_idle_start_locked(self, status: str):
+        if self._idle_start_timer:
             return
-        seconds = self._screensaver_startup_delay_remaining()
+        seconds = self._startup_delay_remaining() if self._volumio_ready else VOLUMIO_READY_POLL_SECONDS
         if seconds <= 0:
-            self._start_screensaver_locked(status)
+            self._start_idle_locked(status)
             return
-        self._screensaver_start_timer_id += 1
-        timer_id = self._screensaver_start_timer_id
+        self._idle_start_timer_id += 1
+        timer_id = self._idle_start_timer_id
         log.info(
-            "Showing built-in fallback for %.1fs before starting screensaver",
+            "Keeping matrix uninitialized before idle display; Volumio ready=%r, next check in %.1fs",
+            self._volumio_ready,
             seconds,
         )
-        self._screensaver_start_timer = threading.Timer(
+        self._idle_start_timer = threading.Timer(
             seconds,
-            self._start_screensaver_from_timer,
+            self._start_idle_from_timer,
             args=(timer_id, status),
         )
-        self._screensaver_start_timer.daemon = True
-        self._screensaver_start_timer.start()
+        self._idle_start_timer.daemon = True
+        self._idle_start_timer.start()
 
     def _schedule_screensaver_frame_locked(self, status: str):
         if self._screensaver_timer or not self._screensaver:
@@ -694,14 +757,14 @@ class Vinyltron:
         self._screensaver_reset_timer.daemon = True
         self._screensaver_reset_timer.start()
 
-    def _cancel_screensaver_start_locked(self):
-        if self._screensaver_start_timer:
-            self._screensaver_start_timer.cancel()
-            self._screensaver_start_timer = None
-        self._screensaver_start_timer_id += 1
+    def _cancel_idle_start_locked(self):
+        if self._idle_start_timer:
+            self._idle_start_timer.cancel()
+            self._idle_start_timer = None
+        self._idle_start_timer_id += 1
 
     def _cancel_screensaver_locked(self):
-        self._cancel_screensaver_start_locked()
+        self._cancel_idle_start_locked()
         if self._screensaver_timer:
             self._screensaver_timer.cancel()
             self._screensaver_timer = None
@@ -712,15 +775,18 @@ class Vinyltron:
         self._screensaver_reset_timer_id += 1
         self._screensaver = None
 
-    def _start_screensaver_from_timer(self, timer_id: int, status: str):
+    def _start_idle_from_timer(self, timer_id: int, status: str):
         with self._overlay_lock:
-            if timer_id != self._screensaver_start_timer_id:
+            if timer_id != self._idle_start_timer_id:
                 return
-            self._screensaver_start_timer = None
-            if not self._display_on or not self._fallback_visible or not self._screensaver_enabled():
+            self._idle_start_timer = None
+            if not self._display_on or not self._fallback_visible:
                 self._cancel_screensaver_locked()
                 return
-            self._start_screensaver_locked(status)
+            if self._idle_ready_to_start():
+                self._start_idle_locked(status)
+            else:
+                self._schedule_idle_start_locked(status)
 
     def _show_screensaver_frame_from_timer(self, timer_id: int, status: str):
         with self._overlay_lock:
@@ -733,7 +799,7 @@ class Vinyltron:
             if not self._screensaver:
                 self._screensaver = self._new_screensaver()
                 self._schedule_screensaver_reset_locked(status)
-            self._display.show_screensaver_frame(self._screensaver.frame())
+            self._ensure_display().show_screensaver_frame(self._screensaver.frame())
             self._schedule_screensaver_frame_locked(status)
 
     def _reset_screensaver_from_timer(self, timer_id: int, status: str):
@@ -746,7 +812,7 @@ class Vinyltron:
                 return
             log.info("Resetting %s screensaver state", self._screensaver_engine())
             self._screensaver = self._new_screensaver()
-            self._display.show_screensaver_frame(self._screensaver.frame())
+            self._ensure_display().show_screensaver_frame(self._screensaver.frame())
             self._schedule_screensaver_frame_locked(status)
             self._schedule_screensaver_reset_locked(status)
 
@@ -757,7 +823,7 @@ class Vinyltron:
             self._idle_rotation_timer = None
             if not self._display_on or not self._fallback_rotation_enabled():
                 return
-            self._display.show_fallback()
+            self._ensure_display().show_fallback()
             self._fallback_visible = True
             self._schedule_active_fallback_locked(status)
         log.info("Status: %s — rotated idle random image", status)
@@ -846,7 +912,7 @@ class Vinyltron:
         foreground = self._rgb_tuple(overlays.get('progress_bar_foreground', [255, 255, 255]), (255, 255, 255))
         background = self._rgb_tuple(overlays.get('progress_bar_background'), None)
 
-        self._display.show_progress(width, height, foreground, background)
+        self._ensure_display().show_progress(width, height, foreground, background)
         self._progress_last_width = width
 
     def _progress_width(self) -> int:
@@ -879,7 +945,7 @@ class Vinyltron:
         self._progress_last_width = None
         self._progress_last_update = time.monotonic()
         if clear_visible:
-            self._display.clear_progress()
+            self._clear_progress_if_initialized()
 
     def _cancel_progress_timer_locked(self):
         if self._progress_timer:
@@ -965,7 +1031,7 @@ class Vinyltron:
                 "fallback=%r fallback_mode=%r fallback_folder=%r "
                 "fallback_selected=%r fallback_rotate_seconds=%r screensaver_engine=%r "
                 "screensaver_palette=%r screensaver_fps=%r screensaver_reset_seconds=%r "
-                "screensaver_startup_delay_seconds=%r "
+                "startup_delay_seconds=%r "
                 "progress_height=%r progress_foreground=%r "
                 "progress_background=%r format_badge=%r format_font=%r badge_duration=%r"
             ),
@@ -992,7 +1058,7 @@ class Vinyltron:
             screensaver.get('palette', 'cyan_amber'),
             screensaver.get('fps', SCREENSAVER_FPS_DEFAULT),
             screensaver.get('reset_seconds', SCREENSAVER_RESET_SECONDS_DEFAULT),
-            screensaver.get('startup_delay_seconds', SCREENSAVER_STARTUP_DELAY_SECONDS_DEFAULT),
+            self._startup_delay_seconds(),
             overlays.get('progress_bar_height'),
             overlays.get('progress_bar_foreground'),
             overlays.get('progress_bar_background'),
@@ -1031,7 +1097,7 @@ class Vinyltron:
             self._cancel_overlay_locked()
             self._cancel_progress_locked()
             self._badge_visible = False
-            self._display.clear()
+            self._clear_display_if_initialized()
             self._fallback_visible = False
         with self._state_lock:
             self._state_seq += 1
@@ -1043,6 +1109,8 @@ class Vinyltron:
         log.info("SIGHUP received — reloading config")
         try:
             self._cfg = toml.load(self._config_path)
+            self._volumio_ready = False
+            self._volumio_ready_at = None
             self._log_runtime_config("reload")
             was_on = self._display_on
             self._display_on = self._effective_display_on()
@@ -1054,9 +1122,10 @@ class Vinyltron:
                 self._cancel_overlay_locked()
                 self._cancel_progress_locked(clear_visible=True)
                 if not new_format_badge and self._badge_visible:
-                    self._display.clear_badge()
+                    self._clear_badge_if_initialized()
                 self._badge_visible = False
-                self._display.reconfigure(self._cfg)
+                if self._display is not None:
+                    self._display.reconfigure(self._cfg)
                 self._fallback_visible = False
             if not self._display_on:
                 self._clear_display_for_power_off("Display off")
@@ -1128,7 +1197,7 @@ class Vinyltron:
             self._cancel_overlay_locked()
             self._cancel_progress_locked(clear_visible=True)
             self._badge_visible = False
-            self._display.clear()
+            self._clear_display_if_initialized()
             self._fallback_visible = False
         self._clear_current_track_state()
         log.info(message)
@@ -1144,7 +1213,7 @@ class Vinyltron:
                 self._show_or_start_fallback_locked('startup')
         else:
             with self._overlay_lock:
-                self._display.clear()
+                self._clear_display_if_initialized()
         self._client.start()
         log.info("Vinyltron running")
         while self._running:

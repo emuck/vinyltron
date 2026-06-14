@@ -106,6 +106,8 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         s[0].content[7].value = {value: format_font, label: self._labelForFormatFont(format_font)};
         var badge_duration = (self.config.get('badge_duration') || 10).toString();
         s[0].content[8].value = badge_duration;
+        var startup_delay_seconds = self._validStartupDelaySeconds(self.config.get('startup_delay_seconds'));
+        s[0].content[9].value = startup_delay_seconds.toString();
 
         var fallback_mode = self._validFallbackMode(self.config.get('fallback_mode') || 'single');
         var fallback_image_folder = self.config.get('fallback_image_folder') || DEFAULT_IDLE_FOLDER;
@@ -213,6 +215,7 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['display', 'rotation', 'rotation', 'string'],
             ['display', 'hardware_mapping', 'hardware_mapping', 'string'],
             ['display', 'limit_refresh_rate_hz', 'limit_refresh_rate_hz', 'number'],
+            ['display', 'startup_delay_seconds', 'startup_delay_seconds', 'number'],
             ['display', 'display_on', 'display_on', 'boolean'],
             ['volumio', 'artwork_enabled', 'volumio_artwork_enabled', 'boolean'],
             ['fallback', 'mode', 'fallback_mode', 'string'],
@@ -358,6 +361,8 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     var format_font = data['format_font'] ? data['format_font']['value'] : 'tom_thumb';
     var badge_duration_value = data['badge_duration'] && data['badge_duration']['value'] !== undefined ? data['badge_duration']['value'] : data['badge_duration'];
     var badge_duration = badge_duration_value !== undefined ? parseInt(badge_duration_value) : 10;
+    var startup_delay_seconds_value = data['startup_delay_seconds'] && data['startup_delay_seconds']['value'] !== undefined ? data['startup_delay_seconds']['value'] : data['startup_delay_seconds'];
+    var startup_delay_seconds = self._validStartupDelaySeconds(startup_delay_seconds_value);
     if (isNaN(progress_bar_height)) progress_bar_height = 0;
     progress_bar_height = Math.max(0, Math.min(64, progress_bar_height));
     var progress_bar = progress_bar_height > 0;
@@ -373,6 +378,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     self.config.set('format_badge', format_badge);
     self.config.set('format_font', format_font);
     self.config.set('badge_duration', badge_duration);
+    self.config.set('startup_delay_seconds', startup_delay_seconds);
 
     self.logger.info('Vinyltron: saving display settings: ' + JSON.stringify({
         brightness: brightness,
@@ -384,7 +390,8 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
         progress_bar_background: progress_bar_background,
         format_badge: format_badge,
         format_font: format_font,
-        badge_duration: badge_duration
+        badge_duration: badge_duration,
+        startup_delay_seconds: startup_delay_seconds
     }));
 
     self._patchConfigToml({brightness: brightness, gamma: gamma,
@@ -395,7 +402,8 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
                            progress_bar_background: progress_bar_background,
                            format_badge: format_badge,
                            format_font: format_font,
-                           badge_duration: badge_duration});
+                           badge_duration: badge_duration,
+                           startup_delay_seconds: startup_delay_seconds});
 
     self._service('reload', 'display settings save');
 
@@ -792,6 +800,7 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.hardware_mapping !== undefined) content = this._patchTomlInSection(content, 'display', 'hardware_mapping', this._tomlString(fields.hardware_mapping), 'display_on');
         if (fields.disable_hardware_pulsing !== undefined) content = this._patchTomlInSection(content, 'display', 'disable_hardware_pulsing', fields.disable_hardware_pulsing, 'hardware_mapping');
         if (fields.limit_refresh_rate_hz !== undefined) content = this._patchTomlInSection(content, 'display', 'limit_refresh_rate_hz', fields.limit_refresh_rate_hz, 'slowdown_gpio');
+        if (fields.startup_delay_seconds !== undefined) content = this._patchTomlInSection(content, 'display', 'startup_delay_seconds', fields.startup_delay_seconds, 'limit_refresh_rate_hz');
         if (fields.display_on !== undefined) content = this._patchTomlInSection(content, 'display', 'display_on', fields.display_on);
         if (fields.fallback_image_folder !== undefined) content = this._patchTomlInSection(content, 'fallback', 'image_folder', this._tomlString(fields.fallback_image_folder), 'image');
         if (fields.fallback_mode !== undefined) content = this._patchTomlInSection(content, 'fallback', 'mode', this._tomlString(fields.fallback_mode), 'image_folder');
@@ -945,6 +954,12 @@ ControllerVinyltron.prototype._validScreensaverFps = function(value) {
 ControllerVinyltron.prototype._validScreensaverResetSeconds = function(value) {
     value = parseInt(value);
     if (isNaN(value) || value < 0) return 0;
+    return value;
+};
+
+ControllerVinyltron.prototype._validStartupDelaySeconds = function(value) {
+    value = parseInt(value);
+    if (isNaN(value) || value < 0) return 5;
     return value;
 };
 

@@ -15,7 +15,7 @@
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["brightness", "gamma", "volumio_artwork_enabled", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "format_font", "badge_duration"],
+                "data": ["brightness", "gamma", "volumio_artwork_enabled", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "format_font", "badge_duration", "startup_delay_seconds"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -110,6 +110,14 @@
                     "label": "Format Duration (seconds)",
                     "value": "10",
                     "doc": "How long the format badge stays visible after a new track starts"
+                },
+                {
+                    "id": "startup_delay_seconds",
+                    "element": "input",
+                    "label": "Startup Delay (seconds)",
+                    "value": "5",
+                    "min": 0,
+                    "doc": "Extra grace period after Volumio reports ready before the idle display starts. The matrix stays uninitialized during boot while waiting."
                 }
             ]
         },
