@@ -46,13 +46,21 @@ The raw frame endpoint returns exactly:
 
 ## Current Controls
 
-- **Engine**: currently `Brian's Brain`
-- **Palette**: color pair for live/trail cells
-- **FPS**: browser playback target
-- **Density**: initial ready-cell density
+- **Engine**: `Brian's Brain`, `Langton's Ant`, or `Chaos Game`
+- **Palette**: color pair used by the selected engine
+- **Speed**: `Slow` / `Medium` / `Fast` (4 / 6 / 10 fps), matching the plugin's Screensaver
+  "Speed" setting; controls browser playback target
+- **Density**: initial ready-cell density for Brian's Brain
+- **Ant Count**: number of active ants for Langton's Ant
+- **Steps Per Frame**: Langton's Ant simulation steps before each rendered frame
+- **Points Per Frame**: Chaos Game random midpoint plots before each rendered frame
+- **Fade**: Chaos Game per-frame pixel fade
+- **Rotation Speed**: Chaos Game vertex rotation per rendered frame
+- **Seed**: optional deterministic seed; blank means random
 - **Reset Engine**: reseed the current engine
 - **Pause / Resume**
 - **Toggle Grid**
+- **Copy Config Snippet**: copy matching `[fallback]` and `[screensaver]` TOML
 
 ## Adding Future Screensavers
 
@@ -72,7 +80,6 @@ Good candidates:
 - cyclic cellular automata
 - sine plasma with lookup tables
 - Lissajous / orbit trails
-- Langton's Ant variants
 - simplified reaction-diffusion inspired patterns
 
 The simulator should stay dependency-light. If a future screensaver needs heavy math,

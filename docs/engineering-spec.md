@@ -213,11 +213,16 @@ selected_image = ""      # basename inside image_folder
 rotate_seconds = 300
 
 [screensaver]
-engine = "brians_brain"  # brians_brain
+engine = "brians_brain"  # brians_brain | langtons_ant | chaos_game
 palette = "cyan_amber"   # cyan_amber | green_magenta | blue_red | white_violet
 fps = 6                  # clamped to 2-24
 reset_seconds = 300      # 0 disables periodic random reset
 density = 0.22           # advanced Brian's Brain initial ready-cell density
+ant_count = 4            # advanced Langton's Ant count
+steps_per_frame = 96     # advanced Langton's Ant simulation steps per rendered frame
+points_per_frame = 320   # advanced Chaos Game plotted points per rendered frame
+fade = 12                # advanced Chaos Game per-frame fade
+rotation_speed = 2       # advanced Chaos Game vertex rotation degrees per rendered frame
 seed = ""                # advanced deterministic seed; blank = random each daemon start
 
 [overlays]
@@ -271,17 +276,23 @@ entered after debounce, not on every render.
 
 Screensaver fallback is controlled by `[screensaver]`. The plugin UI exposes generic
 controls (`engine`, `palette`, `fps`, `reset_seconds`) while engine-specific tuning such as
-Brian's Brain `density` and `seed` remains config-file-only. The MVP engine is Brian's
-Brain: a three-state cellular automaton backed by two 4096-byte grids and precomputed
-neighbor indexes. It renders generated RGB frames through the same `display.py` image path
-as static fallbacks, so progress and format overlays still compose on top.
+Brian's Brain `density`, Langton's Ant `ant_count`/`steps_per_frame`, Chaos Game
+`points_per_frame`/`fade`/`rotation_speed`, and `seed` remains config-file-only. Brian's
+Brain is a three-state cellular automaton backed by two 4096-byte grids and precomputed
+neighbor indexes. Langton's Ant maintains a one-byte grid and a small set of moving ants
+that turn, flip cells, and wrap around the panel edges. Chaos Game plots random midpoint
+steps toward rotating triangle vertices into a decaying RGB buffer. All engines render
+generated RGB frames through the same `display.py` image path as static fallbacks, so
+progress and format overlays still compose on top.
 
 During early service startup, `vinyltron.py` polls Volumio's `/status` endpoint before
 initializing the matrix display for any idle fallback mode. Idle display starts only after
 `/status` returns `ready` and the extra `[display].startup_delay_seconds` grace period has
-elapsed. Playback artwork is allowed to initialize the matrix immediately. The frame,
-reset, and delayed-start timers are owned by `vinyltron.py` and are cancelled on playback
-artwork, display-off, config reload, and shutdown.
+elapsed. Playback artwork is allowed to initialize the matrix immediately. If `/status`
+never reports `ready`, `VOLUMIO_READY_MAX_WAIT_SECONDS` (5 minutes) bounds the wait and the
+idle display starts anyway, so a broken or slow Volumio doesn't leave the matrix blank
+indefinitely. The frame, reset, and delayed-start timers are owned by `vinyltron.py` and are
+cancelled on playback artwork, display-off, config reload, and shutdown.
 
 For visual tuning before hardware deployment, `tools/matrix-sim.py` exposes the same
 generated-frame boundary in a browser: engines return 64x64 RGB frames, `/api/frame`
