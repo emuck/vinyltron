@@ -6,8 +6,8 @@ Album art on a 64x64 HUB75E RGB LED matrix, driven by Volumio.
 
 Vinyltron turns a Raspberry Pi, a Volumio player, and a small RGB matrix into a physical
 music display for the room. It shows the current album art while music is playing, then
-falls back to selected photos, a built-in idle image, or an animated screensaver when
-playback stops.
+falls back to selected photos, a built-in idle image, an animated screensaver, or a weather
+display when playback stops.
 
 It is built as a Volumio `user_interface` plugin: install the zip from Volumio's plugin
 manager, configure it from the plugin settings page, and let the companion daemon handle
@@ -29,12 +29,13 @@ foundation for it.
 - Pause, stop, track-change, reboot, and reconnect handling without flashing stale art
 - Optional progress strip with configurable height and RGB colors
 - Optional compact format overlay for bitrate, sample rate, lossless, and DSD labels
-- Idle modes: built-in image, selected folder image, random photo rotation, or animated
-  screensavers
+- Idle modes: built-in image, selected folder image, random photo rotation, animated
+  screensavers, or a weather display
 - Phone-friendly photo manager for adding, selecting, deleting, and randomizing idle photos,
   with a configurable port if it conflicts with another service
 - Daily display schedule for photo-frame use when music is not playing
-- Volumio settings UI for display, idle image, hardware, and power controls
+- Volumio settings UI for display, idle image, screensaver, weather, hardware, and power
+  controls
 
 ## Install
 
@@ -93,6 +94,7 @@ For users:
 - [Install guide](docs/install.md)
 - [Hardware setup](docs/hardware.md)
 - [Screensavers](docs/screensavers.md)
+- [Current Weather](docs/weather.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
 For reviewers and builders:

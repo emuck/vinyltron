@@ -6,7 +6,8 @@ deploying to real HUB75 hardware.
 
 It does not simulate electrical timing, panel scan artifacts, GPIO contention, or the
 subjective brightness of the physical matrix. It does test the part of the pipeline where a
-screensaver produces a 64x64 RGB frame and hands it off for display.
+generated display, such as a screensaver or weather renderer, produces a 64x64 RGB frame
+and hands it off for display.
 
 ## Run
 
@@ -30,7 +31,7 @@ python3 tools/matrix-sim.py --host 127.0.0.1 --port 8765
 
 The simulator mirrors Vinyltron's display handoff boundary:
 
-1. A screensaver engine generates a 64x64 RGB frame.
+1. A generator engine produces a 64x64 RGB frame.
 2. The simulator exposes that frame as raw RGB bytes from `/api/frame`.
 3. The browser paints those bytes onto a 64x64 canvas scaled up with pixelated rendering.
 
@@ -46,7 +47,8 @@ The raw frame endpoint returns exactly:
 
 ## Current Controls
 
-- **Engine**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, or `Reaction-Diffusion`
+- **Engine**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, `Reaction-Diffusion`, or
+  `Weather`
 - **Palette**: color pair or gradient used by the selected engine
 - **Speed**: `Slow` / `Medium` / `Fast` (4 / 6 / 10 fps), matching the plugin's Screensaver
   "Speed" setting; controls browser playback target
@@ -59,11 +61,18 @@ The raw frame endpoint returns exactly:
 - **Feed Rate**: Reaction-Diffusion Gray-Scott feed rate
 - **Kill Rate**: Reaction-Diffusion Gray-Scott kill rate
 - **Grid Scale**: Reaction-Diffusion simulation downscale factor (2 = 32x32 grid upscaled to 64x64)
+- **Weather Condition**: mock weather icon to render
+- **Weather Time**: daytime weather icon or night/moon icon
+- **Moon Phase**: mock moon phase, where `0.0` is new and `0.5` is full
+- **Bottom Metric**: humidity, AQI, or wind in the weather bottom-left slot
 - **Seed**: optional deterministic seed; blank means random
 - **Reset Engine**: reseed the current engine
 - **Pause / Resume**
 - **Toggle Grid**
-- **Copy Config Snippet**: copy matching `[fallback]` and `[screensaver]` TOML
+- **Copy Config Snippet**: copy matching TOML for the selected generated display
+
+Weather uses the same `weather.py` renderer as the daemon. Restart the simulator after
+editing that file; the running Python process keeps imported modules in memory.
 
 ## Adding Future Screensavers
 
