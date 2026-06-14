@@ -1,8 +1,10 @@
 # Current Weather
 
 Vinyltron can show a weather display as an idle mode. The current implementation is an
-MVP scaffold: it uses mock weather data, but the mode routing, plugin settings, renderer,
-simulator support, and hardware display path are in place.
+MVP current-conditions display. It can use mock weather data for icon testing or live
+Open-Meteo data for temperature, condition, high/low, humidity, wind, sunrise, and sunset.
+The mode routing, plugin settings, renderer, simulator support, and hardware display path
+are in place.
 
 Album art still wins. When Volumio artwork is enabled and available, weather stops just
 like the other idle modes.
@@ -22,23 +24,50 @@ For direct TOML testing:
 mode = "weather"
 
 [weather]
+source = "mock"                  # mock | open_meteo
+latitude = 0.0
+longitude = 0.0
+location_label = ""
+units = "imperial"               # imperial | metric
+refresh_minutes = 10
+night_icon = "moon"              # moon | weather
+secondary_metric = "humidity"    # humidity | aqi | wind
 fps = 1
 mock_condition = "partly_cloudy"
 mock_night = false
 mock_moon_phase = 0.55
-secondary_metric = "humidity"
 ```
 
 ## Weather Settings
 
-These controls are currently renderer-test controls. Live Open-Meteo data will replace the
-mock fields in the data-integration pass.
+The Volumio Weather settings section is user-facing and focused on live current weather:
 
-- **Mock Condition**: `Clear`, `Partly Cloudy`, `Cloudy`, `Rain`, `Storm`, `Snow`, `Fog`
-- **Mock Night / Moon**: shows moon phase in the large icon area instead of the weather icon
-- **Mock Moon Phase**: `0.0` new moon, `0.5` full moon, `1.0` new moon
+- **Location Label**: optional friendly name for logs and future screens
+- **Latitude / Longitude**: manual coordinates used by Open-Meteo
+- **Units**: `Imperial` or `Metric`
+- **Refresh**: live data refresh cadence, clamped to 5-60 minutes
+- **Night Icon**: show computed moon phase after sunset, or keep the weather icon
 - **Bottom Metric**: `Humidity`, `AQI`, or `Wind`
 - **Animation Speed**: weather renderer frame rate
+
+Saving the Volumio Weather settings selects the live Open-Meteo source. Mock weather
+controls are intentionally kept out of the Volumio panel; use the simulator or direct TOML
+editing for icon development.
+
+## Live Data
+
+When `source = "open_meteo"`, Vinyltron fetches the Open-Meteo forecast API in a
+background thread and keeps showing the last good frame if a refresh fails. The first frame
+falls back to mock data until the first successful fetch completes.
+
+Live current-conditions fields currently used:
+
+- temperature, weather code, day/night flag, humidity, wind speed
+- daily high and low
+- sunrise and sunset local times from Open-Meteo's timezone-aware response
+- optional US AQI from Open-Meteo Air Quality when `secondary_metric = "aqi"`
+
+City lookup is not implemented yet; enter latitude and longitude manually for now.
 
 ## Layout
 
@@ -94,28 +123,19 @@ Set **Engine** to `Weather`, then use:
 The simulator imports `weather.py` once at startup. Restart the simulator after editing
 the renderer.
 
-## Planned Data Integration
+For direct TOML renderer testing, set `source = "mock"` and use:
 
-The intended live data source is Open-Meteo:
+- **Mock Condition**: `clear`, `partly_cloudy`, `cloudy`, `rain`, `storm`, `snow`, `fog`
+- **Mock Night / Moon**: `mock_night = true` shows moon phase in the large icon area
+- **Mock Moon Phase**: `0.0` new moon, `0.5` full moon, `1.0` new moon
 
-- forecast API for current temperature, humidity, wind, weather code, daily high/low,
-  sunrise, sunset, and timezone-aware local timestamps
-- optional air-quality API for US AQI only when AQI is selected
-- geocoding API for city lookup after manual latitude/longitude works
-
-Expected future `[weather]` fields:
-
-```toml
-[weather]
-screen = "today"             # today | forecast | future screens
-latitude = 37.7749
-longitude = -122.4194
-location_label = "San Francisco"
-units = "imperial"           # imperial | metric
-secondary_metric = "humidity" # humidity | aqi | wind
-night_icon = "moon"          # moon | weather
-refresh_minutes = 10
-```
+## Planned Weather Expansion
 
 Future weather screens can be added beside `today`, for example forecast, tides, or night
 sky. They should stay under Weather settings rather than becoming screensaver engines.
+
+Likely next steps:
+
+- geocoding API for city lookup after manual latitude/longitude proves stable
+- a dedicated forecast screen instead of squeezing forecast into the current screen
+- richer night displays, such as visible planets or moonrise/moonset

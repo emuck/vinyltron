@@ -381,7 +381,7 @@
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["weather_mock_condition", "weather_mock_night", "weather_mock_moon_phase", "weather_secondary_metric", "weather_fps"],
+                "data": ["weather_location_label", "weather_latitude", "weather_longitude", "weather_units", "weather_refresh_minutes", "weather_night_icon", "weather_secondary_metric", "weather_fps"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -390,34 +390,61 @@
             },
             "content": [
                 {
-                    "id": "weather_mock_condition",
+                    "id": "weather_location_label",
+                    "element": "input",
+                    "label": "Location Label",
+                    "value": "",
+                    "doc": "Optional friendly name for this weather location."
+                },
+                {
+                    "id": "weather_latitude",
+                    "element": "input",
+                    "label": "Latitude",
+                    "value": "0.0",
+                    "doc": "Latitude for Open-Meteo live weather."
+                },
+                {
+                    "id": "weather_longitude",
+                    "element": "input",
+                    "label": "Longitude",
+                    "value": "0.0",
+                    "doc": "Longitude for Open-Meteo live weather. Use negative values west of Greenwich."
+                },
+                {
+                    "id": "weather_units",
                     "element": "select",
-                    "label": "Mock Condition",
+                    "label": "Units",
                     "value": {},
                     "options": [
-                        {"value": "clear", "label": "Clear"},
-                        {"value": "partly_cloudy", "label": "Partly Cloudy"},
-                        {"value": "cloudy", "label": "Cloudy"},
-                        {"value": "rain", "label": "Rain"},
-                        {"value": "storm", "label": "Storm"},
-                        {"value": "snow", "label": "Snow"},
-                        {"value": "fog", "label": "Fog"}
+                        {"value": "imperial", "label": "Imperial"},
+                        {"value": "metric", "label": "Metric"}
                     ],
-                    "doc": "Temporary renderer test condition. Live weather will replace this in the MVP data pass."
+                    "doc": "Temperature and wind units."
                 },
                 {
-                    "id": "weather_mock_night",
-                    "element": "switch",
-                    "label": "Mock Night / Moon",
-                    "value": false,
-                    "doc": "Show moon phase instead of the large weather icon."
+                    "id": "weather_refresh_minutes",
+                    "element": "select",
+                    "label": "Refresh",
+                    "value": {},
+                    "options": [
+                        {"value": "5", "label": "5 minutes"},
+                        {"value": "10", "label": "10 minutes"},
+                        {"value": "15", "label": "15 minutes"},
+                        {"value": "30", "label": "30 minutes"},
+                        {"value": "60", "label": "60 minutes"}
+                    ],
+                    "doc": "How often live weather is refreshed."
                 },
                 {
-                    "id": "weather_mock_moon_phase",
-                    "element": "input",
-                    "label": "Mock Moon Phase",
-                    "value": "0.55",
-                    "doc": "0.0 new, 0.5 full, 1.0 new."
+                    "id": "weather_night_icon",
+                    "element": "select",
+                    "label": "Night Icon",
+                    "value": {},
+                    "options": [
+                        {"value": "moon", "label": "Moon Phase"},
+                        {"value": "weather", "label": "Weather Icon"}
+                    ],
+                    "doc": "What to show in the large icon area after sunset."
                 },
                 {
                     "id": "weather_secondary_metric",
@@ -429,7 +456,7 @@
                         {"value": "aqi", "label": "AQI"},
                         {"value": "wind", "label": "Wind"}
                     ],
-                    "doc": "Temporary renderer test metric for the bottom-left slot."
+                    "doc": "What to show in the bottom-left slot."
                 },
                 {
                     "id": "weather_fps",
