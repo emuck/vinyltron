@@ -100,6 +100,7 @@ BIG_DIGITS: Dict[str, Tuple[int, ...]] = {
     '7': (0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000),
     '8': (0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110),
     '9': (0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b01110),
+    '-': (0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000),
 }
 
 
@@ -259,7 +260,10 @@ class WeatherService:
         data = self._parse_forecast(payload)
 
         if self.secondary_metric == 'aqi':
-            aqi = self._fetch_aqi()
+            try:
+                aqi = self._fetch_aqi()
+            except Exception:
+                aqi = None
             if aqi is not None:
                 data = data._replace(aqi=aqi, aqi_valid=True)
 
