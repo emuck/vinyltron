@@ -785,7 +785,6 @@ class MockWeatherRenderer:
     def _draw_secondary_metric(self, draw: ImageDraw.ImageDraw, x: int, y: int):
         if self.secondary_metric == 'aqi':
             color = self._aqi_color(self.weather.aqi) if self.weather.aqi_valid else (90, 90, 90)
-            color = self._scale_rgb(color, self._breath_brightness())
             self._draw_aqi_glyph(draw, x, y, color)
             text = '%s' % self.weather.aqi if self.weather.aqi_valid else '--'
             self._draw_small_text(draw, text, x + 12, y, color)
@@ -810,26 +809,6 @@ class MockWeatherRenderer:
         if aqi <= 300:
             return (170, 70, 190)
         return (126, 0, 35)
-
-    def _breath_brightness(self) -> float:
-        cycle = 4.5
-        inhale = 1.5
-        phase = time.monotonic() % cycle
-        if phase < inhale:
-            t = phase / inhale
-            eased = 0.5 - 0.5 * math.cos(t * math.pi)
-            return 0.48 + 0.52 * eased
-        t = (phase - inhale) / (cycle - inhale)
-        eased = 0.5 - 0.5 * math.cos(t * math.pi)
-        return 1.0 - 0.52 * eased
-
-    def _scale_rgb(self, color: RGB, amount: float) -> RGB:
-        amount = max(0.0, min(1.0, amount))
-        return (
-            int(round(color[0] * amount)),
-            int(round(color[1] * amount)),
-            int(round(color[2] * amount)),
-        )
 
     def _draw_aqi_glyph(self, draw: ImageDraw.ImageDraw, x: int, y: int, color: RGB):
         y = y + 1
