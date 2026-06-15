@@ -781,7 +781,11 @@ class MockWeatherRenderer:
     def _draw_secondary_metric(self, draw: ImageDraw.ImageDraw, x: int, y: int):
         if self.secondary_metric == 'aqi':
             color = self._aqi_color(self.weather.aqi) if self.weather.aqi_valid else (90, 90, 90)
-            text = 'A%s' % self.weather.aqi if self.weather.aqi_valid else 'A--'
+            color = self._scale_rgb(color, self._breath_brightness())
+            self._draw_aqi_glyph(draw, x, y, color)
+            text = '%s' % self.weather.aqi if self.weather.aqi_valid else '--'
+            self._draw_small_text(draw, text, x + 12, y, color)
+            return
         elif self.secondary_metric == 'wind':
             color = (155, 225, 255)
             text = 'W%s' % self.weather.wind_mph
@@ -802,6 +806,46 @@ class MockWeatherRenderer:
         if aqi <= 300:
             return (170, 70, 190)
         return (126, 0, 35)
+
+    def _breath_brightness(self) -> float:
+        cycle = 4.5
+        inhale = 1.5
+        phase = time.monotonic() % cycle
+        if phase < inhale:
+            t = phase / inhale
+            eased = 0.5 - 0.5 * math.cos(t * math.pi)
+            return 0.48 + 0.52 * eased
+        t = (phase - inhale) / (cycle - inhale)
+        eased = 0.5 - 0.5 * math.cos(t * math.pi)
+        return 1.0 - 0.52 * eased
+
+    def _scale_rgb(self, color: RGB, amount: float) -> RGB:
+        amount = max(0.0, min(1.0, amount))
+        return (
+            int(round(color[0] * amount)),
+            int(round(color[1] * amount)),
+            int(round(color[2] * amount)),
+        )
+
+    def _draw_aqi_glyph(self, draw: ImageDraw.ImageDraw, x: int, y: int, color: RGB):
+        y = y + 1
+        rows = (
+            0b0100010010,
+            0b1010101010,
+            0b1010101010,
+            0b1110101010,
+            0b1010101010,
+            0b1010010010,
+            0b0000001000,
+            0b0000000000,
+        )
+        for yy, row in enumerate(rows):
+            for xx in range(10):
+                if row & (1 << (9 - xx)):
+                    px = x + xx
+                    py = y + yy
+                    if 0 <= px < self.width and 0 <= py < self.height:
+                        draw.point((px, py), fill=color)
 
     def _minutes_label(self, minutes: int) -> str:
         hour = (minutes // 60) % 24
