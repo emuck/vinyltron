@@ -5,6 +5,9 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+- Removed the AQI glyph's breathing brighten/dim animation added in 0.2.10 — it looked
+  jerky on the panel. The AQI glyph is now drawn at a solid, constant color.
+
 ## [0.2.10] - 2026-06-14
 
 - Added a new `weather` fallback/idle mode: a 64x64 pixel-art display showing current
