@@ -5,6 +5,28 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-06-14
+
+- Added a new `weather` fallback/idle mode: a 64x64 pixel-art display showing current
+  conditions (temperature, condition icon, H/L) plus a secondary metric (humidity, wind,
+  or an animated AQI glyph), with moon-phase rendering at night. The Settings UI gained a
+  Weather section (location, units, refresh interval, night icon, secondary metric, fps).
+- Live weather data is fetched from Open-Meteo in a background thread (`WeatherService`),
+  with periodic refresh and retry/staleness handling. Without coordinates configured, or
+  with `source = mock`, the display falls back to a mock renderer driven by
+  `mock_condition`/`mock_night`/`mock_moon_phase` in `config.toml`.
+- The AQI glyph is color-coded by EPA AQI tier and has a slow breathing brighten/dim cycle
+  (~1.5s brighten / 3s dim) when `secondary_metric = aqi`.
+- `tools/matrix-sim.py` gained a weather engine preview with controls for condition,
+  night/moon phase, and secondary metric, for tuning the renderer without hardware.
+- Fixed `BIG_DIGITS` missing a `-` glyph, which caused negative current temperatures
+  (e.g. -12°) to render without the minus sign.
+- Fixed `WeatherService._fetch()` to tolerate a failed AQI sub-request: previously an
+  unreachable air-quality endpoint discarded an otherwise-successful forecast fetch,
+  leaving the renderer stuck on mock data.
+- Added `docs/weather.md` describing the mock/live behavior, AQI gating, and simulator
+  usage.
+
 ## [0.2.9] - 2026-06-13
 
 - Added a fourth screensaver engine: Reaction-Diffusion, a Gray-Scott two-chemical
