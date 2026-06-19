@@ -37,6 +37,18 @@ foundation for it.
 - Volumio settings UI for display, idle image, screensaver, weather, hardware, and power
   controls
 
+## Screenshots
+
+| Weather — clear day | Weather — night / moon | Weather — AQI |
+|:---:|:---:|:---:|
+| ![Clear day weather display showing sun icon, 74°, H82/L58, humidity and sunset](docs/images/screenshot-weather-day.png) | ![Night weather display showing full moon texture, 70°, H82/L58, wind and sunrise](docs/images/screenshot-weather-night.png) | ![Partly cloudy weather display showing sun/cloud icon, 68°, H74/L55, AQI 68](docs/images/screenshot-weather-aqi.png) |
+
+| Brian's Brain screensaver | Gray-Scott screensaver |
+|:---:|:---:|
+| ![Brian's Brain cellular automaton screensaver in cyan and amber](docs/images/screenshot-brians-brain.png) | ![Gray-Scott reaction-diffusion screensaver in blue and red](docs/images/screenshot-gray-scott.png) |
+
+_Screenshots rendered from the [matrix simulator](docs/matrix-simulator.md) at 8× scale._
+
 ## Install
 
 Vinyltron is not yet in the Volumio Plugins store, so installing it means SSHing into the
