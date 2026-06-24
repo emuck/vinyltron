@@ -41,15 +41,15 @@ foundation for it.
 
 ## Screenshots
 
-| Weather — clear day | Weather — night / moon | Weather — AQI |
+| Weather — clear day _(sim)_ | Weather — AQI _(sim)_ | Weather — night / moon |
 |:---:|:---:|:---:|
-| ![Clear day weather display showing sun icon, 74°, H82/L58, humidity and sunset](docs/images/screenshot-weather-day.png) | ![Night weather display on hardware showing moon phase, 55°, H71/L55, wind and sunrise](docs/images/vinyltron-weather-night.jpg) | ![Partly cloudy weather display showing sun/cloud icon, 68°, H74/L55, AQI 68](docs/images/screenshot-weather-aqi.png) |
+| ![Clear day weather display showing sun icon, 74°, H82/L58, humidity and sunset](docs/images/screenshot-weather-day.png) | ![Partly cloudy weather display showing sun/cloud icon, 68°, H74/L55, AQI 68](docs/images/screenshot-weather-aqi.png) | ![Night weather display on hardware showing moon phase, 55°, H71/L55, wind and sunrise](docs/images/vinyltron-weather-night.jpg) |
 
-| Brian's Brain screensaver | Gray-Scott screensaver |
+| Brian's Brain screensaver _(sim)_ | Gray-Scott screensaver _(sim)_ |
 |:---:|:---:|
 | ![Brian's Brain cellular automaton screensaver in cyan and amber](docs/images/screenshot-brians-brain.png) | ![Gray-Scott reaction-diffusion screensaver in blue and red](docs/images/screenshot-gray-scott.png) |
 
-_Screenshots rendered from the [matrix simulator](docs/matrix-simulator.md) at 8× scale._
+_Simulator screenshots rendered from the [matrix simulator](docs/matrix-simulator.md) at 8× scale._
 
 ## Install
 
