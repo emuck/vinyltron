@@ -37,11 +37,13 @@ foundation for it.
 - Volumio settings UI for display, idle image, screensaver, weather, hardware, and power
   controls
 
+![Close-up of the LED matrix playing Dark Side of the Moon with a DSD64 format badge](docs/images/vinyltron-playing.jpg)
+
 ## Screenshots
 
 | Weather — clear day | Weather — night / moon | Weather — AQI |
 |:---:|:---:|:---:|
-| ![Clear day weather display showing sun icon, 74°, H82/L58, humidity and sunset](docs/images/screenshot-weather-day.png) | ![Night weather display showing full moon texture, 70°, H82/L58, wind and sunrise](docs/images/screenshot-weather-night.png) | ![Partly cloudy weather display showing sun/cloud icon, 68°, H74/L55, AQI 68](docs/images/screenshot-weather-aqi.png) |
+| ![Clear day weather display showing sun icon, 74°, H82/L58, humidity and sunset](docs/images/screenshot-weather-day.png) | ![Night weather display on hardware showing moon phase, 55°, H71/L55, wind and sunrise](docs/images/vinyltron-weather-night.jpg) | ![Partly cloudy weather display showing sun/cloud icon, 68°, H74/L55, AQI 68](docs/images/screenshot-weather-aqi.png) |
 
 | Brian's Brain screensaver | Gray-Scott screensaver |
 |:---:|:---:|
