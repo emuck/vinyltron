@@ -43,10 +43,11 @@ fi
 
 echo "Installing build dependencies..."
 apt-get update
-if ! apt-get install -y build-essential python3-dev python3-pip cython3 wget libjpeg-dev zlib1g-dev; then
+# python3-pil installs Pillow from the Bookworm package (prebuilt, no compilation).
+if ! apt-get install -y build-essential python3-dev python3-pip cython3 wget python3-pil; then
     echo "Retrying with --force-overwrite (known libpython3-stdlib conflict on fresh Bookworm images)..."
     apt-get install -y -f -o Dpkg::Options::='--force-overwrite'
-    apt-get install -y build-essential python3-dev python3-pip cython3 wget libjpeg-dev zlib1g-dev
+    apt-get install -y build-essential python3-dev python3-pip cython3 wget python3-pil
 fi
 
 if ! python3 -c "import sys; sys.path.insert(0, '$MATRIX_LIB'); import rgbmatrix" 2>/dev/null; then
@@ -104,10 +105,12 @@ fi
 chown -R volumio:volumio "$CONFIG_DIR"
 
 echo "Installing Python dependencies..."
-# --break-system-packages required on Python 3.11+ (PEP 668 / Bookworm)
+# Pillow is installed via python3-pil above (prebuilt, no compilation).
+# Remaining packages are pure Python; pip install won't trigger a build.
+# --break-system-packages required on Python 3.11+ (PEP 668 / Bookworm).
 PIP_FLAGS=""
 python3 -c "import sys; exit(0 if sys.version_info >= (3, 11) else 1)" 2>/dev/null && PIP_FLAGS="--break-system-packages"
-pip3 install $PIP_FLAGS -r "$VINYLTRON_DIR/requirements.txt"
+pip3 install $PIP_FLAGS "requests>=2.21,<3" "toml>=0.10,<1" "python-socketio[client]==4.6.1"
 
 # Install and enable systemd service
 echo "Installing systemd service..."
