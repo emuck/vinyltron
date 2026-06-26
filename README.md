@@ -2,7 +2,7 @@
 
 **[vinyltron.github.io](https://emuck.github.io/vinyltron/)** · Album art on a 64x64 HUB75E RGB LED matrix, driven by Volumio.
 
-Vinyltron turns a Raspberry Pi, a Volumio player, and a small RGB matrix into a physical
+Vinyltron turns a Raspberry Pi running Volumio and a small RGB matrix into a physical
 music display for the room. It shows the current album art while music is playing, then
 falls back to selected photos, a built-in idle image, an animated screensaver, or a weather
 display when playback stops.
