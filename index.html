@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vinyltron — Album Art on 4,096 LEDs</title>
+  <meta name="description" content="An open-source Volumio plugin that drives a 64×64 RGB LED matrix. Live album art, weather, generative screensavers, and a photo manager. Build it for ~$60 in parts (assumes a Raspberry Pi).">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #07070f;
+      --surface:    #0d0d1a;
+      --surface2:   #131320;
+      --border:     rgba(255,255,255,0.06);
+      --cyan:       #4fc3f7;
+      --cyan-dim:   rgba(79,195,247,0.1);
+      --amber:      #ffb300;
+      --red:        #e05252;
+      --green:      #4caf7d;
+      --text:       #e8e8f0;
+      --muted:      #8888aa;
+      --glow-cyan:  0 0 50px rgba(79,195,247,0.28);
+      --glow-amber: 0 0 50px rgba(255,179,0,0.22);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+
+    /* ─── NAV ─────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2.5rem;
+      background: rgba(7,7,15,0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+      color: var(--cyan);
+      letter-spacing: 0.18em;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--cyan); }
+
+    /* ─── HERO ────────────────────────────────────────────── */
+    .hero {
+      min-height: 100svh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 5rem;
+      padding: 8rem 5rem 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: -20% auto auto -10%;
+      width: 70%;
+      height: 90%;
+      background: radial-gradient(ellipse at 30% 40%, rgba(79,195,247,0.06) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-text { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 1.75rem;
+    }
+
+    .eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px;
+      height: 1px;
+      background: var(--cyan);
+      opacity: 0.6;
+      flex-shrink: 0;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.8rem, 4.5vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1.07;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.75rem;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--cyan);
+    }
+
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 46ch;
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-proof {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2.75rem;
+    }
+
+    .proof-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.35rem 0.85rem;
+    }
+
+    .proof-chip .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.8rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-decoration: none;
+      transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+      font-family: inherit;
+    }
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn-primary { background: var(--cyan); color: #000; }
+    .btn-primary:hover { box-shadow: var(--glow-cyan); }
+
+    .btn-ghost {
+      border: 1px solid rgba(79,195,247,0.3);
+      color: var(--cyan);
+    }
+    .btn-ghost:hover {
+      border-color: var(--cyan);
+      box-shadow: var(--glow-cyan);
+    }
+
+    .hero-media { position: relative; z-index: 1; }
+
+    .hero-media img {
+      width: 100%;
+      border-radius: 10px;
+      display: block;
+      box-shadow: var(--glow-cyan), 0 48px 96px rgba(0,0,0,0.85);
+    }
+
+    /* ─── MARQUEE ─────────────────────────────────────────── */
+    .marquee-band {
+      padding: 2.5rem 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .marquee-label {
+      text-align: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+    }
+
+    .marquee-track {
+      display: flex;
+      gap: 1.25rem;
+      animation: scroll-left 35s linear infinite;
+      width: max-content;
+    }
+    .marquee-track:hover { animation-play-state: paused; }
+
+    @keyframes scroll-left {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    .marquee-frame {
+      width: 168px;
+      height: 168px;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      box-shadow: 0 0 18px rgba(79,195,247,0.1);
+    }
+
+    .marquee-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: pixelated;
+      display: block;
+    }
+    .marquee-frame.photo img { image-rendering: auto; }
+
+    /* ─── WHAT IS THE MATRIX ──────────────────────────────── */
+    .matrix-band {
+      padding: 5rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .matrix-band::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, rgba(79,195,247,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .matrix-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 4rem;
+      text-align: center;
+    }
+
+    .matrix-inner .tag { justify-content: center; }
+
+    .matrix-inner h2.title {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .matrix-inner .body-text {
+      margin: 0 auto 4rem;
+      text-align: left;
+      max-width: 64ch;
+    }
+
+    .matrix-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .stat {
+      background: var(--surface);
+      padding: 2rem 1.75rem;
+    }
+
+    .stat-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .stat-sub {
+      font-size: 0.7rem;
+      color: var(--muted);
+      opacity: 0.6;
+      margin-top: 0.25rem;
+    }
+
+    /* ─── SHARED SECTION CHROME ───────────────────────────── */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 7rem 4rem;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 1rem;
+    }
+
+    .tag::before {
+      content: '';
+      display: block;
+      width: 16px;
+      height: 1px;
+      background: var(--cyan);
+      opacity: 0.5;
+    }
+
+    h2.title {
+      font-size: clamp(1.8rem, 3vw, 2.75rem);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 1.1rem;
+    }
+
+    .body-text {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 54ch;
+      line-height: 1.8;
+    }
+
+    /* ─── SPLIT ───────────────────────────────────────────── */
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: center;
+    }
+
+    .split.flip { direction: rtl; }
+    .split.flip > * { direction: ltr; }
+
+    .media-wrap img {
+      width: 100%;
+      border-radius: 8px;
+      display: block;
+    }
+
+    .media-wrap.glow-blue img {
+      box-shadow: var(--glow-cyan), 0 28px 72px rgba(0,0,0,0.7);
+    }
+
+    .media-wrap.glow-amber img {
+      box-shadow: var(--glow-amber), 0 28px 72px rgba(0,0,0,0.7);
+      image-rendering: pixelated;
+    }
+
+    .media-wrap.pixel img { image-rendering: pixelated; }
+
+    .feature-bullets {
+      list-style: none;
+      margin-top: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .feature-bullets li {
+      display: flex;
+      gap: 0.875rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .feature-bullets li::before {
+      content: '▸';
+      color: var(--cyan);
+      flex-shrink: 0;
+      font-size: 0.7em;
+      margin-top: 0.3em;
+    }
+
+    code {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.82em;
+      background: var(--cyan-dim);
+      color: var(--cyan);
+      padding: 0.15em 0.45em;
+      border-radius: 3px;
+    }
+
+    /* ─── RULE ────────────────────────────────────────────── */
+    .rule { border: none; border-top: 1px solid var(--border); }
+
+    /* ─── IDLE GRID ───────────────────────────────────────── */
+    .idle-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem;
+      margin-top: 3.5rem;
+    }
+
+    .idle-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+
+    .idle-card:hover {
+      border-color: rgba(79,195,247,0.35);
+      box-shadow: var(--glow-cyan);
+      transform: translateY(-3px);
+    }
+
+    .idle-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      display: block;
+      object-fit: cover;
+      image-rendering: pixelated;
+    }
+    .idle-card.photo img { image-rendering: auto; }
+
+    .idle-label {
+      padding: 0.65rem 0.9rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ─── VS TABLE ────────────────────────────────────────── */
+    .vs-band {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .vs-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 7rem 4rem;
+    }
+
+    .vs-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 3rem;
+    }
+
+    .vs-table th {
+      text-align: left;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .vs-table th:last-child {
+      color: var(--cyan);
+    }
+
+    .vs-table td {
+      padding: 1.1rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      font-size: 0.92rem;
+      vertical-align: middle;
+    }
+
+    .vs-table tr:last-child td { border-bottom: none; }
+    .vs-table tr:hover td { background: rgba(79,195,247,0.02); }
+
+    .vs-table .feature-name { color: var(--muted); }
+    .vs-table .them { color: var(--muted); font-size: 0.85rem; }
+
+    .check { color: var(--green); font-size: 1.1rem; }
+    .cross { color: var(--muted); opacity: 0.4; font-size: 1.1rem; }
+    .highlight { color: var(--cyan); font-weight: 600; }
+
+    /* ─── HARDWARE TABLE ──────────────────────────────────── */
+    .hw-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 2.5rem;
+    }
+
+    .hw-table th {
+      text-align: left;
+      padding: 0.65rem 1.1rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hw-table td {
+      padding: 1rem 1.1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      font-size: 0.92rem;
+    }
+
+    .hw-table tr:last-child td { border-bottom: none; }
+    .hw-table tr:hover td { background: rgba(79,195,247,0.02); }
+
+    /* ─── INSTALL BAND ────────────────────────────────────── */
+    .install-band {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .install-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 7rem 4rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: start;
+    }
+
+    .code-block {
+      background: #060610;
+      border: 1px solid rgba(79,195,247,0.15);
+      border-radius: 8px;
+      padding: 1.75rem 2rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 2;
+      color: var(--text);
+      overflow-x: auto;
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
+    }
+
+    .p { color: var(--cyan); user-select: none; }
+    .c { color: var(--muted); }
+
+    /* ─── FOOTER ──────────────────────────────────────────── */
+    footer {
+      padding: 2.5rem 4rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--cyan); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ─── RESPONSIVE ──────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero,
+      .split,
+      .install-inner {
+        grid-template-columns: 1fr;
+        padding-left: 1.75rem;
+        padding-right: 1.75rem;
+        gap: 2.5rem;
+      }
+      .hero { padding-top: 7rem; }
+      .split.flip { direction: ltr; }
+      .section { padding: 5rem 1.75rem; }
+      .matrix-inner { padding: 0 1.75rem; }
+      .matrix-stats { grid-template-columns: repeat(2, 1fr); }
+      .idle-grid { grid-template-columns: repeat(3, 1fr); }
+      .vs-inner, .install-inner { padding: 4rem 1.75rem; }
+      nav { padding: 1rem 1.5rem; }
+      .nav-links { gap: 1.25rem; }
+      footer { flex-direction: column; text-align: center; padding: 2rem; }
+    }
+
+    @media (max-width: 540px) {
+      .idle-grid { grid-template-columns: repeat(2, 1fr); }
+      .matrix-stats { grid-template-columns: 1fr 1fr; }
+      .nav-links li:nth-child(n+3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">VINYLTRON</a>
+  <ul class="nav-links">
+    <li><a href="#playback">Playback</a></li>
+    <li><a href="#idle">Idle modes</a></li>
+    <li><a href="#hardware">Hardware</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="https://github.com/emuck/vinyltron">GitHub ↗</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-text">
+    <p class="eyebrow">Open source · Raspberry Pi · Volumio</p>
+    <h1>Album art.<br>On <em>4,096 LEDs</em>.<br>For the cost<br>of the parts.</h1>
+    <p class="hero-sub">
+      Vinyltron is an open-source Volumio plugin that drives a 64×64 RGB LED matrix.
+      Live album art while music plays. Live weather, generative screensavers, and
+      your own photos when it doesn't. Build it once. Run it forever.
+    </p>
+    <div class="hero-proof">
+      <span class="proof-chip"><span class="dot"></span>Free &amp; open source</span>
+      <span class="proof-chip"><span class="dot"></span>No subscription. Ever.</span>
+      <span class="proof-chip"><span class="dot"></span>~$60–80 in parts*</span>
+    </div>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/emuck/vinyltron/releases/latest">↓ Download latest release</a>
+      <a class="btn btn-ghost" href="docs/install.md">Install guide</a>
+    </div>
+  </div>
+  <div class="hero-media">
+    <img
+      src="docs/images/vinyltron.jpg"
+      alt="Vinyltron glowing inside a media cabinet alongside high-end audio equipment">
+  </div>
+</div>
+
+<!-- MARQUEE -->
+<div class="marquee-band">
+  <p class="marquee-label">Every display mode</p>
+  <div class="marquee-track">
+    <div class="marquee-frame photo"><img src="docs/images/vinyltron-playing.jpg"       alt="Dark Side of the Moon"></div>
+    <div class="marquee-frame">      <img src="docs/images/screenshot-weather-day.png"  alt="Weather — clear day"></div>
+    <div class="marquee-frame">      <img src="docs/images/screenshot-brians-brain.png" alt="Brian's Brain screensaver"></div>
+    <div class="marquee-frame photo"><img src="docs/images/vinyltron-weather-night.jpg"  alt="Weather — night on hardware"></div>
+    <div class="marquee-frame">      <img src="docs/images/screenshot-gray-scott.png"   alt="Gray-Scott reaction diffusion"></div>
+    <div class="marquee-frame">      <img src="docs/images/screenshot-weather-aqi.png"  alt="Weather — AQI"></div>
+    <!-- duplicate for seamless loop -->
+    <div class="marquee-frame photo"><img src="docs/images/vinyltron-playing.jpg"       alt="Dark Side of the Moon"></div>
+    <div class="marquee-frame">      <img src="docs/images/screenshot-weather-day.png"  alt="Weather — clear day"></div>
+    <div class="marquee-frame">      <img src="docs/images/screenshot-brians-brain.png" alt="Brian's Brain screensaver"></div>
+    <div class="marquee-frame photo"><img src="docs/images/vinyltron-weather-night.jpg"  alt="Weather — night on hardware"></div>
+    <div class="marquee-frame">      <img src="docs/images/screenshot-gray-scott.png"   alt="Gray-Scott reaction diffusion"></div>
+    <div class="marquee-frame">      <img src="docs/images/screenshot-weather-aqi.png"  alt="Weather — AQI"></div>
+  </div>
+</div>
+
+<!-- WHAT IS THE MATRIX -->
+<div class="matrix-band">
+  <div class="matrix-inner">
+    <p class="tag">The display</p>
+    <h2 class="title">4,096 individually addressable LEDs.</h2>
+    <p class="body-text">
+      A 64×64 HUB75 RGB LED matrix is a grid of 4,096 LEDs — each one driven
+      independently, each capable of displaying any of 16.7 million colors at full
+      PWM brightness control. The same HUB75 protocol drives LED walls at concerts
+      and sports arenas, scaled down to a 7.5-inch panel that sits on a shelf or
+      tucks inside a cabinet. At normal listening-room distance, the pixels
+      disappear and what you see is vivid, physical light.
+    </p>
+
+    <div class="matrix-stats">
+      <div class="stat">
+        <div class="stat-num">4,096</div>
+        <div class="stat-label">Individually addressable LEDs</div>
+        <div class="stat-sub">64 columns × 64 rows</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">16.7M</div>
+        <div class="stat-label">Colors per pixel</div>
+        <div class="stat-sub">Full 24-bit RGB via PWM</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">7.5″</div>
+        <div class="stat-label">Square panel</div>
+        <div class="stat-sub">192 × 192 mm · P3 pitch</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">HUB75</div>
+        <div class="stat-label">Industry-standard protocol</div>
+        <div class="stat-sub">The same interface as stadium LED walls</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYBACK -->
+<section id="playback" class="section">
+  <div class="split">
+    <div class="media-wrap glow-blue">
+      <img
+        src="docs/images/vinyltron-playing.jpg"
+        alt="Dark Side of the Moon filling the LED matrix, DSD64 format badge in the upper left">
+    </div>
+    <div>
+      <p class="tag">Live playback</p>
+      <h2 class="title">Your music.<br>On the wall.<br>In real time.</h2>
+      <p class="body-text">
+        Vinyltron listens to Volumio in real time — no polling, no lag. When a
+        track starts, the matrix updates within a frame. When playback stops, it
+        transitions gracefully to whatever idle mode you've chosen.
+      </p>
+      <ul class="feature-bullets">
+        <li>Album art resized and cropped to fill the full 64×64 display</li>
+        <li>Optional progress bar with configurable height and RGB color</li>
+        <li>Format badge: DSD64, DSD128, 24/96, 16/44.1, MP3, AAC, FLAC, and more</li>
+        <li>Handles pause, stop, track change, and reconnect — no stale art flashing</li>
+        <li>Starts automatically on boot — no manual restart needed</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- IDLE MODES -->
+<section id="idle" class="section">
+  <p class="tag">Idle modes</p>
+  <h2 class="title">Always something<br>worth looking at.</h2>
+  <p class="body-text">
+    When music stops, the display doesn't go dark. Choose from your own photos,
+    four generative screensaver engines, or a live pixel-art weather readout —
+    all configurable from the Volumio plugin settings page.
+  </p>
+
+  <div class="idle-grid">
+    <div class="idle-card photo">
+      <img src="docs/images/vinyltron-playing.jpg" alt="Album art — Dark Side of the Moon">
+      <p class="idle-label">Album art</p>
+    </div>
+    <div class="idle-card">
+      <img src="docs/images/screenshot-weather-day.png" alt="Weather — clear day">
+      <p class="idle-label">Weather · day</p>
+    </div>
+    <div class="idle-card photo">
+      <img src="docs/images/vinyltron-weather-night.jpg" alt="Weather — night with moon phase">
+      <p class="idle-label">Weather · night</p>
+    </div>
+    <div class="idle-card">
+      <img src="docs/images/screenshot-brians-brain.png" alt="Brian's Brain cellular automaton">
+      <p class="idle-label">Brian's Brain</p>
+    </div>
+    <div class="idle-card">
+      <img src="docs/images/screenshot-gray-scott.png" alt="Gray-Scott reaction diffusion">
+      <p class="idle-label">Gray-Scott</p>
+    </div>
+  </div>
+
+  <!-- WEATHER SPLIT -->
+  <div class="split" style="margin-top: 6rem;">
+    <div>
+      <p class="tag">Live weather</p>
+      <h2 class="title">Current conditions.<br>Pixel-perfect.</h2>
+      <p class="body-text">
+        Live temperature, condition icon, high/low, humidity, wind, and moon phase —
+        fetched from Open-Meteo (free, no API key required) and rendered entirely
+        on the matrix in 64×64 pixels. AQI pulls from the air quality feed and
+        color-codes by EPA tier. No cloud account, no subscription.
+      </p>
+      <ul class="feature-bullets">
+        <li>Automatic day/night switching with moon phase rendering</li>
+        <li>Secondary metric: humidity, wind speed, or AQI glyph</li>
+        <li>Configurable location, units, refresh interval, and fps</li>
+        <li>Falls back to mock data if coordinates aren't configured yet</li>
+      </ul>
+    </div>
+    <div class="media-wrap glow-blue">
+      <img src="docs/images/vinyltron-weather-night.jpg" alt="Weather display on hardware showing moon phase, 55°, wind and sunrise time">
+    </div>
+  </div>
+
+  <!-- SCREENSAVERS SPLIT -->
+  <div class="split flip" style="margin-top: 6rem;">
+    <div>
+      <p class="tag">Screensavers</p>
+      <h2 class="title">Generative art.<br>Running on a $15 Pi.</h2>
+      <p class="body-text">
+        Four simulation engines run directly on the Raspberry Pi, producing
+        slowly evolving organic patterns that never repeat exactly. Each has
+        configurable palette, speed, and reset interval from the Volumio UI —
+        with advanced tuning parameters in <code>config.toml</code>.
+      </p>
+      <ul class="feature-bullets">
+        <li><strong style="color:var(--text)">Brian's Brain</strong> — three-state cellular automaton with selectable palette</li>
+        <li><strong style="color:var(--text)">Langton's Ant</strong> — multi-ant emergent highway patterns</li>
+        <li><strong style="color:var(--text)">Chaos Game</strong> — slowly rotating Sierpiński fractal</li>
+        <li><strong style="color:var(--text)">Gray-Scott</strong> — reaction-diffusion coral, spot, and worm morphologies</li>
+      </ul>
+    </div>
+    <div class="media-wrap glow-blue pixel">
+      <img src="docs/images/screenshot-gray-scott.png" alt="Gray-Scott reaction diffusion — blue and red organic shapes">
+    </div>
+  </div>
+
+  <!-- PHOTO MANAGER SPLIT -->
+  <div class="split" style="margin-top: 6rem;">
+    <div>
+      <p class="tag">Photo manager</p>
+      <h2 class="title">Your photos.<br>No SSH required.</h2>
+      <p class="body-text">
+        A built-in browser UI at <code>volumio.local:3018/photos</code> lets you upload
+        idle photos from any device on your home network — phone, tablet, or laptop.
+        Set a single photo, pick from a folder, or randomize — all without touching the Pi.
+      </p>
+      <ul class="feature-bullets">
+        <li>Upload, select, delete, and randomize from phone or laptop</li>
+        <li>Accepts HEIC, JPEG, PNG — any photo your phone can take</li>
+        <li>Optional daily display schedule for photo-frame mode</li>
+        <li>Configurable port if 3018 conflicts with another service</li>
+      </ul>
+    </div>
+    <div class="media-wrap glow-blue">
+      <img src="docs/images/vinyltron.jpg" alt="Vinyltron in a media cabinet showing the idle Vinyltron logo">
+    </div>
+  </div>
+</section>
+
+<!-- VS BAND -->
+<div class="vs-band">
+  <div class="vs-inner">
+    <p class="tag">Why Vinyltron</p>
+    <h2 class="title">Everything a $200 display does.<br>And then some.</h2>
+    <p class="body-text" style="margin-bottom: 0;">
+      Commercial LED music displays exist. They ship in a nice box and look great on a
+      shelf. Vinyltron lives inside your existing rack, costs a fraction of the price,
+      and does things no commercial product offers.
+    </p>
+
+    <table class="vs-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Commercial display</th>
+          <th>Vinyltron</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature-name">Cost</td>
+          <td class="them">$199–$219</td>
+          <td class="highlight">~$60–80 in parts*</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Live album art</td>
+          <td class="them"><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Subscription required</td>
+          <td class="them">Optional paid tier</td>
+          <td class="highlight">None. Ever.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Live weather display</td>
+          <td class="them"><span class="cross">—</span></td>
+          <td><span class="check">✓</span> Temperature, AQI, moon phase</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Generative screensavers</td>
+          <td class="them"><span class="cross">—</span></td>
+          <td><span class="check">✓</span> 4 simulation engines</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Audiophile format badge</td>
+          <td class="them"><span class="cross">—</span></td>
+          <td><span class="check">✓</span> DSD64, 24/96, FLAC, and more</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Volumio integration</td>
+          <td class="them">Polling / separate account</td>
+          <td class="highlight">Real-time, no polling, no lag</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Open source</td>
+          <td class="them"><span class="cross">—</span></td>
+          <td><span class="check">✓</span> MIT license, full source on GitHub</td>
+        </tr>
+        <tr>
+          <td class="feature-name">You built it</td>
+          <td class="them"><span class="cross">—</span></td>
+          <td><span class="check">✓</span> Priceless</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- HARDWARE -->
+<section id="hardware" class="section">
+  <div class="split">
+    <div>
+      <p class="tag">Hardware</p>
+      <h2 class="title">A weekend build.<br>A permanent fixture.</h2>
+      <p class="body-text">
+        One Pi, one panel, one Bonnet. The Adafruit RGB Matrix Bonnet handles
+        level shifting and hardware PWM timing so the matrix renders clean and
+        flicker-free. A separate 5V supply keeps the Pi stable under full
+        matrix load. Fits neatly inside an AV cabinet or on a shelf.
+      </p>
+      <ul class="feature-bullets" style="margin-top: 1.75rem;">
+        <li>No dedicated software account or cloud service required</li>
+        <li>The Bonnet isn't required — direct GPIO wiring works too, with a retro-flicker charm</li>
+        <li>Pi 5 compatible in software-pulse mode; Pi 3B for hardware PWM</li>
+        <li>Full hardware setup, BOM, and wiring guide in <a href="docs/hardware.md" style="color:var(--cyan)">docs/hardware.md</a></li>
+      </ul>
+    </div>
+    <div>
+      <table class="hw-table">
+        <thead>
+          <tr><th>Part</th><th>Tested setup</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Host</td>
+            <td>Raspberry Pi 3B · Volumio 4 · Debian Bookworm</td>
+          </tr>
+          <tr>
+            <td>Matrix</td>
+            <td>64×64 P3 HUB75E RGB LED panel</td>
+          </tr>
+          <tr>
+            <td>Interface</td>
+            <td>Adafruit RGB Matrix Bonnet <code>#3211</code></td>
+          </tr>
+          <tr>
+            <td>Matrix power</td>
+            <td>Dedicated 5V 4A supply</td>
+          </tr>
+          <tr>
+            <td>Wiring</td>
+            <td>GPIO4 → GPIO18 jumper for hardware PWM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<div id="install" class="install-band">
+  <div class="install-inner">
+    <div>
+      <p class="tag">Install</p>
+      <h2 class="title">SSH in once.<br>Then it<br>just runs.</h2>
+      <p class="body-text" style="margin-bottom: 1.5rem;">
+        Download the latest release zip, copy it to the Pi, and run
+        <code>volumio plugin install</code>. The installer builds the
+        matrix library from source (~25 min on a Pi 3B) and configures
+        everything automatically. One reboot, then configure from the
+        Volumio plugin settings page.
+      </p>
+      <p class="body-text" style="margin-bottom: 2.5rem;">
+        Full walkthrough in the <a href="docs/install.md" style="color:var(--cyan)">install guide</a>.
+        Bonnet wiring and power in <a href="docs/hardware.md" style="color:var(--cyan)">hardware setup</a>.
+      </p>
+      <a class="btn btn-primary" href="https://github.com/emuck/vinyltron/releases/latest">↓ Download vinyltron.zip</a>
+    </div>
+    <div>
+      <div class="code-block">
+<span class="c"># copy the release zip to your Pi</span>
+<span class="p">$</span> scp vinyltron.zip volumio@volumio.local:~
+
+<span class="c"># SSH in and install</span>
+<span class="p">$</span> ssh volumio@volumio.local
+<span class="p">$</span> volumio plugin install vinyltron.zip
+<span class="c">   # builds rpi-rgb-led-matrix (~25 min on Pi 3B)</span>
+<span class="c">   # configures boot files for hardware PWM</span>
+
+<span class="c"># reboot to activate PWM boot settings</span>
+<span class="p">$</span> sudo reboot
+
+<span class="c"># configure in Volumio → Plugins → Vinyltron</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>
+    Vinyltron · MIT License ·
+    <a href="https://github.com/emuck/vinyltron">github.com/emuck/vinyltron</a>
+  </span>
+  <span style="font-size:0.75rem; opacity:0.6;">* Assumes a Raspberry Pi is already available. Add ~$35–50 for a Pi 3B if starting from scratch.</span>
+  <span>
+    Built on <a href="https://volumio.com">Volumio</a> ·
+    <a href="https://github.com/hzeller/rpi-rgb-led-matrix">rpi-rgb-led-matrix</a> ·
+    <a href="https://open-meteo.com">Open-Meteo (free API)</a>
+  </span>
+</footer>
+
+</body>
+</html>
