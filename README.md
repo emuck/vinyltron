@@ -2,8 +2,6 @@
 
 **[vinyltron.github.io](https://emuck.github.io/vinyltron/)** · Album art on a 64x64 HUB75E RGB LED matrix, driven by Volumio.
 
-![Vinyltron mounted in a media cabinet, showing the Vinyltron logo on the LED matrix](docs/images/vinyltron.jpg)
-
 Vinyltron turns a Raspberry Pi, a Volumio player, and a small RGB matrix into a physical
 music display for the room. It shows the current album art while music is playing, then
 falls back to selected photos, a built-in idle image, an animated screensaver, or a weather
@@ -37,17 +35,15 @@ foundation for it.
 - Volumio settings UI for display, idle image, screensaver, weather, hardware, and power
   controls
 
-![Close-up of the LED matrix playing Dark Side of the Moon with a DSD64 format badge](docs/images/vinyltron-playing.jpg)
+## Display modes
 
-## Screenshots
-
-| Weather — clear day _(sim)_ | Weather — AQI _(sim)_ | Weather — night / moon |
+| Album art | Weather — clear day _(sim)_ | Weather — AQI _(sim)_ |
 |:---:|:---:|:---:|
-| ![Clear day weather display showing sun icon, 74°, H82/L58, humidity and sunset](docs/images/screenshot-weather-day.png) | ![Partly cloudy weather display showing sun/cloud icon, 68°, H74/L55, AQI 68](docs/images/screenshot-weather-aqi.png) | ![Night weather display on hardware showing moon phase, 55°, H71/L55, wind and sunrise](docs/images/vinyltron-weather-night.jpg) |
+| <img src="docs/images/vinyltron-playing.jpg" width="220" alt="Dark Side of the Moon on the LED matrix with DSD64 format badge"> | <img src="docs/images/screenshot-weather-day.png" width="220" alt="Clear day weather showing sun icon, 74°, H82/L58"> | <img src="docs/images/screenshot-weather-aqi.png" width="220" alt="Partly cloudy weather showing AQI 68"> |
 
-| Brian's Brain screensaver _(sim)_ | Gray-Scott screensaver _(sim)_ |
-|:---:|:---:|
-| ![Brian's Brain cellular automaton screensaver in cyan and amber](docs/images/screenshot-brians-brain.png) | ![Gray-Scott reaction-diffusion screensaver in blue and red](docs/images/screenshot-gray-scott.png) |
+| Weather — night / moon | Brian's Brain _(sim)_ | Gray-Scott _(sim)_ |
+|:---:|:---:|:---:|
+| <img src="docs/images/vinyltron-weather-night.jpg" width="220" alt="Night weather on hardware showing moon phase, 55°"> | <img src="docs/images/screenshot-brians-brain.png" width="220" alt="Brian's Brain cellular automaton screensaver"> | <img src="docs/images/screenshot-gray-scott.png" width="220" alt="Gray-Scott reaction-diffusion screensaver"> |
 
 _Simulator screenshots rendered from the [matrix simulator](docs/matrix-simulator.md) at 8× scale._
 
