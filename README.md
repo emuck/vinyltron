@@ -1,6 +1,6 @@
 # Vinyltron
 
-Album art on a 64x64 HUB75E RGB LED matrix, driven by Volumio.
+**[vinyltron.github.io](https://emuck.github.io/vinyltron/)** · Album art on a 64x64 HUB75E RGB LED matrix, driven by Volumio.
 
 ![Vinyltron mounted in a media cabinet, showing the Vinyltron logo on the LED matrix](docs/images/vinyltron.jpg)
 
