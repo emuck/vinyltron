@@ -1,6 +1,7 @@
 rpi-rgb-led-matrix/
 dist/
 plugin/node_modules/
+plugin/package-lock.json
 __pycache__/
 *.pyc
 .DS_Store
