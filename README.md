@@ -49,11 +49,10 @@ _Simulator screenshots rendered from the [matrix simulator](docs/matrix-simulato
 
 ## Install
 
-Vinyltron is not yet in the Volumio Plugins store, so installing it means SSHing into the
-Pi and running `volumio plugin install` — Volumio's web UI no longer has a plugin-zip
-upload option. Download the latest `vinyltron.zip` from
-[Releases](https://github.com/emuck/vinyltron/releases/latest), then follow the
-[install guide](docs/install.md) for the exact commands.
+Vinyltron is available in the Volumio plugin store on the **beta channel**. Open the
+Volumio web UI, go to **Plugins → User Interface**, find Vinyltron, and click Install.
+See the [install guide](docs/install.md) for the full walkthrough, including how to enable
+the beta channel and the ZIP install path if the store is unavailable.
 
 The installer builds the pinned `rpi-rgb-led-matrix` Python bindings on the Pi, installs
 the `vinyltron` systemd service, and configures the boot settings needed for matrix PWM. A

@@ -681,7 +681,7 @@
 
 <!-- MARQUEE -->
 <div class="marquee-band">
-  <p class="marquee-label">Every display mode</p>
+  <p class="marquee-label">Display modes</p>
   <div class="marquee-track">
     <div class="marquee-frame photo"><img src="docs/images/vinyltron-playing.jpg"       alt="Dark Side of the Moon"></div>
     <div class="marquee-frame">      <img src="docs/images/screenshot-weather-day.png"  alt="Weather — clear day"></div>
@@ -709,8 +709,8 @@
       independently, each capable of displaying any of 16.7 million colors at full
       PWM brightness control. The same HUB75 protocol drives LED walls at concerts
       and sports arenas, scaled down to a 7.5-inch panel that sits on a shelf or
-      tucks inside a cabinet. At normal listening-room distance, the pixels
-      disappear and what you see is vivid, physical light.
+      tucks inside a cabinet. At a few meters, the pixel grid blends into
+      a continuous image.
     </p>
 
     <div class="matrix-stats">
@@ -752,10 +752,10 @@
       <p class="body-text">
         Vinyltron listens to Volumio in real time — no polling, no lag. When a
         track starts, the matrix updates within a frame. When playback stops, it
-        transitions gracefully to whatever idle mode you've chosen.
+        transitions to whatever idle mode you've chosen.
       </p>
       <ul class="feature-bullets">
-        <li>Album art resized and cropped to fill the full 64×64 display</li>
+        <li>Album art resized and cropped to fill the 64×64 display</li>
         <li>Optional progress bar with configurable height and RGB color</li>
         <li>Format badge: DSD64, DSD128, 24/96, 16/44.1, MP3, AAC, FLAC, and more</li>
         <li>Handles pause, stop, track change, and reconnect — no stale art flashing</li>
@@ -773,7 +773,7 @@
   <h2 class="title">Always something<br>worth looking at.</h2>
   <p class="body-text">
     When music stops, the display doesn't go dark. Choose from your own photos,
-    four generative screensaver engines, or a live pixel-art weather readout —
+    five generative screensaver engines, or a live pixel-art weather readout —
     all configurable from the Volumio plugin settings page.
   </p>
 
@@ -827,18 +827,19 @@
   <div class="split flip" style="margin-top: 6rem;">
     <div>
       <p class="tag">Screensavers</p>
-      <h2 class="title">Generative art.<br>Running on a $15 Pi.</h2>
+      <h2 class="title">Generative art.<br>Running on a Pi 3B.</h2>
       <p class="body-text">
-        Four simulation engines run directly on the Raspberry Pi, producing
-        slowly evolving organic patterns that never repeat exactly. Each has
-        configurable palette, speed, and reset interval from the Volumio UI —
-        with advanced tuning parameters in <code>config.toml</code>.
+        Five simulation engines run directly on the Raspberry Pi, each producing
+        patterns that evolve continuously. Each has configurable palette, speed,
+        and reset interval from the Volumio UI — with advanced tuning parameters
+        in <code>config.toml</code>.
       </p>
       <ul class="feature-bullets">
         <li><strong style="color:var(--text)">Brian's Brain</strong> — three-state cellular automaton with selectable palette</li>
         <li><strong style="color:var(--text)">Langton's Ant</strong> — multi-ant emergent highway patterns</li>
         <li><strong style="color:var(--text)">Chaos Game</strong> — slowly rotating Sierpiński fractal</li>
         <li><strong style="color:var(--text)">Gray-Scott</strong> — reaction-diffusion coral, spot, and worm morphologies</li>
+        <li><strong style="color:var(--text)">Lissajous</strong> — orbit-trail figure with slow phase drift</li>
       </ul>
     </div>
     <div class="media-wrap glow-blue pixel">
@@ -858,7 +859,7 @@
       </p>
       <ul class="feature-bullets">
         <li>Upload, select, delete, and randomize from phone or laptop</li>
-        <li>Accepts HEIC, JPEG, PNG — any photo your phone can take</li>
+        <li>Accepts HEIC, JPEG, and PNG</li>
         <li>Optional daily display schedule for photo-frame mode</li>
         <li>Configurable port if 3018 conflicts with another service</li>
       </ul>
@@ -877,7 +878,7 @@
     <p class="body-text" style="margin-bottom: 0;">
       Commercial LED music displays exist. They ship in a nice box and look great on a
       shelf. Vinyltron lives inside your existing rack, costs a fraction of the price,
-      and does things no commercial product offers.
+      and does things these displays don't.
     </p>
 
     <table class="vs-table">
@@ -912,7 +913,7 @@
         <tr>
           <td class="feature-name">Generative screensavers</td>
           <td class="them"><span class="cross">—</span></td>
-          <td><span class="check">✓</span> 4 simulation engines</td>
+          <td><span class="check">✓</span> 5 simulation engines</td>
         </tr>
         <tr>
           <td class="feature-name">Audiophile format badge</td>
@@ -954,7 +955,7 @@
       <ul class="feature-bullets" style="margin-top: 1.75rem;">
         <li>No dedicated software account or cloud service required</li>
         <li>The Bonnet isn't required — direct GPIO wiring works too, with a retro-flicker charm</li>
-        <li>Pi 5 compatible in software-pulse mode; Pi 3B for hardware PWM</li>
+        <li>Pi 5 in software-pulse mode (panel rendering untested); Pi 3B for hardware PWM</li>
         <li>Full hardware setup, BOM, and wiring guide in <a href="https://github.com/emuck/vinyltron/blob/main/docs/hardware.md" style="color:var(--cyan)">docs/hardware.md</a></li>
       </ul>
     </div>
@@ -1007,7 +1008,7 @@
         Full walkthrough in the <a href="https://github.com/emuck/vinyltron/blob/main/docs/install.md" style="color:var(--cyan)">install guide</a>.
         Bonnet wiring and power in <a href="https://github.com/emuck/vinyltron/blob/main/docs/hardware.md" style="color:var(--cyan)">hardware setup</a>.
       </p>
-      <a class="btn btn-primary" href="https://volumio.com/en/volumio-plugins-collection">Browse Plugin Store</a>
+      <a class="btn btn-primary" href="https://github.com/emuck/vinyltron/blob/main/docs/install.md">Read install guide →</a>
     </div>
     <div>
       <div class="code-block">
