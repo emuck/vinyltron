@@ -995,32 +995,26 @@
   <div class="install-inner">
     <div>
       <p class="tag">Install</p>
-      <h2 class="title">SSH in once.<br>Then it<br>just runs.</h2>
+      <h2 class="title">One click<br>in Volumio.<br>Then it runs.</h2>
       <p class="body-text" style="margin-bottom: 1.5rem;">
-        Download the latest release zip, copy it to the Pi, and run
-        <code>volumio plugin install</code>. The installer builds the
-        matrix library from source (~25 min on a Pi 3B) and configures
-        everything automatically. One reboot, then configure from the
-        Volumio plugin settings page.
+        Vinyltron is available in the Volumio plugin store (beta channel).
+        Search for <strong>Vinyltron</strong> under
+        <em>Plugins → User Interface</em> and install. The installer
+        handles dependencies and configures boot files automatically.
+        One reboot, then configure from the Volumio plugin settings page.
       </p>
       <p class="body-text" style="margin-bottom: 2.5rem;">
         Full walkthrough in the <a href="https://github.com/emuck/vinyltron/blob/main/docs/install.md" style="color:var(--cyan)">install guide</a>.
         Bonnet wiring and power in <a href="https://github.com/emuck/vinyltron/blob/main/docs/hardware.md" style="color:var(--cyan)">hardware setup</a>.
       </p>
-      <a class="btn btn-primary" href="https://github.com/emuck/vinyltron/releases/latest">↓ Download vinyltron.zip</a>
+      <a class="btn btn-primary" href="https://volumio.com/en/volumio-plugins-collection">Browse Plugin Store</a>
     </div>
     <div>
       <div class="code-block">
-<span class="c"># copy the release zip to your Pi</span>
-<span class="p">$</span> scp vinyltron.zip volumio@volumio.local:~
+<span class="c"># In Volumio web UI:</span>
+<span class="c"># Plugins → User Interface → search Vinyltron → Install</span>
 
-<span class="c"># SSH in and install</span>
-<span class="p">$</span> ssh volumio@volumio.local
-<span class="p">$</span> volumio plugin install vinyltron.zip
-<span class="c">   # builds rpi-rgb-led-matrix (~25 min on Pi 3B)</span>
-<span class="c">   # configures boot files for hardware PWM</span>
-
-<span class="c"># reboot to activate PWM boot settings</span>
+<span class="c"># reboot when prompted (configures PWM boot settings)</span>
 <span class="p">$</span> sudo reboot
 
 <span class="c"># configure in Volumio → Plugins → Vinyltron</span>
