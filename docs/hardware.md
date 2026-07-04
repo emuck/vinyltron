@@ -14,6 +14,27 @@ power, level shifting, row addressing, and GPIO18/PWM ownership.
 
 IDC ribbon cable and panel power cable are usually included with the matrix.
 
+## Chassis
+
+A 3D-printable frameless desk stand for the full assembly is available on Printables:
+
+**[Frameless 64×64 RGB Matrix Desk Stand](https://www.printables.com/model/1772332-frameless-64x64-rgb-matrix-desk-stand-raspberry-pi)**
+
+The chassis is a single printed part. Two vertical rails bolt to the panel's rear M4 boss
+columns using the magnetic screws that ship with the display. Raised 9mm seat rings clock up
+the magnet standoff height so everything clamps flush. A crossbar carries the Pi on M2.5
+thread-forming standoffs. Wedge feet set a 10° backward lean, coplanar by construction. No
+bezel — the panel floats edge-to-edge. PLA or PETG, 0.2mm, 15% infill, no supports, ~75g.
+
+Tested with the Seengreat P3(2121)-32S panel (boss columns ±86.5mm, holes at y=0 / y=73mm).
+The Adafruit RGB Matrix Bonnet is optional but recommended. Hardware needed: 4× M4 magnetic
+screws (the ones that ship with the panel) and 4× M2.5 screws (thread into 2.2mm pilots,
+no inserts needed).
+
+The OpenSCAD source is included on the Printables page. Boss coordinates and lean angle are
+named variables at the top of the file — two edits regenerates the part for a different panel
+revision.
+
 ## Raspberry Pi
 
 The primary tested platform is Raspberry Pi 3B running Volumio 4 / Bookworm.

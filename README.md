@@ -70,6 +70,7 @@ matrix.
 | Interface | Adafruit RGB Matrix Bonnet #3211 recommended; direct GPIO also works |
 | Matrix power | Separate 5V 4A supply |
 | Wiring | Bonnet PWM mode with GPIO4-to-GPIO18 quality jumper for the cleanest output |
+| Chassis | [3D-printable frameless desk stand](https://www.printables.com/model/1772332-frameless-64x64-rgb-matrix-desk-stand-raspberry-pi) — Pi + panel in one print, 10° lean |
 
 Pi 5 note: the plugin installs and runs in software-pulse mode on Pi 5, but actual HUB75
 panel rendering on Pi 5 remains untested. Hardware-pulse mode is automatically disabled
