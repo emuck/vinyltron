@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 
-from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES, ChaosGame, GrayScott, LangtonsAnt  # noqa: E402
+from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES, ChaosGame, GrayScott, LangtonsAnt, Lissajous  # noqa: E402
 from weather import MockWeatherRenderer  # noqa: E402
 
 
@@ -236,6 +236,30 @@ HTML = """<!doctype html>
       </div>
     </div>
 
+    <div id="freqAField" class="field" hidden>
+      <label for="freqA">X Frequency</label>
+      <div class="row">
+        <input id="freqA" type="range" min="1" max="6" value="3">
+        <output id="freqAOut">3</output>
+      </div>
+    </div>
+
+    <div id="freqBField" class="field" hidden>
+      <label for="freqB">Y Frequency</label>
+      <div class="row">
+        <input id="freqB" type="range" min="1" max="6" value="2">
+        <output id="freqBOut">2</output>
+      </div>
+    </div>
+
+    <div id="driftSpeedField" class="field" hidden>
+      <label for="driftSpeed">Drift Speed</label>
+      <div class="row">
+        <input id="driftSpeed" type="range" min="0" max="10" value="2">
+        <output id="driftSpeedOut">2</output>
+      </div>
+    </div>
+
     <div id="weatherConditionField" class="field" hidden>
       <label for="weatherCondition">Weather Condition</label>
       <select id="weatherCondition">
@@ -332,6 +356,15 @@ HTML = """<!doctype html>
     const gridScale = $('gridScale');
     const gridScaleOut = $('gridScaleOut');
     const gridScaleField = $('gridScaleField');
+    const freqA = $('freqA');
+    const freqAOut = $('freqAOut');
+    const freqAField = $('freqAField');
+    const freqB = $('freqB');
+    const freqBOut = $('freqBOut');
+    const freqBField = $('freqBField');
+    const driftSpeed = $('driftSpeed');
+    const driftSpeedOut = $('driftSpeedOut');
+    const driftSpeedField = $('driftSpeedField');
     const weatherCondition = $('weatherCondition');
     const weatherConditionField = $('weatherConditionField');
     const weatherNight = $('weatherNight');
@@ -360,6 +393,9 @@ HTML = """<!doctype html>
         feed: (parseInt(feed.value, 10) / 1000).toFixed(3),
         kill: (parseInt(kill.value, 10) / 1000).toFixed(3),
         grid_scale: gridScale.value,
+        freq_a: freqA.value,
+        freq_b: freqB.value,
+        drift_speed: driftSpeed.value,
         weather_condition: weatherCondition.value,
         weather_night: weatherNight.value,
         moon_phase: (parseInt(moonPhase.value, 10) / 100).toFixed(2),
@@ -404,6 +440,9 @@ HTML = """<!doctype html>
       feedOut.textContent = (parseInt(feed.value, 10) / 1000).toFixed(3);
       killOut.textContent = (parseInt(kill.value, 10) / 1000).toFixed(3);
       gridScaleOut.textContent = gridScale.value;
+      freqAOut.textContent = freqA.value;
+      freqBOut.textContent = freqB.value;
+      driftSpeedOut.textContent = driftSpeed.value;
       moonPhaseOut.textContent = (parseInt(moonPhase.value, 10) / 100).toFixed(2);
       resetSeconds.hidden = engine.value === 'weather';
       resetSeconds.previousElementSibling.hidden = engine.value === 'weather';
@@ -418,6 +457,10 @@ HTML = """<!doctype html>
       feedField.hidden = engine.value !== 'gray_scott';
       killField.hidden = engine.value !== 'gray_scott';
       gridScaleField.hidden = engine.value !== 'gray_scott';
+      freqAField.hidden = engine.value !== 'lissajous';
+      freqBField.hidden = engine.value !== 'lissajous';
+      driftSpeedField.hidden = engine.value !== 'lissajous';
+      fadeField.hidden = engine.value !== 'chaos_game' && engine.value !== 'lissajous';
       weatherConditionField.hidden = engine.value !== 'weather';
       weatherNightField.hidden = engine.value !== 'weather';
       moonPhaseField.hidden = engine.value !== 'weather' || weatherNight.value !== '1';
@@ -470,6 +513,12 @@ HTML = """<!doctype html>
         lines.push(`kill = ${(parseInt(kill.value, 10) / 1000).toFixed(3)}`);
         lines.push(`grid_scale = ${parseInt(gridScale.value, 10)}`);
       }
+      if (engine.value === 'lissajous') {
+        lines.push(`freq_a = ${parseInt(freqA.value, 10)}`);
+        lines.push(`freq_b = ${parseInt(freqB.value, 10)}`);
+        lines.push(`fade = ${parseInt(fade.value, 10)}`);
+        lines.push(`drift_speed = ${parseInt(driftSpeed.value, 10)}`);
+      }
       lines.push(`seed = ${tomlString(seed.value)}`);
       return lines.join('\\n');
     }
@@ -513,6 +562,9 @@ HTML = """<!doctype html>
         `feed=${feedOut.textContent}`,
         `kill=${killOut.textContent}`,
         `grid_scale=${gridScale.value}`,
+        `freq_a=${freqA.value}`,
+        `freq_b=${freqB.value}`,
+        `drift_speed=${driftSpeed.value}`,
         `weather_condition=${weatherCondition.value}`,
         `weather_night=${weatherNight.value}`,
         `moon_phase=${moonPhaseOut.textContent}`,
@@ -565,7 +617,7 @@ HTML = """<!doctype html>
       $('copyToml').textContent = 'Copied';
       setTimeout(() => { $('copyToml').textContent = 'Copy Config Snippet'; }, 1000);
     });
-    for (const input of [engine, palette, fps, resetSeconds, density, antCount, stepsPerFrame, pointsPerFrame, fade, rotationSpeed, feed, kill, gridScale, weatherCondition, weatherNight, moonPhase, secondaryMetric, seed]) {
+    for (const input of [engine, palette, fps, resetSeconds, density, antCount, stepsPerFrame, pointsPerFrame, fade, rotationSpeed, feed, kill, gridScale, freqA, freqB, driftSpeed, weatherCondition, weatherNight, moonPhase, secondaryMetric, seed]) {
       input.addEventListener('change', async () => {
         updateLabels();
         await resetEngine();
@@ -618,6 +670,9 @@ class EngineRegistry:
             params['feed'],
             params['kill'],
             params['grid_scale'],
+            params['freq_a'],
+            params['freq_b'],
+            params['drift_speed'],
             params['weather_condition'],
             params['weather_night'],
             params['moon_phase'],
@@ -661,6 +716,17 @@ class EngineRegistry:
                 feed=params['feed'],
                 kill=params['kill'],
                 grid_scale=params['grid_scale'],
+                seed=params['seed'],
+            )
+        if params['engine'] == 'lissajous':
+            return Lissajous(
+                WIDTH,
+                HEIGHT,
+                palette=params['palette'],
+                freq_a=params['freq_a'],
+                freq_b=params['freq_b'],
+                fade=params['fade'],
+                drift_speed=params['drift_speed'],
                 seed=params['seed'],
             )
         if params['engine'] == 'weather':
@@ -718,6 +784,18 @@ def request_params(query):
         grid_scale = int(values.get('grid_scale', ['2'])[0])
     except ValueError:
         grid_scale = 2
+    try:
+        freq_a = int(values.get('freq_a', ['3'])[0])
+    except ValueError:
+        freq_a = 3
+    try:
+        freq_b = int(values.get('freq_b', ['2'])[0])
+    except ValueError:
+        freq_b = 2
+    try:
+        drift_speed = int(values.get('drift_speed', ['2'])[0])
+    except ValueError:
+        drift_speed = 2
     weather_condition = values.get('weather_condition', ['partly_cloudy'])[0]
     weather_night = values.get('weather_night', ['0'])[0] in ('1', 'true', 'yes', 'on')
     try:
@@ -738,6 +816,9 @@ def request_params(query):
         'feed': max(0.0, min(0.1, feed)),
         'kill': max(0.0, min(0.12, kill)),
         'grid_scale': max(1, min(4, grid_scale)),
+        'freq_a': max(1, min(6, freq_a)),
+        'freq_b': max(1, min(6, freq_b)),
+        'drift_speed': max(0, min(10, drift_speed)),
         'weather_condition': weather_condition,
         'weather_night': weather_night,
         'moon_phase': max(0.0, min(1.0, moon_phase)),
@@ -761,6 +842,7 @@ class Handler(BaseHTTPRequestHandler):
                     {'id': 'langtons_ant', 'label': "Langton's Ant"},
                     {'id': 'chaos_game', 'label': "Chaos Game"},
                     {'id': 'gray_scott', 'label': "Reaction-Diffusion"},
+                    {'id': 'lissajous', 'label': "Lissajous"},
                     {'id': 'weather', 'label': "Weather"},
                 ],
                 'palettes': [
