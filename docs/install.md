@@ -1,16 +1,14 @@
 # Install Guide
 
-Vinyltron installs as a Volumio `user_interface` plugin. Vinyltron is not yet in the
-Volumio Plugins store (see [roadmap](roadmap.md#m6--plugin-store-submission)), and
-Volumio's web UI no longer has a plugin-zip upload option, so installing or updating it
-means SSHing into the Pi and running `volumio plugin install`.
+Vinyltron installs as a Volumio `user_interface` plugin, available in the
+Volumio plugin store on the **beta channel**.
 
 ## Before You Install
 
 Confirm the hardware basics first:
 
 - Raspberry Pi running Volumio 4 / Bookworm
-- 64x64 HUB75E RGB LED matrix
+- 64×64 HUB75E RGB LED matrix
 - Adafruit RGB Matrix Bonnet #3211, compatible HUB75 interface, or direct GPIO wiring
 - Separate 5V high-current supply for the matrix
 - Bonnet E-address jumper closed for 64-row panels, if using the Bonnet
@@ -19,11 +17,31 @@ Confirm the hardware basics first:
 
 See [hardware setup](hardware.md) for wiring, power, and Bonnet details.
 
-## Install Over SSH
+## Install from the Plugin Store (recommended)
+
+1. Open the Volumio web UI and go to **Plugins → User Interface**.
+2. Find **Vinyltron** and click **Install**.
+3. Wait for the install to complete, then reboot if prompted (the installer
+   configures boot files for matrix PWM — a reboot is required for those to
+   take effect).
+
+The installer:
+
+- Installs Python dependencies used by the daemon and photo upload converter
+- Installs prebuilt `rgbmatrix` bindings (no compilation required)
+- Adds Bookworm backports and installs `libheif-examples` when available, so
+  iPhone HEIC/HEIF photo uploads can be decoded by `heif-convert`
+- Installs the `vinyltron` systemd service
+- Adds tightly scoped sudoers rules for controlling only the `vinyltron` service
+- Configures boot files needed for matrix PWM
+
+## Install from a Release Zip (advanced / development)
+
+If the store is unavailable or you need a specific build:
 
 1. Download the latest `vinyltron.zip` from
    [Releases](https://github.com/emuck/vinyltron/releases/latest).
-2. Copy it to the Pi and install it:
+2. Copy it to the Pi and install:
 
    ```bash
    scp vinyltron.zip volumio@volumio.local:/tmp/
@@ -34,46 +52,28 @@ See [hardware setup](hardware.md) for wiring, power, and Bonnet details.
    ```
 
    `volumio plugin install` shows an unverified-plugin warning and asks
-   `Do you want to install this plugin anyway?` — answer `y`. If Vinyltron is already
-   installed, use `volumio plugin update` instead; `install` fails with
+   `Do you want to install this plugin anyway?` — answer `y`. If Vinyltron is
+   already installed, use `volumio plugin update` instead; `install` fails with
    `Plugin vinyltron already exists` on an existing install.
 
-   `volumio plugin update` copies the new files into place but does not reload them into
-   the running processes, so after an update run:
+   After an update, restart both services to pick up the new code:
 
    ```bash
    sudo systemctl restart volumio
    sudo systemctl restart vinyltron
    ```
 
-   `volumio` runs the plugin's settings UI code (`index.js`); `vinyltron` is the matrix
-   daemon. Both need restarting to pick up an update.
-
-3. Wait for `plugininstallend` in the output — Volumio's plugin manager prints this on
-   both success and failure.
+3. Wait for `plugininstallend` in the output.
 4. Reboot if the install output says boot configuration changed.
 
-If you have this repo cloned, `./tools/install-volumio-plugin-zip.sh [host] [zip]` does
-steps 2-3 for you, automatically choosing `install` or `update` based on whether
+If you have this repo cloned, `./tools/install-volumio-plugin-zip.sh [host] [zip]`
+does steps 2–3 automatically, choosing `install` or `update` based on whether
 Vinyltron is already installed.
-
-The installer:
-
-- Builds the pinned `rpi-rgb-led-matrix` C library and Python bindings on the Pi
-- Installs Python dependencies used by the daemon and photo upload converter
-- Adds Bookworm backports and installs `libheif-examples` when available, so iPhone
-  HEIC/HEIF photo uploads can be decoded by `heif-convert`
-- Installs the `vinyltron` systemd service
-- Adds tightly scoped sudoers rules for controlling only the `vinyltron` service
-- Configures boot files needed for matrix PWM
-
-The matrix library build can take several minutes on a Pi 3B. See
-[engineering-spec.md](engineering-spec.md#rpi-rgb-led-matrix-build) for build details.
 
 ## Boot Configuration
 
-For Bonnet PWM mode, GPIO18/PWM must be free. Volumio's onboard/HDMI audio can claim that
-PWM path, so Vinyltron's installer intentionally disables it:
+For Bonnet PWM mode, GPIO18/PWM must be free. Volumio's onboard/HDMI audio can
+claim that PWM path, so Vinyltron's installer intentionally disables it:
 
 - `/boot/userconfig.txt`: adds `dtparam=audio=off`
 - `/boot/cmdline.txt`: removes Volumio's `snd_bcm2835.enable_hdmi=1` and
@@ -86,11 +86,11 @@ Before the first edit, the installer saves backups as:
 - `/boot/cmdline.txt.vinyltron-orig`
 - `/boot/userconfig.txt.vinyltron-orig`
 
-Uninstalling the plugin does not revert these boot changes. Onboard/HDMI audio stays
-disabled intentionally so GPIO18/PWM remains free for the matrix.
+Uninstalling the plugin does not revert these boot changes. Onboard/HDMI audio
+stays disabled intentionally so GPIO18/PWM remains free for the matrix.
 
-To restore onboard audio later, copy the backups back over the active boot files, if
-present, then reboot:
+To restore onboard audio later, copy the backups back over the active boot
+files, if present, then reboot:
 
 ```bash
 sudo cp /boot/cmdline.txt.vinyltron-orig /boot/cmdline.txt
@@ -108,8 +108,8 @@ After install and reboot:
    - `Bonnet` if the GPIO4-to-GPIO18 quality jumper is not installed
    - `Direct GPIO` if wiring the panel directly to the Pi
 3. Confirm **Rotation** matches the mounted panel orientation.
-4. Open the **Photo Manager** URL shown in the Idle Image settings from a device on the
-   same network.
+4. Open the **Photo Manager** URL shown in the Idle Image settings from a
+   device on the same network.
 
 The photo manager defaults to:
 
@@ -117,18 +117,18 @@ The photo manager defaults to:
 http://volumio.local:3018/photos
 ```
 
-If port `3018` is unavailable, the Settings page shows an unavailable-port message. Change
-**Photo Manager Port** to an unused port from `1024` to `65535` and save.
+If port `3018` is unavailable, the Settings page shows an unavailable-port
+message. Change **Photo Manager Port** to an unused port from `1024` to
+`65535` and save.
 
 ## Uninstall
 
-Uninstall removes the plugin files, systemd service, sudoers entry, and runtime
-configuration owned by the plugin. It intentionally leaves these behind:
+Uninstall removes the plugin files, systemd service, sudoers entry, and
+runtime configuration owned by the plugin. It intentionally leaves:
 
-- `/home/volumio/rpi-rgb-led-matrix`, because rebuilding it is slow and other matrix
-  experiments may use it
 - `/boot/*.vinyltron-orig` backups
-- The active boot-file changes that keep onboard/HDMI audio disabled for matrix PWM
+- The active boot-file changes that keep onboard/HDMI audio disabled for
+  matrix PWM
 
-Use the restore commands above if you want to re-enable onboard/HDMI audio after removing
-Vinyltron.
+Use the restore commands above if you want to re-enable onboard/HDMI audio
+after removing Vinyltron.

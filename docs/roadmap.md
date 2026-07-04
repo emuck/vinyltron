@@ -66,16 +66,16 @@ _Docs are accurate, sparse, and useful to a new user finding the repo cold._
 
 ---
 
-## M6 — Plugin Store Submission
+## M6 — Plugin Store Submission ✓
 
 _Goal: get the plugin live in the Volumio beta channel._
 
-- [ ] Fork `volumio/volumio-plugins-sources-bookworm`
-- [ ] Add plugin to fork under top-level `vinyltron/`
-- [ ] Run `volumio plugin submit` from a running Volumio device
-- [ ] PR opened; submission checklist completed
-- [ ] Respond to Volumio team review feedback
-- [ ] Plugin live in beta channel
+- [x] Fork `volumio/volumio-plugins-sources-bookworm`
+- [x] Add plugin to fork under top-level `vinyltron/`
+- [x] Run `volumio plugin submit` from a running Volumio device
+- [x] PR opened; submission checklist completed
+- [x] Respond to Volumio team review feedback
+- [x] Plugin live in beta channel
 
 ---
 
