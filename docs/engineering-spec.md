@@ -330,73 +330,30 @@ The optional `[schedule]` section controls idle/photo-frame display time:
 - Overnight windows are supported, for example `on_time = "18:00"` and
   `off_time = "01:00"`.
 
-## rpi-rgb-led-matrix Build
+## rpi-rgb-led-matrix Bindings
 
-Must build from source — no prebuilt wheels exist, and a single prebuilt `.so` would not
-be portable across the Cortex-A core variants in Pi 3B/4/5 (the library's `config.mk` uses
-`-march=native -mtune=native`). `plugin/install.sh` builds it automatically on first
-install — see "Automated Install" below for what it does.
+The plugin ships prebuilt CPython 3.11 armhf `.so` files for `rgbmatrix` — no on-device
+compilation. They live at `tools/matrix-build/prebuilt/rgbmatrix/` in the repo and are
+bundled into the plugin zip as `vinyltron/matrix-build/prebuilt/`. `display.py` loads them
+via `sys.path.insert(0, '.../matrix-build/prebuilt')`.
 
 **Pinned commit**: `e947417` ("Merge pull request #1885 from ty-porter/patch-2"), full SHA
-`e947417fff9042b3ea173542be09490acab069f7`. Upstream HEAD fails to compile on Buster/GCC8
-due to Pi 5 RP1 code, and this commit predates Pi 5 RP1 GPIO support entirely — see
-the Pi 5 note in `README.md`.
-
-Verified 2026-06-11/12 on a Pi 5 (Volumio 4.119/Bookworm, armhf userspace): `install.sh`
-completes, `rgbmatrix` imports, and the daemon starts, connects to Volumio, and shuts down
-cleanly (~1s) in software-pulse mode (`disable_hardware_pulsing = True`).
+`e947417fff9042b3ea173542be09490acab069f7`. This commit predates Pi 5 RP1 GPIO support —
+see the Pi 5 note below.
 
 **Confirmed broken on Pi 5**: hardware-pulse mode (`disable_hardware_pulsing = False`)
-against the RP1 I/O chip — this pinned commit predates RP1 GPIO support. Rather than
-failing to initialize, the C library's PWM setup busy-spins and holds the GIL, so the
+against the RP1 I/O chip. The C library's PWM setup busy-spins and holds the GIL, so the
 daemon never responds to SIGTERM (`systemctl stop` hangs 90s and requires SIGKILL).
 `display.py` detects Pi 5 and forces `disable_hardware_pulsing = True` regardless of
-`config.toml`, so this can no longer happen — see "Components" above. Actual HUB75
-panel rendering on Pi 5 remains untested: mounting the Bonnet on a Pi 5 requires a tall
-GPIO stacking header (~12-15mm) to clear the Active Cooler, which the test unit doesn't
-have. Pi 3B remains the verified reference platform for hardware-pulse mode and panel
-rendering.
-
-### Python Bindings
-
-This commit predates `pyproject.toml`, so the Python bindings need a custom `setup.py`
-and an `Imaging.h` stub (a minimal `ImagingMemoryInstance` struct matching Pillow 5–9's
-layout on 32-bit ARM, avoiding a dependency on Pillow dev headers). Both live in
-`tools/matrix-build/` in this repo and are bundled into the plugin package as
-`vinyltron/matrix-build/`, so `install.sh` can build the bindings without network access
-to this repo.
-
-Use `sys.path.insert(0, '/home/volumio/rpi-rgb-led-matrix/bindings/python')` to import.
-
-### Automated Install (plugin/install.sh)
-
-On first install, if `rgbmatrix` isn't importable from `/home/volumio/rpi-rgb-led-matrix`,
-`install.sh`:
-1. Installs build dependencies (`build-essential python3-dev python3-pip cython3 wget
-   libjpeg-dev zlib1g-dev`), retrying with `--force-overwrite` for the known
-   `libpython3-stdlib` conflict on fresh Bookworm images.
-2. Downloads the pinned commit as a tarball from
-   `https://github.com/hzeller/rpi-rgb-led-matrix/archive/<sha>.tar.gz` (no `git` needed).
-3. Runs `make -C examples-api-use`, then builds the Python bindings using the bundled
-   `matrix-build/` helpers (above).
-
-The result persists at `/home/volumio/rpi-rgb-led-matrix` across plugin reinstalls/updates
-(uninstall.sh does not remove it), so the build only runs once per device.
-
-Measured on a Pi 3B (full rebuild, from `systemctl stop` to `plugininstallend`): ~24
-minutes total — `make -C examples-api-use` (library + 9 binaries) takes ~19 minutes and
-the Cython Python bindings take ~4 minutes, plus apt/pip/systemd overhead. Budget roughly
-25-30 minutes for a first install on a Pi 3B.
-
-Measured on a Pi 5 (fresh install, `install.sh starting` to `plugininstallend`): ~3
-minutes total — `make -C examples-api-use` ~42s, Cython bindings ~12s, apt/pip dominate
-the rest (including building Pillow from source).
+`config.toml`, so this can no longer happen — see "Components" above. Actual HUB75 panel
+rendering on Pi 5 remains untested: mounting the Bonnet on a Pi 5 requires a tall GPIO
+stacking header (~12-15mm) to clear the Active Cooler, which the test unit doesn't have.
+Pi 3B remains the verified reference platform for hardware-pulse mode and panel rendering.
 
 **Volumio runs `install.sh` via `/bin/sh` (dash), ignoring the `#!/bin/bash` shebang** —
 confirmed via `journalctl -u volumio` showing `COMMAND=/usr/bin/sh .../install.sh`. dash
 does not support `set -o pipefail`, so the script uses plain `set -e` and avoids any
-`cmd | other_cmd` pipeline whose exit status matters (e.g. the matrix tarball is
-downloaded with `wget -qO file` then extracted with `tar -f file`, not `wget -qO- | tar`).
+`cmd | other_cmd` pipeline whose exit status matters.
 
 ## libheif Build
 

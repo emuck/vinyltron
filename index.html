@@ -750,9 +750,9 @@
       <p class="tag">Live playback</p>
       <h2 class="title">Your music.<br>On the wall.<br>In real time.</h2>
       <p class="body-text">
-        Vinyltron listens to Volumio in real time — no polling, no lag. When a
-        track starts, the matrix updates within a frame. When playback stops, it
-        transitions to whatever idle mode you've chosen.
+        Vinyltron follows Volumio's pushState event stream — no polling loop.
+        When a track starts, the matrix updates immediately. When playback stops,
+        it transitions to whatever idle mode you've chosen.
       </p>
       <ul class="feature-bullets">
         <li>Album art resized and cropped to fill the 64×64 display</li>
@@ -775,6 +775,8 @@
     When music stops, the display doesn't go dark. Choose from your own photos,
     five generative screensaver engines, or a live pixel-art weather readout —
     all configurable from the Volumio plugin settings page.
+    Screenshots labeled (sim) are rendered from the
+    <a href="https://github.com/emuck/vinyltron/blob/main/docs/matrix-simulator.md" style="color:var(--cyan)">matrix simulator</a> at 8× scale.
   </p>
 
   <div class="idle-grid">
@@ -784,7 +786,7 @@
     </div>
     <div class="idle-card">
       <img src="docs/images/screenshot-weather-day.png" alt="Weather — clear day">
-      <p class="idle-label">Weather · day</p>
+      <p class="idle-label">Weather · day (sim)</p>
     </div>
     <div class="idle-card photo">
       <img src="docs/images/vinyltron-weather-night.jpg" alt="Weather — night with moon phase">
@@ -792,11 +794,11 @@
     </div>
     <div class="idle-card">
       <img src="docs/images/screenshot-brians-brain.png" alt="Brian's Brain cellular automaton">
-      <p class="idle-label">Brian's Brain</p>
+      <p class="idle-label">Brian's Brain (sim)</p>
     </div>
     <div class="idle-card">
       <img src="docs/images/screenshot-gray-scott.png" alt="Gray-Scott reaction diffusion">
-      <p class="idle-label">Gray-Scott</p>
+      <p class="idle-label">Gray-Scott (sim)</p>
     </div>
   </div>
 
@@ -856,6 +858,8 @@
         A built-in browser UI at <code>volumio.local:3018/photos</code> lets you upload
         idle photos from any device on your home network — phone, tablet, or laptop.
         Set a single photo, pick from a folder, or randomize — all without touching the Pi.
+        No authentication; intended for a trusted home network, the same trust model as
+        the Volumio web UI.
       </p>
       <ul class="feature-bullets">
         <li>Upload, select, delete, and randomize from phone or laptop</li>
@@ -874,7 +878,7 @@
 <div class="vs-band">
   <div class="vs-inner">
     <p class="tag">Why Vinyltron</p>
-    <h2 class="title">Everything a $200 display does.<br>And then some.</h2>
+    <h2 class="title">Album art display, open-source.<br>No subscription. No cloud.</h2>
     <p class="body-text" style="margin-bottom: 0;">
       Commercial LED music displays exist. They ship in a nice box and look great on a
       shelf. Vinyltron lives inside your existing rack, costs a fraction of the price,
@@ -922,8 +926,8 @@
         </tr>
         <tr>
           <td class="feature-name">Volumio integration</td>
-          <td class="them">Polling / separate account</td>
-          <td class="highlight">Real-time, no polling, no lag</td>
+          <td class="them">Varies</td>
+          <td class="highlight">pushState events, no polling</td>
         </tr>
         <tr>
           <td class="feature-name">Open source</td>
@@ -948,8 +952,8 @@
       <h2 class="title">A weekend build.<br>A permanent fixture.</h2>
       <p class="body-text">
         One Pi, one panel, one Bonnet. The Adafruit RGB Matrix Bonnet handles
-        level shifting and hardware PWM timing so the matrix renders clean and
-        flicker-free. A separate 5V supply keeps the Pi stable under full
+        level shifting and hardware PWM timing for cleaner, more stable output
+        than direct GPIO. A separate 5V supply keeps the Pi stable under full
         matrix load. Fits neatly inside an AV cabinet or on a shelf.
       </p>
       <ul class="feature-bullets" style="margin-top: 1.75rem;">
@@ -996,13 +1000,13 @@
   <div class="install-inner">
     <div>
       <p class="tag">Install</p>
-      <h2 class="title">One click<br>in Volumio.<br>Then it runs.</h2>
+      <h2 class="title">Install.<br>Reboot.<br>Configure.</h2>
       <p class="body-text" style="margin-bottom: 1.5rem;">
-        Vinyltron is available in the Volumio plugin store (beta channel).
-        Search for <strong>Vinyltron</strong> under
-        <em>Plugins → User Interface</em> and install. The installer
-        handles dependencies and configures boot files automatically.
-        One reboot, then configure from the Volumio plugin settings page.
+        Vinyltron is in the Volumio plugin store (beta channel). Find it under
+        <em>Plugins → User Interface</em> and install. The installer configures
+        boot files to free GPIO18/PWM for the matrix — this intentionally
+        disables onboard/HDMI audio, which claims that GPIO pin. Reboot when
+        prompted, then set the panel mapping and idle mode in plugin settings.
       </p>
       <p class="body-text" style="margin-bottom: 2.5rem;">
         Full walkthrough in the <a href="https://github.com/emuck/vinyltron/blob/main/docs/install.md" style="color:var(--cyan)">install guide</a>.
