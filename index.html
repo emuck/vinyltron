@@ -252,6 +252,22 @@
       flex-shrink: 0;
       border: 1px solid var(--border);
       box-shadow: 0 0 18px rgba(79,195,247,0.1);
+      position: relative;
+    }
+
+    .marquee-frame:not(.photo)::after {
+      content: 'sim';
+      position: absolute;
+      bottom: 5px;
+      left: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.75);
+      background: rgba(0,0,0,0.55);
+      padding: 1px 5px;
+      border-radius: 3px;
+      pointer-events: none;
     }
 
     .marquee-frame img {
@@ -751,7 +767,7 @@
       <h2 class="title">Your music.<br>On the wall.<br>In real time.</h2>
       <p class="body-text">
         Vinyltron follows Volumio's pushState event stream — no polling loop.
-        When a track starts, the matrix updates immediately. When playback stops,
+        Track changes appear on the next render cycle. When playback stops,
         it transitions to whatever idle mode you've chosen.
       </p>
       <ul class="feature-bullets">
@@ -906,7 +922,7 @@
         </tr>
         <tr>
           <td class="feature-name">Subscription required</td>
-          <td class="them">Optional paid tier</td>
+          <td class="them">Varies</td>
           <td class="highlight">None. Ever.</td>
         </tr>
         <tr>
