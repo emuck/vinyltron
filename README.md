@@ -7,9 +7,9 @@ music display for the room. It shows the current album art while music is playin
 falls back to selected photos, a built-in idle image, an animated screensaver, or a weather
 display when playback stops.
 
-It is built as a Volumio `user_interface` plugin: install the zip from Volumio's plugin
-manager, configure it from the plugin settings page, and let the companion daemon handle
-the matrix.
+It is built as a Volumio `user_interface` plugin: install from the Volumio plugin store
+(beta channel) or from a release zip, configure it from the plugin settings page, and let
+the companion daemon handle the matrix.
 
 ## Why Vinyltron?
 
@@ -54,11 +54,10 @@ Volumio web UI, go to **Plugins → User Interface**, find Vinyltron, and click 
 See the [install guide](docs/install.md) for the full walkthrough, including how to enable
 the beta channel and the ZIP install path if the store is unavailable.
 
-The installer builds the pinned `rpi-rgb-led-matrix` Python bindings on the Pi, installs
-the `vinyltron` systemd service, and configures the boot settings needed for matrix PWM. A
-reboot may be needed after the first install because boot files are changed, and the boot
-changes disable onboard/HDMI audio intentionally so GPIO18/PWM remains free for the
-matrix.
+The plugin zip bundles prebuilt CPython 3.11 armhf `rgbmatrix` bindings — no on-device
+compilation required. The installer also sets up the `vinyltron` systemd service and
+configures boot files for matrix PWM. Those boot changes disable onboard/HDMI audio so
+GPIO18/PWM remains free for the matrix; a reboot is required for them to take effect.
 
 ## Hardware Snapshot
 

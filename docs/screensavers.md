@@ -9,7 +9,7 @@ screensaver stops immediately and the matrix returns to album art.
 Open Vinyltron Settings and set:
 
 - **Idle Mode**: `Screensaver`
-- **Screensaver**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, or `Reaction-Diffusion`
+- **Screensaver**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, `Reaction-Diffusion`, or `Lissajous`
 - **Palette**: choose a color pair
 - **Speed**: `Slow`, `Medium`, or `Fast`
 - **Reset Interval**: seconds between random state resets, or `0` to disable
@@ -120,6 +120,20 @@ reaction is most active.
 
 Advanced tuning controls the feed rate, kill rate, and grid scale. Lower kill values tend
 to produce faster-spreading "worm" patterns; higher values tend toward more static spots.
+
+## Lissajous
+
+Lissajous draws a parametric Lissajous figure — the path traced by a point whose x and y
+coordinates follow independent sinusoidal oscillations at different frequencies. The default
+frequency ratio is 3:2, producing a smooth three-lobed orbit. Older pixels fade out, leaving
+a glowing trail that retains the figure's shape while the phase drifts slowly over time.
+
+Because the figure is fully redrawn each frame from a parametric equation, there is no
+random state to seed and no grid to reset — the pattern changes continuously via the phase
+drift alone. Speed controls the drift rate; a slower setting extends the visible trail.
+
+Advanced tuning controls the frequency ratio (`freq_a`, `freq_b`), trail fade rate, and
+drift speed.
 
 ## Configuration Model
 

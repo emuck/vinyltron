@@ -9,7 +9,7 @@ hardware tests.
 - Raspberry Pi 3B with 64x64 HUB75E panel and Adafruit RGB Matrix Bonnet
 - Raspberry Pi 5 software-pulse behavior
 - Volumio 4 / Bookworm plugin install path
-- Legacy Volumio 3 / Buster development baseline
+- Legacy Volumio 3 / Buster (historical development baseline; not a supported target)
 
 ## Completed Acceptance Coverage
 
@@ -17,7 +17,7 @@ hardware tests.
 - [x] Update from an existing plugin install
 - [x] Uninstall from Volumio plugin manager
 - [x] Reinstall after uninstall
-- [x] `rgbmatrix` builds and imports on-device
+- [x] Bundled prebuilt `rgbmatrix` bindings load and import on-device
 - [x] `vinyltron` systemd service starts, stops, restarts, reloads, and shuts down cleanly
 - [x] Playback state handling: play, pause, stop, reboot, and Volumio reconnect
 - [x] Album art rendering on the 64x64 matrix

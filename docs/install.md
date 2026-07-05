@@ -13,7 +13,8 @@ Confirm the hardware basics first:
 - Separate 5V high-current supply for the matrix
 - Bonnet E-address jumper closed for 64-row panels, if using the Bonnet
 - GPIO4-to-GPIO18 quality jumper installed if using Bonnet `adafruit-hat-pwm` quality mode
-- SSH access to the Pi (enabled in Volumio under `Settings -> System`)
+- SSH access to the Pi (enabled in Volumio under `Settings -> System`) — required for
+  the ZIP install path and post-install troubleshooting; not needed for the plugin store path
 
 See [hardware setup](hardware.md) for wiring, power, and Bonnet details.
 
