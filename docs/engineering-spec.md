@@ -7,8 +7,9 @@ to Volumio's Socket.io `pushState` event stream for real-time track change notif
 fetches album art, processes it through an image pipeline, and pushes frames to a 64×64
 HUB75E RGB LED matrix via the rpi-rgb-led-matrix C library.
 
-The plugin targets **Volumio 4 / Bookworm** for store submission. Development and testing
-were done on Volumio 3 / Buster; the daemon is Python 3.7+ compatible and runs on both.
+The plugin targets **Volumio 4 / Bookworm**. The shipped release bundles prebuilt CPython
+3.11 armhf binaries, so Bookworm is the supported runtime. Buster was the original
+development baseline and is not a supported target.
 
 ## Hardware Constraints
 
@@ -28,8 +29,8 @@ were done on Volumio 3 / Buster; the daemon is Python 3.7+ compatible and runs o
 - CPU: 4× Cortex-A53 @ 1.2GHz — sufficient; keep image pipeline lightweight
 
 ### Volumio OS
-- **Debian Buster** (Volumio 3, tested) — Python 3.7, GCC 8
-- **Debian Bookworm** (Volumio 4, store target) — Python 3.11, Node ≥ 20
+- **Debian Bookworm** (Volumio 4) — Python 3.11, Node ≥ 20; the only supported runtime
+- **Debian Buster** (Volumio 3) — historical development baseline; not a supported target
 - Standard apt, systemd available
 - User customizations to `/boot/config.txt` should go in `/boot/userconfig.txt`
   to survive Volumio system updates
@@ -116,7 +117,7 @@ Pi GND pin ──► Panel GND (common ground required)
 ## Software Architecture
 
 ### Runtime
-- **Python 3.7+** — tested on Buster/Volumio 3.x (Python 3.7); plugin targets Bookworm/Volumio 4 (Python 3.11)
+- **Python 3.11** (Bookworm) — the only supported runtime; bundled rgbmatrix bindings are CPython 3.11 armhf
 - Runs as a systemd service, starts after Volumio (`After=volumio.service`), runs as root
 - Logging via Python `logging` module to journald
 
