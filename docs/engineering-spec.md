@@ -326,8 +326,9 @@ The optional `[schedule]` section controls idle/photo-frame display time:
 
 - `display_on = false` is a hard master off and blanks the matrix.
 - When `display_on = true`, schedule windows gate idle/photo-frame display.
-- Active Volumio `play` or `pause` state wakes the matrix outside the schedule only when
-  `[volumio] artwork_enabled = true`.
+- Active Volumio `play` state wakes the matrix outside the schedule only when
+  `[volumio] artwork_enabled = true`. Paused or stopped playback obeys the schedule,
+  including when the artwork timer has switched the display to idle photos.
 - Overnight windows are supported, for example `on_time = "18:00"` and
   `off_time = "01:00"`.
 

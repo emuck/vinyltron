@@ -106,8 +106,10 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         s[0].content[7].value = {value: format_font, label: self._labelForFormatFont(format_font)};
         var badge_duration = (self.config.get('badge_duration') || 10).toString();
         s[0].content[8].value = badge_duration;
+        var album_art_duration = self._validAlbumArtDuration(self.config.get('album_art_duration'));
+        s[0].content[9].value = album_art_duration.toString();
         var startup_delay_seconds = self._validStartupDelaySeconds(self.config.get('startup_delay_seconds'));
-        s[0].content[9].value = startup_delay_seconds.toString();
+        s[0].content[10].value = startup_delay_seconds.toString();
 
         var fallback_mode = self._validFallbackMode(self.config.get('fallback_mode') || 'single');
         var fallback_image_folder = self.config.get('fallback_image_folder') || DEFAULT_IDLE_FOLDER;
@@ -261,6 +263,7 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['overlays', 'format_badge', 'format_badge', 'boolean'],
             ['overlays', 'format_font', 'format_font', 'string'],
             ['overlays', 'badge_duration', 'badge_duration', 'number'],
+            ['overlays', 'album_art_duration', 'album_art_duration', 'number'],
             ['schedule', 'enabled', 'schedule_enabled', 'boolean'],
             ['schedule', 'on_time', 'schedule_on_time', 'string'],
             ['schedule', 'off_time', 'schedule_off_time', 'string']
@@ -478,6 +481,8 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     var format_font = data['format_font'] ? data['format_font']['value'] : 'tom_thumb';
     var badge_duration_value = data['badge_duration'] && data['badge_duration']['value'] !== undefined ? data['badge_duration']['value'] : data['badge_duration'];
     var badge_duration = badge_duration_value !== undefined ? parseInt(badge_duration_value) : 10;
+    var album_art_duration_value = data['album_art_duration'] && data['album_art_duration']['value'] !== undefined ? data['album_art_duration']['value'] : data['album_art_duration'];
+    var album_art_duration = self._validAlbumArtDuration(album_art_duration_value);
     var startup_delay_seconds_value = data['startup_delay_seconds'] && data['startup_delay_seconds']['value'] !== undefined ? data['startup_delay_seconds']['value'] : data['startup_delay_seconds'];
     var startup_delay_seconds = self._validStartupDelaySeconds(startup_delay_seconds_value);
     if (isNaN(progress_bar_height)) progress_bar_height = 0;
@@ -495,6 +500,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
     self.config.set('format_badge', format_badge);
     self.config.set('format_font', format_font);
     self.config.set('badge_duration', badge_duration);
+    self.config.set('album_art_duration', album_art_duration);
     self.config.set('startup_delay_seconds', startup_delay_seconds);
 
     self.logger.info('Vinyltron: saving display settings: ' + JSON.stringify({
@@ -508,6 +514,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
         format_badge: format_badge,
         format_font: format_font,
         badge_duration: badge_duration,
+        album_art_duration: album_art_duration,
         startup_delay_seconds: startup_delay_seconds
     }));
 
@@ -520,6 +527,7 @@ ControllerVinyltron.prototype.saveDisplay = function(data) {
                            format_badge: format_badge,
                            format_font: format_font,
                            badge_duration: badge_duration,
+                           album_art_duration: album_art_duration,
                            startup_delay_seconds: startup_delay_seconds});
 
     self._service('reload', 'display settings save');
@@ -946,6 +954,7 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         if (fields.format_badge !== undefined) content = this._patchTomlInSection(content, 'overlays', 'format_badge', fields.format_badge, 'progress_bar_background');
         if (fields.format_font !== undefined) content = this._patchTomlInSection(content, 'overlays', 'format_font', this._tomlString(fields.format_font), 'format_badge');
         if (fields.badge_duration !== undefined) content = this._patchTomlInSection(content, 'overlays', 'badge_duration', fields.badge_duration, 'format_font');
+        if (fields.album_art_duration !== undefined) content = this._patchTomlInSection(content, 'overlays', 'album_art_duration', fields.album_art_duration, 'badge_duration');
         if (fields.schedule_enabled !== undefined) content = this._patchTomlInSection(content, 'schedule', 'enabled', fields.schedule_enabled);
         if (fields.schedule_on_time !== undefined) content = this._patchTomlInSection(content, 'schedule', 'on_time', this._tomlString(fields.schedule_on_time), 'enabled');
         if (fields.schedule_off_time !== undefined) content = this._patchTomlInSection(content, 'schedule', 'off_time', this._tomlString(fields.schedule_off_time), 'on_time');
@@ -1059,6 +1068,12 @@ ControllerVinyltron.prototype._validFallbackMode = function(value) {
 };
 
 ControllerVinyltron.prototype._validFallbackRotateSeconds = function(value) {
+    value = parseInt(value);
+    if (isNaN(value) || value < 0) return 0;
+    return value;
+};
+
+ControllerVinyltron.prototype._validAlbumArtDuration = function(value) {
     value = parseInt(value);
     if (isNaN(value) || value < 0) return 0;
     return value;

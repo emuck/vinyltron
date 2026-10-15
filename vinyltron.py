@@ -97,6 +97,9 @@ class Vinyltron:
         self._overlay_lock = threading.Lock()
         self._badge_timer: Optional[threading.Timer] = None
         self._badge_visible = False
+        self._album_art_timer: Optional[threading.Timer] = None
+        self._album_art_timer_id = 0
+        self._album_art_timed_out = False
         self._fallback_visible = False
         self._fallback_timer: Optional[threading.Timer] = None
         self._fallback_timer_id = 0
@@ -167,6 +170,8 @@ class Vinyltron:
 
         if status not in ('play', 'pause'):
             with self._overlay_lock:
+                self._cancel_album_art_timer_locked()
+                self._album_art_timed_out = False
                 if self._fallback_visible:
                     self._clear_playback_overlays_on_fallback_locked(status)
                     clear_track_state = True
@@ -181,12 +186,6 @@ class Vinyltron:
             self._on_idle_artwork_state(state, albumart, status)
             return
 
-        with self._overlay_lock:
-            self._cancel_fallback_locked()
-            self._cancel_idle_rotation_locked()
-            self._cancel_screensaver_locked()
-            self._cancel_weather_locked()
-
         if not albumart:
             return
 
@@ -196,8 +195,11 @@ class Vinyltron:
         with self._state_lock:
             is_current_track = track_key == self._current_track_key
             is_pending_track = track_key == self._pending_track_key
+            album_changed = album_key != self._current_album_key
 
         if is_current_track:
+            if self._album_art_timed_out:
+                return
             self._sync_progress_from_state(state)
             return
         if is_pending_track:
@@ -209,11 +211,17 @@ class Vinyltron:
         with self._state_lock:
             self._state_seq += 1
             seq = self._state_seq
-            album_changed = album_key != self._current_album_key
             self._current_track_key = track_key
             self._pending_track_key = track_key
 
         with self._overlay_lock:
+            if album_changed:
+                self._cancel_fallback_locked()
+                self._cancel_idle_rotation_locked()
+                self._cancel_screensaver_locked()
+                self._cancel_weather_locked()
+                self._cancel_album_art_timer_locked()
+                self._album_art_timed_out = False
             self._cancel_overlay_locked()
             self._cancel_progress_locked(clear_visible=album_changed)
             if album_changed and self._badge_visible:
@@ -266,15 +274,17 @@ class Vinyltron:
 
         if img:
             with self._overlay_lock:
-                if album_changed or albumart != self._current_albumart:
+                if album_changed:
                     self._ensure_display().show_image(img)
                     self._fallback_visible = False
+                    self._schedule_album_art_timeout_locked(state.get('status', 'play'))
             with self._state_lock:
                 self._current_albumart = albumart
                 self._current_album_key = album_key
                 self._current_track_key = track_key
                 self._pending_track_key = None
-            self._sync_progress_from_state(state)
+            if not self._album_art_timed_out:
+                self._sync_progress_from_state(state)
             if album_changed:
                 self._show_format_badge(state)
         else:
@@ -497,6 +507,52 @@ class Vinyltron:
         if self._badge_timer:
             self._badge_timer.cancel()
             self._badge_timer = None
+
+    def _album_art_duration_seconds(self) -> int:
+        try:
+            seconds = int(self._cfg.get('overlays', {}).get('album_art_duration', 0))
+        except (TypeError, ValueError):
+            seconds = 0
+        return max(0, seconds)
+
+    def _schedule_album_art_timeout_locked(self, status: str):
+        seconds = self._album_art_duration_seconds()
+        if seconds <= 0:
+            return
+        self._album_art_timer_id += 1
+        timer_id = self._album_art_timer_id
+        log.info("Album art will revert to the idle display in %ss", seconds)
+        self._album_art_timer = threading.Timer(
+            seconds,
+            self._show_fallback_after_album_art_timeout,
+            args=(timer_id, status),
+        )
+        self._album_art_timer.daemon = True
+        self._album_art_timer.start()
+
+    def _cancel_album_art_timer_locked(self):
+        if self._album_art_timer:
+            self._album_art_timer.cancel()
+            self._album_art_timer = None
+        self._album_art_timer_id += 1
+
+    def _show_fallback_after_album_art_timeout(self, timer_id: int, status: str):
+        with self._overlay_lock:
+            if timer_id != self._album_art_timer_id:
+                return
+            self._album_art_timer = None
+            if not self._display_on or self._album_art_duration_seconds() <= 0:
+                return
+            if self._last_state.get('status') not in ('play', 'pause'):
+                return
+            self._cancel_overlay_locked()
+            self._cancel_progress_locked(clear_visible=True)
+            if self._badge_visible:
+                self._clear_badge_if_initialized()
+            self._badge_visible = False
+            self._album_art_timed_out = True
+            self._show_or_start_fallback_locked(status)
+        log.info("Album art duration elapsed; showing idle display during playback")
 
     def _schedule_fallback_locked(self, status: str):
         if self._fallback_timer or self._fallback_visible:
@@ -1298,6 +1354,7 @@ class Vinyltron:
         log.info("Shutting down")
         self._running = False
         with self._overlay_lock:
+            self._cancel_album_art_timer_locked()
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
             self._cancel_screensaver_locked()
@@ -1325,6 +1382,7 @@ class Vinyltron:
             self._display_on = self._effective_display_on()
             new_format_badge = self._cfg.get('overlays', {}).get('format_badge', False)
             with self._overlay_lock:
+                self._cancel_album_art_timer_locked()
                 self._cancel_fallback_locked()
                 self._cancel_idle_rotation_locked()
                 self._cancel_screensaver_locked()
@@ -1358,7 +1416,7 @@ class Vinyltron:
         if not self._volumio_artwork_enabled():
             return False
         state = state or self._last_state
-        return state.get('status') in ('play', 'pause')
+        return state.get('status') == 'play'
 
     def _schedule_allows_display(self) -> bool:
         schedule = self._cfg.get('schedule', {})
@@ -1401,6 +1459,7 @@ class Vinyltron:
 
     def _clear_display_for_power_off(self, message: str):
         with self._overlay_lock:
+            self._cancel_album_art_timer_locked()
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
             self._cancel_screensaver_locked()

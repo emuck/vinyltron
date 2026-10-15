@@ -15,7 +15,7 @@
             },
             "saveButton": {
                 "label": "Save",
-                "data": ["brightness", "gamma", "volumio_artwork_enabled", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "format_font", "badge_duration", "startup_delay_seconds"],
+                "data": ["brightness", "gamma", "volumio_artwork_enabled", "progress_bar_height", "progress_bar_foreground", "progress_bar_background", "format_badge", "format_font", "badge_duration", "album_art_duration", "startup_delay_seconds"],
                 "popup": {
                     "allowClose": true,
                     "type": "success",
@@ -110,6 +110,14 @@
                     "label": "Format Duration (seconds)",
                     "value": "10",
                     "doc": "How long the format badge stays visible after a new track starts"
+                },
+                {
+                    "id": "album_art_duration",
+                    "element": "input",
+                    "label": "Album Art Duration (seconds)",
+                    "value": "0",
+                    "min": 0,
+                    "doc": "How long album art stays visible before returning to the selected idle display. Set to 0 to keep album art visible during playback."
                 },
                 {
                     "id": "startup_delay_seconds",
@@ -352,7 +360,7 @@
                     "element": "switch",
                     "label": "Schedule",
                     "value": false,
-                    "doc": "Turn the matrix on and off automatically each day."
+                    "doc": "Turn the matrix on and off automatically each day. Active playback with Volumio Artwork enabled keeps it on; paused or stopped playback follows the schedule."
                 },
                 {
                     "id": "schedule_on_time",
