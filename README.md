@@ -23,7 +23,7 @@ foundation for it.
 
 ## Features
 
-- Live Volumio album art from `pushState`, resized and cropped for a 64x64 matrix
+- Live Volumio album art from `pushState`, resized and cropped for a 64x64 matrix, with an optional timed return to the selected idle display
 - Pause, stop, track-change, reboot, and reconnect handling without flashing stale art
 - Optional progress strip with configurable height and RGB colors
 - Optional compact format overlay for bitrate, sample rate, lossless, and DSD labels

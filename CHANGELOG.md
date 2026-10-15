@@ -5,6 +5,12 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+- Paused playback now obeys the display schedule, so idle photos turn off at the
+  configured time. Only active playback can override the schedule.
+- Added an optional **Album Art Duration** display setting. After that many seconds of
+  playback, album art yields to the configured idle photo, screensaver, or weather view;
+  `0` retains the previous always-show-art behavior. The duration is per album, so
+  successive tracks from the same album do not replay artwork or restart the timer.
 - Removed the AQI glyph's breathing brighten/dim animation added in 0.2.10 — it looked
   jerky on the panel. The AQI glyph is now drawn at a solid, constant color.
 
