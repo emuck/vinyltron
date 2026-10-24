@@ -1,18 +1,27 @@
 # Screensavers
 
 Vinyltron can use an animated screensaver as the idle fallback instead of a static image.
-Album art still wins: when Volumio provides artwork and artwork display is enabled, the
-screensaver stops immediately and the matrix returns to album art.
+When Volumio provides artwork and artwork display is enabled, a new album returns the
+matrix to album art. A positive Album Art Duration returns to the screensaver after that
+window; later tracks from the same album do not restart it. Duration `0` keeps artwork on.
 
 ## How To Enable
 
 Open Vinyltron Settings and set:
 
 - **Idle Mode**: `Screensaver`
-- **Screensaver**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, `Reaction-Diffusion`, or `Lissajous`
-- **Palette**: choose a color pair
+- **Screensaver**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, `Reaction-Diffusion`,
+  `Lissajous`, `Gravity Ballet`, `Rain on Glass`, `Radar Garden`, or `Random`
+- **Palette**: choose a color pair or `Random`
 - **Speed**: `Slow`, `Medium`, or `Fast`
 - **Reset Interval**: seconds between random state resets, or `0` to disable
+
+Choose **Screensaver → Random** to pick an engine when the screensaver starts and
+a different engine at every reset interval. **Palette → Random** independently picks
+a different color pair at the same times. Either setting can be random while the other
+stays fixed. With a reset interval of `0`, the initial choices stay until the screensaver
+next starts. Random choices avoid immediately repeating the previous selection.
+Radar Garden preserves image colors, so changing its palette has no visible effect.
 
 The screensaver appears anywhere Vinyltron would otherwise show fallback art:
 
@@ -21,6 +30,7 @@ The screensaver appears anywhere Vinyltron would otherwise show fallback art:
 - scheduled display-on idle state
 - album-art fetch failure
 - playback with Volumio artwork disabled
+- playback after the Album Art Duration expires
 
 During early service startup, Vinyltron keeps the matrix display uninitialized for every
 idle fallback mode. It polls Volumio's local `/status` endpoint and only starts the idle
@@ -30,6 +40,29 @@ and the web UI finish coming up. If `/status` never reports `ready`, Vinyltron s
 idle display anyway after 5 minutes so the matrix doesn't stay blank indefinitely.
 
 It stops on playback artwork, display off, config reload, service stop, and shutdown.
+
+## Radar Garden
+
+A rotating sweep reveals the original colors of the current album artwork at full
+brightness, with pixels fading after the beam passes. When playback is paused or
+stopped, or artwork is unavailable, it scans the configured default fallback image.
+The simulator previews the built-in idle image. Palette settings do not recolor this
+effect, since it preserves the source image colors. Included in Random selection.
+
+## Rain on Glass
+
+Small droplets collect and merge on glass, then slide down as they grow heavier.
+Faint wet trails fade behind them, with bright highlights and lens-like sampling of
+a softly drifting background glow. All palettes and Random selection are supported.
+
+## Gravity Ballet
+
+Four colored bodies orbit a heavier star, leaving fading trails and bright white heads.
+All five bodies attract one another using softened Newtonian gravity and velocity-Verlet
+integration. Close encounters are softened to avoid extreme accelerations; the camera
+follows the central star. This is a stylized gravitational system, not a model of a
+particular solar system. Speed controls simulation playback rate. Each reset seeds new
+orbital phases and speeds; all palettes and Random selections are supported.
 
 ## Brian's Brain
 

@@ -3,7 +3,7 @@ import random
 from array import array
 from typing import Dict, List, NamedTuple, Tuple
 
-from PIL import Image
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 
 RGB = Tuple[int, int, int]
@@ -35,6 +35,202 @@ GRAY_SCOTT_PALETTES: Dict[str, Tuple[RGB, ...]] = {
     'blue_red': ((5, 5, 25), (20, 50, 140), (40, 110, 255), (255, 90, 70), (255, 50, 50)),
     'white_violet': ((10, 0, 30), (70, 0, 90), (200, 20, 160), (80, 180, 255), (140, 255, 255)),
 }
+
+
+class RadarGarden:
+    """A rotating beam reveals source-image pixels with a fading afterglow."""
+
+    def __init__(self, width: int, height: int, palette: str = 'cyan_amber',
+                 seed: str = '', image=None, source_provider=None):
+        self.width, self.height = int(width), int(height)
+        self.source_provider = source_provider
+        self.source = None
+        self.source_key = None
+        self.angle = random.Random(seed or None).uniform(0, math.tau)
+        self.angles = [
+            math.atan2(y-(height-1)/2, x-(width-1)/2) % math.tau
+            for y in range(height) for x in range(width)
+        ]
+        self.levels = [0.0] * (width * height)
+        self._set_source(image or Image.new('RGB', (width, height)))
+
+    def _set_source(self, image):
+        from PIL import ImageOps
+        self.source = list(ImageOps.fit(image.convert('RGB'),
+                                       (self.width, self.height)).getdata())
+        self.levels = [0.0] * len(self.angles)
+
+    def frame(self) -> Image.Image:
+        if self.source_provider:
+            key, image = self.source_provider()
+            if key != self.source_key:
+                self._set_source(image)
+                self.source_key = key
+        previous = self.angle
+        step = 0.075
+        self.angle = (self.angle + step) % math.tau
+        pixels = bytearray(len(self.angles)*3)
+        for i, angle in enumerate(self.angles):
+            # Illuminate the full angular sector crossed since the previous frame;
+            # no gaps at the corners or when the sweep wraps through zero.
+            if (angle-previous) % math.tau <= step:
+                self.levels[i] = 1.0
+            else:
+                self.levels[i] *= 0.955
+            offset = i*3
+            for channel in range(3):
+                pixels[offset+channel] = round(self.source[i][channel]*self.levels[i])
+        return Image.frombytes('RGB', (self.width, self.height), bytes(pixels))
+
+class RainOnGlass:
+    """Growing, merging droplets refract a blurred, slowly drifting city glow."""
+
+    def __init__(self, width: int, height: int, palette: str = 'cyan_amber', seed: str = ''):
+        self.width, self.height = int(width), int(height)
+        self.colors = LANGTONS_ANT_PALETTES.get(palette, LANGTONS_ANT_PALETTES['cyan_amber'])
+        self.random = random.Random(seed or None)
+        self.drops = []
+        self.tick = 0
+        self.wet = Image.new('RGB', (self.width, self.height))
+        self.fade = [int(v * 0.86) for v in range(256)] * 3
+        self.lights = [(self.random.uniform(0, self.width), self.random.uniform(0, self.height),
+                        self.random.uniform(4, 11), self.colors[i % len(self.colors)])
+                       for i in range(9)]
+        for _ in range(24):
+            self._spawn()
+
+    def _spawn(self):
+        self.drops.append([self.random.uniform(1, max(1, self.width - 2)),
+                           self.random.uniform(0, self.height - 1),
+                           self.random.uniform(0.4, 1.8), 0.0])
+
+    def frame(self) -> Image.Image:
+        self.tick += 1
+        background = Image.new('RGB', (self.width, self.height), (2, 4, 9))
+        glow = ImageDraw.Draw(background)
+        for i, (x, y, radius, color) in enumerate(self.lights):
+            x += math.sin(self.tick * 0.008 + i) * 3
+            glow.ellipse((x-radius, y-radius, x+radius, y+radius),
+                         fill=tuple(int(v * 0.30) for v in color))
+        background = background.filter(ImageFilter.GaussianBlur(5))
+        self.wet = self.wet.point(self.fade)
+        streaks = ImageDraw.Draw(self.wet)
+        if len(self.drops) < 60 and self.random.random() < 0.8:
+            self._spawn()
+        for drop in self.drops:
+            x, y, area, speed = drop
+            area += 0.012
+            if area > 3.0:
+                speed = min(2.5, speed + 0.07 * math.sqrt(area))
+            previous = (x, y)
+            x += math.sin(y * 0.25 + x) * speed * 0.055
+            y += speed
+            if speed:
+                streaks.line((previous, (x, y)), fill=(22, 32, 42), width=1)
+            drop[:] = x, y, area, speed
+        # Area is conserved when touching droplets coalesce.
+        for i in range(len(self.drops)):
+            a = self.drops[i]
+            if not a[2]:
+                continue
+            for b in self.drops[i+1:]:
+                if not b[2]:
+                    continue
+                if math.hypot(a[0]-b[0], a[1]-b[1]) < (math.sqrt(a[2])+math.sqrt(b[2])) * 0.65:
+                    total = a[2] + b[2]
+                    a[0] = (a[0]*a[2]+b[0]*b[2])/total
+                    a[1] = (a[1]*a[2]+b[1]*b[2])/total
+                    a[2], a[3], b[2] = total, max(a[3], b[3]), 0.0
+        self.drops = [d for d in self.drops if d[2] and d[1] < self.height + 4]
+        # Blend faint wet tracks into the glow before drawing glass-like lenses.
+        frame = ImageChops.add(background, self.wet)
+        draw = ImageDraw.Draw(frame)
+        for x, y, area, speed in self.drops:
+            radius = min(3.5, math.sqrt(area) * 0.65)
+            elongation = 1 + speed * 0.30
+            px = max(0, min(self.width-1, round(x-radius)))
+            py = max(0, min(self.height-1, round(y+radius)))
+            refracted = background.getpixel((px, py))
+            lens = tuple(min(255, int(v * 2.8) + 14) for v in refracted)
+            draw.ellipse((x-radius, y-radius*elongation, x+radius, y+radius*elongation),
+                         fill=(2, 5, 10), outline=lens)
+            if radius > 0.65:
+                draw.point((round(x-radius*0.4), round(y-radius*0.5)), fill=(145, 180, 195))
+        return frame
+
+
+class GravityBallet:
+    """Softened Newtonian gravity, integrated with velocity Verlet.
+
+    A heavy central body and four lighter orbiters exchange momentum. Coordinates
+    are physical simulation units; only the drawing is scaled to the panel.
+    """
+
+    def __init__(self, width: int, height: int, palette: str = 'cyan_amber', seed: str = ''):
+        self.width, self.height = int(width), int(height)
+        self.colors = LANGTONS_ANT_PALETTES.get(palette, LANGTONS_ANT_PALETTES['cyan_amber'])
+        self.random = random.Random(seed or None)
+        self.trails = Image.new('RGB', (self.width, self.height))
+        self._fade_lut = [max(0, int(v * 0.94) - 1) for v in range(256)] * 3
+        self.masses = [120.0, 1.2, 1.6, 2.0, 2.4]
+        self.positions = [[0.0, 0.0]]
+        self.velocities = [[0.0, 0.0]]
+        direction = self.random.choice((-1, 1))
+        for radius in (7.0, 12.0, 18.0, 25.0):
+            angle = self.random.uniform(0, math.tau)
+            # Slightly sub-circular speeds produce gently elliptical orbits.
+            speed = math.sqrt(120.0 / radius) * self.random.uniform(0.86, 1.0)
+            self.positions.append([radius * math.cos(angle), radius * math.sin(angle)])
+            self.velocities.append([-direction * speed * math.sin(angle), direction * speed * math.cos(angle)])
+        for axis in (0, 1):
+            self.velocities[0][axis] = -sum(
+                self.masses[i] * self.velocities[i][axis] for i in range(1, 5)
+            ) / self.masses[0]
+        self.accelerations = self._accelerations()
+
+    def _accelerations(self):
+        result = [[0.0, 0.0] for _ in self.masses]
+        for i in range(len(self.masses)):
+            for j in range(i + 1, len(self.masses)):
+                dx = self.positions[j][0] - self.positions[i][0]
+                dy = self.positions[j][1] - self.positions[i][1]
+                # Softening prevents singular forces in close encounters.
+                force = (dx * dx + dy * dy + 0.8 ** 2) ** -1.5
+                for axis, delta in enumerate((dx, dy)):
+                    result[i][axis] += self.masses[j] * delta * force
+                    result[j][axis] -= self.masses[i] * delta * force
+        return result
+
+    def frame(self) -> Image.Image:
+        self.trails = self.trails.point(self._fade_lut)
+        draw = ImageDraw.Draw(self.trails)
+        scale = (min(self.width, self.height) - 6) / 60.0
+        cx, cy = (self.width - 1) / 2, (self.height - 1) / 2
+        dt = 0.05
+        for _ in range(8):
+            for i in range(len(self.masses)):
+                for axis in (0, 1):
+                    self.velocities[i][axis] += 0.5 * dt * self.accelerations[i][axis]
+                    self.positions[i][axis] += dt * self.velocities[i][axis]
+            self.accelerations = self._accelerations()
+            for i in range(len(self.masses)):
+                for axis in (0, 1):
+                    self.velocities[i][axis] += 0.5 * dt * self.accelerations[i][axis]
+                if i:
+                    # Follow the star without modifying the simulated trajectories.
+                    x = cx + (self.positions[i][0] - self.positions[0][0]) * scale
+                    y = cy + (self.positions[i][1] - self.positions[0][1]) * scale
+                    if 0 <= x < self.width and 0 <= y < self.height:
+                        draw.point((round(x), round(y)), fill=self.colors[(i - 1) % len(self.colors)])
+        frame = self.trails.copy()
+        heads = ImageDraw.Draw(frame)
+        heads.ellipse((cx - 1, cy - 1, cx + 1, cy + 1), fill=(255, 235, 190))
+        for i in range(1, len(self.masses)):
+            x = cx + (self.positions[i][0] - self.positions[0][0]) * scale
+            y = cy + (self.positions[i][1] - self.positions[0][1]) * scale
+            if 0 <= x < self.width and 0 <= y < self.height:
+                heads.point((round(x), round(y)), fill=(255, 255, 255))
+        return frame
 
 
 class Ant(NamedTuple):

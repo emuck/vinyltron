@@ -235,9 +235,13 @@
                         {"value": "langtons_ant", "label": "Langton's Ant"},
                         {"value": "chaos_game", "label": "Chaos Game"},
                         {"value": "gray_scott", "label": "Reaction-Diffusion"},
-                        {"value": "lissajous", "label": "Lissajous"}
+                        {"value": "lissajous", "label": "Lissajous"},
+                        {"value": "gravity_ballet", "label": "Gravity Ballet"},
+                        {"value": "rain_on_glass", "label": "Rain on Glass"},
+                        {"value": "radar_garden", "label": "Radar Garden"},
+                        {"value": "random", "label": "Random"}
                     ],
-                    "doc": "Generated display used when Idle Mode is Screensaver."
+                    "doc": "Generated display used when Idle Mode is Screensaver. Random picks a different screensaver at startup and each reset interval."
                 },
                 {
                     "id": "screensaver_palette",
@@ -248,9 +252,10 @@
                         {"value": "cyan_amber",    "label": "Cyan / Amber"},
                         {"value": "green_magenta", "label": "Green / Magenta"},
                         {"value": "blue_red",      "label": "Blue / Red"},
-                        {"value": "white_violet",  "label": "White / Violet"}
+                        {"value": "white_violet",  "label": "White / Violet"},
+                        {"value": "random", "label": "Random"}
                     ],
-                    "doc": "Color pair used by the selected screensaver."
+                    "doc": "Color pair used by the selected screensaver. Random picks a different palette at startup and each reset interval, independently of the screensaver choice."
                 },
                 {
                     "id": "screensaver_fps",

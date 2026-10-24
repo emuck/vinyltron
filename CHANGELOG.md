@@ -5,6 +5,15 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+- Added Radar Garden: a rotating sweep reveals album artwork in its original colors,
+  fading after the beam passes. Uses the default image when playback is inactive.
+- Added Rain on Glass: growing, merging droplets and sliding wet trails over a soft,
+  palette-colored background glow. Included in the simulator and Random selection.
+- Added Gravity Ballet: mutually attracting orbiters with fading colored trails,
+  softened gravitational forces, and a star-following camera. Available in the plugin,
+  simulator, and Random screensaver selection.
+- Added Random screensaver and palette choices. Each reset picks new choices without
+  immediate repeats; a zero reset interval keeps the initial choices until next startup.
 - Paused playback now obeys the display schedule, so idle photos turn off at the
   configured time. Only active playback can override the schedule.
 - Added an optional **Album Art Duration** display setting. After that many seconds of

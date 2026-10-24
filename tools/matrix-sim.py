@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 
-from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES, ChaosGame, GrayScott, LangtonsAnt, Lissajous  # noqa: E402
+from screensavers import BriansBrain, BRIANS_BRAIN_PALETTES, ChaosGame, GravityBallet, GrayScott, LangtonsAnt, Lissajous, RadarGarden, RainOnGlass  # noqa: E402
 from weather import MockWeatherRenderer  # noqa: E402
 
 
@@ -718,6 +718,14 @@ class EngineRegistry:
                 grid_scale=params['grid_scale'],
                 seed=params['seed'],
             )
+        if params['engine'] == 'gravity_ballet':
+            return GravityBallet(WIDTH, HEIGHT, palette=params['palette'], seed=params['seed'])
+        if params['engine'] == 'rain_on_glass':
+            return RainOnGlass(WIDTH, HEIGHT, palette=params['palette'], seed=params['seed'])
+        if params['engine'] == 'radar_garden':
+            from PIL import Image
+            with Image.open(os.path.join(ROOT_DIR, 'assets', 'idle.png')) as image:
+                return RadarGarden(WIDTH, HEIGHT, seed=params['seed'], image=image.copy())
         if params['engine'] == 'lissajous':
             return Lissajous(
                 WIDTH,
@@ -843,6 +851,9 @@ class Handler(BaseHTTPRequestHandler):
                     {'id': 'chaos_game', 'label': "Chaos Game"},
                     {'id': 'gray_scott', 'label': "Reaction-Diffusion"},
                     {'id': 'lissajous', 'label': "Lissajous"},
+                    {'id': 'gravity_ballet', 'label': "Gravity Ballet"},
+                    {'id': 'rain_on_glass', 'label': "Rain on Glass"},
+                    {'id': 'radar_garden', 'label': "Radar Garden"},
                     {'id': 'weather', 'label': "Weather"},
                 ],
                 'palettes': [

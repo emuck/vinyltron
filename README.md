@@ -29,6 +29,8 @@ foundation for it.
 - Optional compact format overlay for bitrate, sample rate, lossless, and DSD labels
 - Idle modes: built-in image, selected folder image, random photo rotation, animated
   screensavers, or a weather display
+- Eight screensavers, including Gravity Ballet, Rain on Glass, and image-scanning Radar
+  Garden, with independent Random engine and palette choices at each reset interval
 - Phone-friendly photo manager for adding, selecting, deleting, and randomizing idle photos,
   with a configurable port if it conflicts with another service
 - Daily display schedule for photo-frame use when music is not playing

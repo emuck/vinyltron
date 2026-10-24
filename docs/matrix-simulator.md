@@ -47,9 +47,16 @@ The raw frame endpoint returns exactly:
 
 ## Current Controls
 
-- **Engine**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, `Reaction-Diffusion`, or
-  `Weather`
+- **Engine**: `Brian's Brain`, `Langton's Ant`, `Chaos Game`, `Reaction-Diffusion`,
+  `Lissajous`, `Gravity Ballet`, `Rain on Glass`, `Radar Garden`, or `Weather`
 - **Palette**: color pair or gradient used by the selected engine
+
+Radar Garden previews the built-in `assets/idle.png` image and preserves its original
+colors, so palette has no effect. On the Pi it uses current artwork during active
+playback and the configured default image otherwise. The simulator does not connect to
+Volumio. Random engine/palette rotation is handled by the daemon; choose individual
+engines and palettes explicitly in the simulator.
+
 - **Speed**: `Slow` / `Medium` / `Fast` (4 / 6 / 10 fps), matching the plugin's Screensaver
   "Speed" setting; controls browser playback target
 - **Density**: initial ready-cell density for Brian's Brain

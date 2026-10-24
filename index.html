@@ -789,7 +789,7 @@
   <h2 class="title">Always something<br>worth looking at.</h2>
   <p class="body-text">
     When music stops, the display doesn't go dark. Choose from your own photos,
-    five generative screensaver engines, or a live pixel-art weather readout —
+    eight screensaver engines in the development build, or a live pixel-art weather readout —
     all configurable from the Volumio plugin settings page.
     Screenshots labeled (sim) are rendered from the
     <a href="https://github.com/emuck/vinyltron/blob/main/docs/matrix-simulator.md" style="color:var(--cyan)">matrix simulator</a> at 8× scale.
@@ -847,10 +847,10 @@
       <p class="tag">Screensavers</p>
       <h2 class="title">Generative art.<br>Running on a Pi 3B.</h2>
       <p class="body-text">
-        Five simulation engines run directly on the Raspberry Pi, each producing
-        patterns that evolve continuously. Each has configurable palette, speed,
-        and reset interval from the Volumio UI — with advanced tuning parameters
-        in <code>config.toml</code>.
+        Eight screensaver engines run directly on the Raspberry Pi in the development
+        build. Choose speed and reset interval, or randomize engines and palettes at
+        each reset. Radar Garden keeps the source image colors; the other engines use
+        the selected palette. Advanced tuning lives in <code>config.toml</code>.
       </p>
       <ul class="feature-bullets">
         <li><strong style="color:var(--text)">Brian's Brain</strong> — three-state cellular automaton with selectable palette</li>
@@ -858,6 +858,9 @@
         <li><strong style="color:var(--text)">Chaos Game</strong> — slowly rotating Sierpiński fractal</li>
         <li><strong style="color:var(--text)">Gray-Scott</strong> — reaction-diffusion coral, spot, and worm morphologies</li>
         <li><strong style="color:var(--text)">Lissajous</strong> — orbit-trail figure with slow phase drift</li>
+        <li><strong style="color:var(--text)">Gravity Ballet</strong> — gravitational orbits with fading trails</li>
+        <li><strong style="color:var(--text)">Rain on Glass</strong> — merging droplets over a soft background glow</li>
+        <li><strong style="color:var(--text)">Radar Garden</strong> — a sweep reveals artwork, fading behind the beam</li>
       </ul>
     </div>
     <div class="media-wrap glow-blue pixel">
@@ -933,7 +936,7 @@
         <tr>
           <td class="feature-name">Generative screensavers</td>
           <td class="them"><span class="cross">—</span></td>
-          <td><span class="check">✓</span> 5 simulation engines</td>
+          <td><span class="check">✓</span> 8 engines in development build</td>
         </tr>
         <tr>
           <td class="feature-name">Audiophile format badge</td>

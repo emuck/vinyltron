@@ -1080,11 +1080,16 @@ ControllerVinyltron.prototype._validAlbumArtDuration = function(value) {
 };
 
 ControllerVinyltron.prototype._validScreensaverEngine = function(value) {
+    if (value === 'radar_garden') return value;
+    if (value === 'rain_on_glass') return value;
+    if (value === 'gravity_ballet') return value;
+    if (value === 'random') return value;
     if (value === 'brians_brain' || value === 'langtons_ant' || value === 'chaos_game' || value === 'gray_scott' || value === 'lissajous') return value;
     return 'brians_brain';
 };
 
 ControllerVinyltron.prototype._validScreensaverPalette = function(value) {
+    if (value === 'random') return value;
     if (value === 'green_magenta' || value === 'blue_red' || value === 'white_violet') return value;
     return 'cyan_amber';
 };
@@ -1196,6 +1201,10 @@ ControllerVinyltron.prototype._labelForFallbackMode = function(value) {
 
 ControllerVinyltron.prototype._labelForScreensaverEngine = function(value) {
     var labels = {
+        'gravity_ballet': 'Gravity Ballet',
+        'rain_on_glass': 'Rain on Glass',
+        'radar_garden': 'Radar Garden',
+        'random': 'Random',
         'brians_brain': 'Brian\'s Brain',
         'langtons_ant': 'Langton\'s Ant',
         'chaos_game': 'Chaos Game',
@@ -1207,6 +1216,7 @@ ControllerVinyltron.prototype._labelForScreensaverEngine = function(value) {
 
 ControllerVinyltron.prototype._labelForScreensaverPalette = function(value) {
     var labels = {
+        'random': 'Random',
         'cyan_amber': 'Cyan / Amber',
         'green_magenta': 'Green / Magenta',
         'blue_red': 'Blue / Red',

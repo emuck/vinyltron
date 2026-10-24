@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import random
 import signal
 import socket
 import sys
@@ -13,7 +14,7 @@ import toml
 from PIL import Image
 
 from display import Display
-from screensavers import BriansBrain, ChaosGame, GrayScott, LangtonsAnt, Lissajous
+from screensavers import BriansBrain, ChaosGame, GravityBallet, GrayScott, LangtonsAnt, Lissajous, RadarGarden, RainOnGlass
 from volumio_client import VolumioClient
 from weather import MockWeatherRenderer
 
@@ -87,6 +88,10 @@ class Vinyltron:
             on_state=self._on_state,
         )
         self._current_albumart: Optional[str] = None
+        self._radar_art = None
+        self._radar_art_url = None
+        self._radar_default = None
+        self._radar_default_path = None
         self._current_album_key: Optional[str] = None
         self._current_track_key: Optional[str] = None
         self._pending_track_key: Optional[str] = None
@@ -112,6 +117,8 @@ class Vinyltron:
         self._screensaver_reset_timer: Optional[threading.Timer] = None
         self._screensaver_reset_timer_id = 0
         self._screensaver: Optional[object] = None
+        self._last_screensaver_engine: Optional[str] = None
+        self._last_screensaver_palette: Optional[str] = None
         self._weather_timer: Optional[threading.Timer] = None
         self._weather_timer_id = 0
         self._weather_renderer: Optional[MockWeatherRenderer] = None
@@ -251,6 +258,9 @@ class Vinyltron:
             return
 
         log.info("New track metadata over idle image: %s — %s", state.get('artist'), state.get('title'))
+        if albumart and self._screensaver_enabled() and self._screensaver_engine() in ('random', 'radar_garden'):
+            threading.Thread(target=self._cache_radar_art, args=(albumart,),
+                             daemon=True, name='radar-art-fetch').start()
         self._log_format_state(state)
 
         with self._state_lock:
@@ -273,6 +283,7 @@ class Vinyltron:
                 return
 
         if img:
+            self._radar_art, self._radar_art_url = img, albumart
             with self._overlay_lock:
                 if album_changed:
                     self._ensure_display().show_image(img)
@@ -640,7 +651,7 @@ class Vinyltron:
     def _screensaver_engine(self) -> str:
         cfg = self._cfg.get('screensaver', {})
         engine = str(cfg.get('engine', 'brians_brain')).strip().lower()
-        if engine in ('brians_brain', 'langtons_ant', 'chaos_game', 'gray_scott', 'lissajous'):
+        if engine in ('random', 'brians_brain', 'langtons_ant', 'chaos_game', 'gray_scott', 'lissajous', 'gravity_ballet', 'rain_on_glass', 'radar_garden'):
             return engine
         log.warning("Unknown screensaver engine %r; using brians_brain", engine)
         return 'brians_brain'
@@ -738,6 +749,27 @@ class Vinyltron:
             return self._startup_delay_remaining() <= 0
         return self._volumio_ready_wait_exceeded()
 
+    def _cache_radar_art(self, url):
+        image = self._fetch_albumart(url)
+        if image is not None and self._last_state.get('albumart') == url:
+            self._radar_art, self._radar_art_url = image, url
+
+    def _radar_source(self):
+        state = self._last_state
+        if (state.get('status') == 'play' and self._radar_art is not None
+                and self._radar_art_url == state.get('albumart')):
+            return ('album', self._radar_art_url), self._radar_art
+        path = self._cfg.get('fallback', {}).get('image', 'assets/idle.png')
+        if self._radar_default is None or path != self._radar_default_path:
+            try:
+                with Image.open(path) as image:
+                    self._radar_default = image.convert('RGB')
+            except Exception as error:
+                log.warning("Radar default image unavailable: %s", error)
+                self._radar_default = Image.new('RGB', (64, 64))
+            self._radar_default_path = path
+        return ('default', path), self._radar_default
+
     def _new_screensaver(self):
         cfg = self._cfg.get('screensaver', {})
         display_cfg = self._cfg.get('display', {})
@@ -746,6 +778,27 @@ class Vinyltron:
         palette = str(cfg.get('palette', 'cyan_amber')).strip().lower()
         seed = str(cfg.get('seed', '') or '')
         engine = self._screensaver_engine()
+        if engine == 'random':
+            engine = random.choice([
+                name for name in ('brians_brain', 'langtons_ant', 'chaos_game', 'gray_scott', 'lissajous', 'gravity_ballet', 'rain_on_glass', 'radar_garden')
+                if name != self._last_screensaver_engine
+            ])
+        if palette == 'random':
+            palette = random.choice([
+                name for name in ('cyan_amber', 'green_magenta', 'blue_red', 'white_violet')
+                if name != self._last_screensaver_palette
+            ])
+        self._last_screensaver_engine = engine
+        self._last_screensaver_palette = palette
+        log.info("Selected screensaver engine=%s palette=%s", engine, palette)
+
+        if engine == 'gravity_ballet':
+            return GravityBallet(width=width, height=height, palette=palette, seed=seed)
+        if engine == 'rain_on_glass':
+            return RainOnGlass(width=width, height=height, palette=palette, seed=seed)
+        if engine == 'radar_garden':
+            return RadarGarden(width=width, height=height, palette=palette, seed=seed,
+                               source_provider=self._radar_source)
 
         if engine == 'langtons_ant':
             return LangtonsAnt(

@@ -279,7 +279,14 @@ gamma LUT, and renders them. Random selection happens only when the fallback sta
 entered after debounce, not on every render.
 
 Screensaver fallback is controlled by `[screensaver]`. The plugin UI exposes generic
-controls (`engine`, `palette`, `fps`, `reset_seconds`) while engine-specific tuning such as
+controls (`engine`, `palette`, `fps`, `reset_seconds`). Engine and palette each accept
+`random`: pick on startup and reset, avoiding the immediately previous choice. A zero
+reset interval holds those choices until next startup. The eight engines include
+Gravity Ballet (softened five-body gravity with velocity-Verlet integration), Rain on
+Glass (merging droplets over blurred lights), and Radar Garden (an angular image reveal
+with fading pixels). Radar Garden preserves source colors, ignores palette, and uses
+cached active-playback artwork or the default fallback image. No image fetch runs in
+its frame loop. Engine-specific tuning such as
 Brian's Brain `density`, Langton's Ant `ant_count`/`steps_per_frame`, Chaos Game
 `points_per_frame`/`fade`/`rotation_speed`, Gray-Scott `feed`/`kill`/`grid_scale`, and `seed`
 remains config-file-only. Brian's Brain is a three-state cellular automaton backed by two
