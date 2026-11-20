@@ -1,6 +1,6 @@
 {
     "name": "vinyltron",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "64×64 HUB75 LED matrix album art display for Volumio",
     "main": "index.js",
     "scripts": {},
@@ -15,7 +15,7 @@
         "architectures": ["armhf"],
         "os": ["bookworm"],
         "details": "Real-time album art on a 64×64 HUB75E LED matrix, driven by Volumio pushState.",
-        "changelog": "0.4.0: persistent PWM audio-module protection, Mixed Rotation idle mode, and four new screensavers"
+        "changelog": "0.4.1: fix Photo Manager URL to use the device hostname"
     },
     "author": "Martin Raumann",
     "license": "MIT",
