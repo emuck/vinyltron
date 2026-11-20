@@ -5,6 +5,8 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-20
+
 - Added persistent onboard-audio module blocking for hardware PWM, with a safe audio
   output check before modifying boot settings, including a kernel-level blacklist for
   Volumio's early initramfs module load. The plugin reapplies protection at service start,
