@@ -74,30 +74,35 @@ Vinyltron is already installed.
 ## Boot Configuration
 
 For Bonnet PWM mode, GPIO18/PWM must be free. Volumio's onboard/HDMI audio can
-claim that PWM path, so Vinyltron's installer intentionally disables it:
+claim that PWM path. Use a USB DAC or I2S output. The installer checks the selected
+Volumio audio card before changing audio/boot settings. If onboard/HDMI audio is
+selected, or the output cannot be verified, it leaves those settings alone and shows
+an audio-conflict warning. Select USB/I2S audio, then reinstall/update Vinyltron.
 
-- `/boot/userconfig.txt`: adds `dtparam=audio=off`
-- `/boot/cmdline.txt`: removes Volumio's `snd_bcm2835.enable_hdmi=1` and
-  `snd_bcm2835.enable_headphones=1` arguments
-- `/boot/cmdline.txt`: adds `module_blacklist=snd_bcm2835` and
-  `modprobe.blacklist=snd_bcm2835`
+For a verified compatible output, the installer adds:
 
-Before the first edit, the installer saves backups as:
+- `/etc/modprobe.d/vinyltron-matrix.conf`: `blacklist snd_bcm2835` and
+  `install snd_bcm2835 /bin/false`, blocking ordinary automatic and explicit modprobe
+  loads after the real root filesystem mounts.
+- A marked `[all]` / `dtparam=audio=off` block in `/boot/userconfig.txt`.
+- `module_blacklist=snd_bcm2835` in `/boot/cmdline.txt`. This kernel-level setting is
+  needed because Volumio's initramfs explicitly loads `snd-bcm2835` before those rootfs
+  modprobe rules are available. Vinyltron rechecks it at service start to repair a
+  regenerated command line for the next reboot.
 
-- `/boot/cmdline.txt.vinyltron-orig`
-- `/boot/userconfig.txt.vinyltron-orig`
+It never unloads a live audio driver or reboots automatically. When prompted, reboot
+through Volumio's System settings. Then refresh Vinyltron settings and inspect
+**Hardware → PWM Status**: it reports the running driver's actual hardware/software
+mode, an audio conflict, reboot guidance, or a waiting state if the display has not
+initialized yet. The saved hardware mapping alone does not confirm hardware PWM.
 
-Uninstalling the plugin does not revert these boot changes. Onboard/HDMI audio
-stays disabled intentionally so GPIO18/PWM remains free for the matrix.
-
-To restore onboard audio later, copy the backups back over the active boot
-files, if present, then reboot:
-
-```bash
-sudo cp /boot/cmdline.txt.vinyltron-orig /boot/cmdline.txt
-sudo cp /boot/userconfig.txt.vinyltron-orig /boot/userconfig.txt
-sudo reboot
-```
+Older installations edited `/boot/cmdline.txt` and saved `.vinyltron-orig` backups.
+The installer records whether it added the kernel blacklist and removes only its own
+`snd_bcm2835` entry on uninstall, preserving other blacklist entries. Legacy command-line
+edits are preserved because their ownership cannot be determined safely. To restore
+onboard audio after uninstalling an older version, review and remove legacy
+`dtparam=audio=off` and `snd_bcm2835` blacklist arguments, then reboot. Compare old
+backups if available; do not blindly overwrite later boot configuration changes.
 
 ## First Settings Check
 
@@ -124,12 +129,7 @@ message. Change **Photo Manager Port** to an unused port from `1024` to
 
 ## Uninstall
 
-Uninstall removes the plugin files, systemd service, sudoers entry, and
-runtime configuration owned by the plugin. It intentionally leaves:
-
-- `/boot/*.vinyltron-orig` backups
-- The active boot-file changes that keep onboard/HDMI audio disabled for
-  matrix PWM
-
-Use the restore commands above if you want to re-enable onboard/HDMI audio
-after removing Vinyltron.
+Uninstall removes the service, sudoers entry, runtime PWM status, the exact plugin-owned
+module rule, and its marked boot block. Modified rules and unrelated boot settings are
+preserved. User config/photos remain under `/data`. Reboot after uninstall to apply
+audio changes. Older boot edits/backups remain; see Boot Configuration above.

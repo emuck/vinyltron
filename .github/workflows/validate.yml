@@ -30,6 +30,14 @@ jobs:
       - name: Validate plugin JS syntax
         run: node -c plugin/index.js
 
+      - name: Mixed rotation scheduler checks
+        run: |
+          python3 -m pip install pillow requests
+          python3 tools/test-mixed-rotation.py
+          node tools/test-mixed-rotation.js
+          python3 tools/test-pwm-setup.py
+          node tools/test-pwm-status.js
+
       - name: Validate shell scripts
         run: bash -n plugin/install.sh plugin/uninstall.sh dev-install-plugin.sh tools/build-volumio-plugin.sh tools/install-volumio-plugin-zip.sh
 

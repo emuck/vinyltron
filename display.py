@@ -5,6 +5,7 @@ import sys
 from typing import Dict, List, NamedTuple, Optional, Tuple
 
 from PIL import Image, ImageOps
+from pwm_status import write_pwm_status
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'matrix-build', 'prebuilt'))
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
@@ -231,6 +232,7 @@ class Display:
             opts.pwm_bits = d['pwm_bits']
         opts.hardware_mapping = d.get('hardware_mapping', 'adafruit-hat-pwm')
         opts.disable_hardware_pulsing = d.get('disable_hardware_pulsing', False)
+        pwm_reason = 'Disabled in configuration' if opts.disable_hardware_pulsing else 'Hardware timing enabled'
         if not opts.disable_hardware_pulsing and _snd_bcm2835_loaded():
             log.warning(
                 "snd_bcm2835 sound module is loaded; forcing disable_hardware_pulsing=True "
@@ -238,6 +240,7 @@ class Display:
                 "See docs/engineering-spec.md for how to disable the sound module."
             )
             opts.disable_hardware_pulsing = True
+            pwm_reason = 'Onboard audio module loaded; reboot required after PWM protection is installed'
         if not opts.disable_hardware_pulsing and _pi5_detected():
             log.warning(
                 "Raspberry Pi 5 detected; forcing disable_hardware_pulsing=True. "
@@ -246,11 +249,15 @@ class Display:
                 "See docs/engineering-spec.md for details."
             )
             opts.disable_hardware_pulsing = True
+            pwm_reason = 'Hardware PWM unsupported by the bundled driver on Raspberry Pi 5'
         opts.pixel_mapper_config = f"Rotate:{d['rotation']}"
         if d.get('panel_type'):
             opts.panel_type = d['panel_type']
 
         self._matrix = RGBMatrix(options=opts)
+        pwm_mode = 'software' if opts.disable_hardware_pulsing else 'hardware'
+        log.info('Effective matrix PWM: %s — %s', pwm_mode, pwm_reason)
+        write_pwm_status(pwm_mode, pwm_reason)
         self._canvas = self._matrix.CreateFrameCanvas()
         self._size = (d['cols'], d['rows'])
         self._gamma_lut = _build_gamma_lut(d['gamma'])
@@ -323,6 +330,12 @@ class Display:
 
     def show_fallback(self):
         self._current_image = self._select_fallback_image()
+        self._text_overlay = None
+        self._progress_overlay = None
+        self._render()
+
+    def show_rotation_photo(self):
+        self._current_image = self._load_random_fallback() or self._fallback.copy()
         self._text_overlay = None
         self._progress_overlay = None
         self._render()

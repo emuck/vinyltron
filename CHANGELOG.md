@@ -5,6 +5,15 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+- Added persistent onboard-audio module blocking for hardware PWM, with a safe audio
+  output check before modifying boot settings, including a kernel-level blacklist for
+  Volumio's early initramfs module load. The plugin reapplies protection at service start,
+  reports reboot guidance, and records the actual runtime PWM mode in a daemon-writable
+  status file. Uninstall removes only owned protection; administrator and legacy boot
+  settings are preserved.
+- Added Mixed Rotation idle mode with independently enabled photo, screensaver,
+  weather, and active album-art categories, a shared slot duration, Sequential order,
+  and fair Shuffle rounds. Existing fixed modes and new-album artwork windows remain.
 - Added Radar Garden: a rotating sweep reveals album artwork in its original colors,
   fading after the beam passes. Uses the default image when playback is inactive.
 - Added Rain on Glass: growing, merging droplets and sliding wet trails over a soft,

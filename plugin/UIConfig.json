@@ -159,9 +159,10 @@
                         {"value": "selected",      "label": "Selected Folder Image"},
                         {"value": "random_folder", "label": "Random Folder Image"},
                         {"value": "screensaver",   "label": "Screensaver"},
+                        {"value": "mixed",        "label": "Mixed Rotation"},
                         {"value": "weather",       "label": "Current Weather"}
                     ],
-                    "doc": "Controls which image is shown when playback is stopped"
+                    "doc": "Display used while idle or after Album Art Duration expires. Mixed Rotation cycles through categories enabled in its section below."
                 },
                 {
                     "id": "fallback_image_folder",
@@ -330,6 +331,13 @@
                     "label": "Refresh Limit (Hz)",
                     "value": "0",
                     "doc": "Caps the HUB75 scan refresh rate. 0 is uncapped. 90-140 Hz is a useful tuning range; 120 Hz reduced flicker in testing."
+                },
+                {
+                    "id": "pwm_status",
+                    "element": "input",
+                    "label": "PWM Status",
+                    "value": "Checking...",
+                    "doc": "Actual mode reported by the running driver. Refresh after reboot or display startup. Hardware PWM requires onboard/HDMI audio disabled and the Bonnet quality jumper. Use USB/I2S audio. Software mode can flicker."
                 }
             ]
         },
@@ -484,6 +492,33 @@
                     ],
                     "doc": "Weather renderer animation rate."
                 }
+            ]
+        },
+        {
+            "id": "section_rotation",
+            "element": "section",
+            "label": "Mixed Rotation",
+            "icon": "fa-random",
+            "onSave": {"type": "controller", "endpoint": "user_interface/vinyltron", "method": "saveRotation"},
+            "saveButton": {
+                "label": "Save",
+                "data": ["rotation_photos", "rotation_screensavers", "rotation_weather", "rotation_album_art", "rotation_slot_seconds", "rotation_order"],
+                "popup": {"allowClose": true, "type": "success", "message": "Mixed rotation updated"}
+            },
+            "content": [
+                {"id": "rotation_photos", "element": "switch", "label": "Photos", "value": true,
+                 "doc": "Pick a random image from Idle Folder per photo slot; use the default image if the folder is empty."},
+                {"id": "rotation_screensavers", "element": "switch", "label": "Screensavers", "value": true,
+                 "doc": "Use the selected screensaver and palette, including their Random options."},
+                {"id": "rotation_weather", "element": "switch", "label": "Weather", "value": true,
+                 "doc": "Use the configured Weather display."},
+                {"id": "rotation_album_art", "element": "switch", "label": "Current Album Art", "value": true,
+                 "doc": "Skip this category unless music is actively playing and artwork is available."},
+                {"id": "rotation_slot_seconds", "element": "input", "label": "Slot Duration (seconds)", "value": "60", "min": 5,
+                 "doc": "Choose Mixed Rotation as Idle Mode. This duration replaces photo rotation and screensaver reset timers within mixed mode. Minimum 5 seconds. If all categories are disabled, show the default image. New-album artwork uses Album Art Duration first; 0 keeps artwork visible during playback."},
+                {"id": "rotation_order", "element": "select", "label": "Order", "value": {},
+                 "options": [{"value": "sequential", "label": "Sequential"}, {"value": "shuffle", "label": "Shuffle"}],
+                 "doc": "Sequential follows the category order above. Shuffle visits each available category once per round, avoiding repeats across rounds when possible."}
             ]
         }
     ]

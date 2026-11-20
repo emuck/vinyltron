@@ -12,6 +12,7 @@ from typing import Dict, Optional
 import requests
 import toml
 from PIL import Image
+from pwm_status import write_pwm_status
 
 from display import Display
 from screensavers import BriansBrain, ChaosGame, GravityBallet, GrayScott, LangtonsAnt, Lissajous, RadarGarden, RainOnGlass
@@ -106,6 +107,11 @@ class Vinyltron:
         self._album_art_timer_id = 0
         self._album_art_timed_out = False
         self._fallback_visible = False
+        self._mixed_timer = None
+        self._mixed_timer_id = 0
+        self._mixed_active = None
+        self._mixed_queue = []
+        self._mixed_last = None
         self._fallback_timer: Optional[threading.Timer] = None
         self._fallback_timer_id = 0
         self._idle_rotation_timer: Optional[threading.Timer] = None
@@ -133,6 +139,7 @@ class Vinyltron:
         self._progress_last_update = time.monotonic()
         self._service_started_at = time.monotonic()
         self._running = True
+        write_pwm_status('waiting', 'Display not initialized yet (schedule off or waiting for Volumio)')
         log.info("Vinyltron version %s", self._version)
         self._log_runtime_config("startup")
         signal.signal(signal.SIGTERM, self._shutdown)
@@ -175,6 +182,11 @@ class Vinyltron:
         status = state.get('status', 'stop')
         albumart = state.get('albumart', '')
 
+        if self._mixed_enabled() and self._mixed_active == 'album_art' and (status != 'play' or not albumart):
+            with self._overlay_lock:
+                self._cancel_mixed_locked()
+                self._start_mixed_slot_locked()
+
         if status not in ('play', 'pause'):
             with self._overlay_lock:
                 self._cancel_album_art_timer_locked()
@@ -194,6 +206,14 @@ class Vinyltron:
             return
 
         if not albumart:
+            if self._mixed_enabled():
+                # no picture while mixing: the previous song's art must not stay up
+                self._clear_current_track_state()
+                with self._overlay_lock:
+                    self._cancel_album_art_timer_locked()
+                    self._album_art_timed_out = True
+                    self._cancel_progress_locked(clear_visible=True)
+                    self._ensure_fallback_background_locked(status)
             return
 
         track_key = self._track_key(state, albumart)
@@ -223,6 +243,7 @@ class Vinyltron:
 
         with self._overlay_lock:
             if album_changed:
+                self._cancel_mixed_locked()
                 self._cancel_fallback_locked()
                 self._cancel_idle_rotation_locked()
                 self._cancel_screensaver_locked()
@@ -254,11 +275,13 @@ class Vinyltron:
             is_current_track = track_key == self._current_track_key
 
         if is_current_track:
+            if self._mixed_enabled():
+                return
             self._sync_progress_from_state(state)
             return
 
         log.info("New track metadata over idle image: %s — %s", state.get('artist'), state.get('title'))
-        if albumart and self._screensaver_enabled() and self._screensaver_engine() in ('random', 'radar_garden'):
+        if albumart and (self._mixed_enabled() or (self._screensaver_enabled() and self._screensaver_engine() in ('random', 'radar_garden'))):
             threading.Thread(target=self._cache_radar_art, args=(albumart,),
                              daemon=True, name='radar-art-fetch').start()
         self._log_format_state(state)
@@ -270,9 +293,10 @@ class Vinyltron:
             self._current_track_key = track_key
             self._pending_track_key = None
 
-        self._sync_progress_from_state(state)
-        if album_changed:
-            self._show_format_badge(state)
+        if not self._mixed_enabled():
+            self._sync_progress_from_state(state)
+            if album_changed:
+                self._show_format_badge(state)
 
     def _load_track_image(self, seq: int, state: Dict, albumart: str, track_key: str, album_key: str, album_changed: bool):
         img = self._fetch_albumart(albumart)
@@ -310,14 +334,17 @@ class Vinyltron:
                 self._cancel_overlay_locked()
                 self._cancel_progress_locked(clear_visible=album_changed)
                 self._badge_visible = False
+                if self._mixed_enabled():
+                    self._album_art_timed_out = True
                 self._show_or_start_fallback_locked('albumart unavailable')
             log.info("Album art unavailable; showing fallback for current track")
             with self._state_lock:
                 if seq != self._state_seq or track_key != self._current_track_key:
                     return
-            self._sync_progress_from_state(state)
-            if album_changed:
-                self._show_format_badge(state)
+            if not self._mixed_enabled():
+                self._sync_progress_from_state(state)
+                if album_changed:
+                    self._show_format_badge(state)
 
     def _show_format_badge(self, state: Dict):
         if not self._cfg.get('overlays', {}).get('format_badge', False):
@@ -641,12 +668,90 @@ class Vinyltron:
     def _screensaver_enabled(self) -> bool:
         fallback = self._cfg.get('fallback', {})
         mode = str(fallback.get('mode', 'single')).strip().lower()
-        return mode in ('screensaver', 'screensaver_brians_brain')
+        return mode in ('screensaver', 'screensaver_brians_brain') or (mode == 'mixed' and self._mixed_active == 'screensavers')
 
     def _weather_enabled(self) -> bool:
         fallback = self._cfg.get('fallback', {})
         mode = str(fallback.get('mode', 'single')).strip().lower()
-        return mode == 'weather'
+        return mode == 'weather' or (mode == 'mixed' and self._mixed_active == 'weather')
+
+    def _mixed_enabled(self):
+        return str(self._cfg.get('fallback', {}).get('mode', '')).strip().lower() == 'mixed'
+
+    def _mixed_categories(self):
+        cfg = self._cfg.get('rotation', {})
+        categories = [name for name in ('photos', 'screensavers', 'weather')
+                      if cfg.get(name, True)]
+        if (cfg.get('album_art', True) and self._last_state.get('status') == 'play'
+                and self._radar_art is not None
+                and self._radar_art_url == self._last_state.get('albumart')):
+            categories.append('album_art')
+        return categories or ['default']
+
+    def _next_mixed_category(self):
+        eligible = self._mixed_categories()
+        if self._cfg.get('rotation', {}).get('order', 'shuffle') == 'sequential':
+            order = ('photos', 'screensavers', 'weather', 'album_art', 'default')
+            start = order.index(self._mixed_last) + 1 if self._mixed_last in order else 0
+            return next(order[(start+i) % len(order)] for i in range(len(order))
+                        if order[(start+i) % len(order)] in eligible)
+        self._mixed_queue = [name for name in self._mixed_queue if name in eligible]
+        if not self._mixed_queue:
+            self._mixed_queue = list(eligible)
+            random.shuffle(self._mixed_queue)
+            if len(self._mixed_queue) > 1 and self._mixed_queue[0] == self._mixed_last:
+                self._mixed_queue[0], self._mixed_queue[1] = self._mixed_queue[1], self._mixed_queue[0]
+        return self._mixed_queue.pop(0)
+
+    def _cancel_mixed_locked(self):
+        if self._mixed_timer:
+            self._mixed_timer.cancel()
+            self._mixed_timer = None
+        self._mixed_timer_id += 1
+        self._mixed_active = None
+
+    def _start_mixed_slot_locked(self):
+        self._cancel_idle_rotation_locked()
+        self._cancel_screensaver_locked()
+        self._cancel_weather_locked()
+        self._cancel_overlay_locked()
+        self._cancel_progress_locked(clear_visible=True)
+        self._clear_badge_if_initialized()
+        self._badge_visible = False
+        category = self._next_mixed_category()
+        self._mixed_active = self._mixed_last = category
+        self._fallback_visible = True
+        status = self._last_state.get('status', 'stop')
+        if category == 'screensavers':
+            self._start_screensaver_locked(status)
+        elif category == 'weather':
+            self._start_weather_locked(status)
+        elif category == 'album_art':
+            self._ensure_display().show_image(self._radar_art)
+        elif category == 'photos':
+            self._ensure_display().show_rotation_photo()
+        else:
+            self._ensure_display().show_fallback()
+        try:
+            seconds = max(5, int(self._cfg.get('rotation', {}).get('slot_seconds', 60)))
+        except (TypeError, ValueError):
+            seconds = 60
+        self._mixed_timer_id += 1
+        timer_id = self._mixed_timer_id
+        self._mixed_timer = threading.Timer(seconds, self._advance_mixed_slot, args=(timer_id,))
+        self._mixed_timer.daemon = True
+        self._mixed_timer.start()
+        log.info('Mixed rotation slot: %s for %ss', category, seconds)
+
+    def _advance_mixed_slot(self, timer_id):
+        with self._overlay_lock:
+            if timer_id != self._mixed_timer_id:
+                return
+            self._mixed_timer = None
+            if not self._display_on or not self._fallback_visible or not self._mixed_enabled():
+                self._cancel_mixed_locked()
+                return
+            self._start_mixed_slot_locked()
 
     def _screensaver_engine(self) -> str:
         cfg = self._cfg.get('screensaver', {})
@@ -897,6 +1002,10 @@ class Vinyltron:
         self._start_idle_locked(status)
 
     def _start_idle_locked(self, status: str):
+        if self._mixed_enabled():
+            if not self._mixed_timer:
+                self._start_mixed_slot_locked()
+            return
         if self._weather_enabled():
             self._start_weather_locked(status)
             return
@@ -910,8 +1019,13 @@ class Vinyltron:
         self._schedule_idle_rotation_locked(status)
 
     def _schedule_active_fallback_locked(self, status: str):
+        if self._mixed_enabled() and self._mixed_timer:
+            return
         if not self._idle_ready_to_start():
             self._show_startup_idle_placeholder_locked(status)
+            return
+        if self._mixed_enabled():
+            self._start_idle_locked(status)
             return
         if self._weather_enabled():
             if self._weather_renderer:
@@ -1022,6 +1136,8 @@ class Vinyltron:
         self._weather_timer.start()
 
     def _schedule_screensaver_reset_locked(self, status: str):
+        if self._mixed_enabled():
+            return
         if self._screensaver_reset_timer or not self._screensaver:
             return
         seconds = self._screensaver_reset_seconds()
@@ -1407,6 +1523,7 @@ class Vinyltron:
         log.info("Shutting down")
         self._running = False
         with self._overlay_lock:
+            self._cancel_mixed_locked()
             self._cancel_album_art_timer_locked()
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()
@@ -1435,6 +1552,9 @@ class Vinyltron:
             self._display_on = self._effective_display_on()
             new_format_badge = self._cfg.get('overlays', {}).get('format_badge', False)
             with self._overlay_lock:
+                self._cancel_mixed_locked()
+                self._mixed_queue = []
+                self._mixed_last = None
                 self._cancel_album_art_timer_locked()
                 self._cancel_fallback_locked()
                 self._cancel_idle_rotation_locked()
@@ -1512,6 +1632,7 @@ class Vinyltron:
 
     def _clear_display_for_power_off(self, message: str):
         with self._overlay_lock:
+            self._cancel_mixed_locked()
             self._cancel_album_art_timer_locked()
             self._cancel_fallback_locked()
             self._cancel_idle_rotation_locked()

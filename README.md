@@ -31,6 +31,8 @@ foundation for it.
   screensavers, or a weather display
 - Eight screensavers, including Gravity Ballet, Rain on Glass, and image-scanning Radar
   Garden, with independent Random engine and palette choices at each reset interval
+- Mixed Rotation with a shared slot duration and Sequential or Shuffle order across
+  enabled photos, screensavers, weather, and active album art
 - Phone-friendly photo manager for adding, selecting, deleting, and randomizing idle photos,
   with a configurable port if it conflicts with another service
 - Daily display schedule for photo-frame use when music is not playing
@@ -58,8 +60,10 @@ the beta channel and the ZIP install path if the store is unavailable.
 
 The plugin zip bundles prebuilt CPython 3.11 armhf `rgbmatrix` bindings — no on-device
 compilation required. The installer also sets up the `vinyltron` systemd service and
-configures boot files for matrix PWM. Those boot changes disable onboard/HDMI audio so
-GPIO18/PWM remains free for the matrix; a reboot is required for them to take effect.
+configures persistent module protection and boot settings for matrix PWM after checking
+the selected audio output. Hardware PWM needs onboard/HDMI audio disabled so
+GPIO18/PWM remains free for the matrix. Reboot when prompted, then check **PWM Status**
+in Hardware settings to confirm the actual running mode.
 
 ## Hardware Snapshot
 
@@ -105,6 +109,7 @@ For users:
 - [Install guide](docs/install.md)
 - [Hardware setup](docs/hardware.md)
 - [Screensavers](docs/screensavers.md)
+- [Mixed Rotation](docs/mixed-rotation.md)
 - [Current Weather](docs/weather.md)
 - [Troubleshooting](docs/troubleshooting.md)
 

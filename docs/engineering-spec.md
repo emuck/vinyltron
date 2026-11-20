@@ -59,16 +59,26 @@ Manual hardware requirements:
 - Quality jumper wire from `GPIO4` to `GPIO18`, so GPIO18 (PWM0) is reserved for matrix
   OE# timing
 
-Boot config requirements (GPIO18/PWM must be free of onboard audio): `dtparam=audio=off`
-in `/boot/userconfig.txt`, and `/boot/cmdline.txt` must not contain
-`snd_bcm2835.enable_hdmi=1`/`enable_headphones=1` — instead it should have
-`module_blacklist=snd_bcm2835 modprobe.blacklist=snd_bcm2835` (Volumio 4/Bookworm's
-default `cmdline.txt` includes the `enable_*` args, which re-enable the module). As of
-v0.2.4, `install.sh` makes both changes automatically and idempotently (backs up the
-originals as `cmdline.txt.vinyltron-orig` and `userconfig.txt.vinyltron-orig`) and
-prints a reboot reminder if anything changed — no manual boot-file editing required. Confirmed 2026-06-10 on Volumio 4.119 / kernel
-`6.12.74-v7+`: `snd_bcm2835` stays absent from `/proc/modules` and `rpi-rgb-led-matrix`
-runs with `disable_hardware_pulsing = False` without flicker.
+`pwm_setup.py` checks Volumio's selected ALSA card, preserving audio settings when
+onboard/HDMI output is selected or cannot be identified. For compatible USB/I2S output
+it installs `/etc/modprobe.d/vinyltron-matrix.conf`, a marked `[all]` /
+`dtparam=audio=off` block in `/boot/userconfig.txt`, and the kernel-level
+`module_blacklist=snd_bcm2835` parameter in `/boot/cmdline.txt`. The last setting is
+required because Volumio's initramfs explicitly loads `snd-bcm2835` from its baked-in
+`/conf/modules` list before the installed root filesystem's modprobe rules are available.
+The service rechecks boot protection at startup so a Volumio update that regenerates
+the command line is detected and repaired for the next reboot. No live module is unloaded
+and no reboot is automatic. Uninstall removes only the owned blacklist member (preserving
+other `module_blacklist` entries), exact owned modprobe rule, and marked boot block.
+See [install guide](install.md#boot-configuration).
+
+After matrix creation, `pwm_status.py` atomically writes the effective mode to
+`/run/vinyltron/pwm.json`. systemd creates this runtime directory writable by the
+`daemon` group because the matrix library drops the daemon to UID/GID 1 after
+initialization. The report includes PID, process-start ticks, and boot ID, which the
+plugin checks before displaying Hardware → PWM Status. A waiting report is written
+at daemon startup so a scheduled-off display is not presented as hardware PWM active.
+The selected configuration alone does not establish actual driver mode.
 
 As a last-resort fallback, `display.py` also detects a still-loaded `snd_bcm2835` at
 startup and forces software-pulse mode — see "Components" below.
@@ -277,6 +287,17 @@ Folder images are not modified on disk. `display.py` opens them on demand, appli
 transpose, converts to RGB, center-crops to square, resizes to 64x64, applies the active
 gamma LUT, and renders them. Random selection happens only when the fallback state is
 entered after debounce, not on every render.
+
+Mixed Rotation (`[fallback] mode = "mixed"`) is controlled by `[rotation]`: boolean
+`photos`, `screensavers`, `weather`, and `album_art`, plus `slot_seconds` (minimum 5)
+and `order` (`sequential` or `shuffle`). A separate generation-checked slot timer owns
+category transitions; per-photo rotation and screensaver reset timers are disabled in
+this mode. Frame timers still animate the active category. Shuffle uses a category bag,
+not an item pool, so photo count and engine count do not affect category frequency.
+Artwork is eligible only while actively playing and cached for the current art URL.
+New-album artwork cancels the slot timer and resumes rotation after its configured
+window. Reload, power-off, and shutdown invalidate outstanding slot callbacks. See
+[Mixed Rotation](mixed-rotation.md) for user-facing behavior and fallback rules.
 
 Screensaver fallback is controlled by `[screensaver]`. The plugin UI exposes generic
 controls (`engine`, `palette`, `fps`, `reset_seconds`). Engine and palette each accept

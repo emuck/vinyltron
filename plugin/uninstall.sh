@@ -1,14 +1,13 @@
 #!/bin/bash
 # Called by Volumio when the plugin is uninstalled.
-# User config and idle images are preserved under /data, as is the built
-# rpi-rgb-led-matrix tree under /home/volumio. Boot config changes made by
-# install.sh (/boot/userconfig.txt, /boot/cmdline.txt) are also left in place,
-# intentionally leaving onboard/HDMI audio disabled so GPIO18/PWM stays free
-# for the matrix. To restore onboard audio, restore /boot/*.vinyltron-orig
-# (see docs/install.md) and reboot.
+# User settings/photos and legacy boot edits are preserved. Remove only our
+# exact module rule and marked boot block, never overwrite later user edits.
 
 /bin/systemctl stop vinyltron || true
 /bin/systemctl disable vinyltron || true
+PLUGIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+python3 "$PLUGIN_DIR/vinyltron/pwm_setup.py" remove || echo "WARNING: PWM cleanup failed; see install guide."
+rm -f /run/vinyltron/pwm.json
 rm -f /etc/systemd/system/vinyltron.service
 rm -f /etc/sudoers.d/vinyltron
 systemctl daemon-reload

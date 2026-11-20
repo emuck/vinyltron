@@ -1,6 +1,7 @@
 {
     "VINYLTRON": {
         "PLUGIN_NAME": "Vinyltron",
+        "PWM_STATUS": "PWM Status",
 
         "SECTION_DISPLAY": "Display",
         "BRIGHTNESS": "Brightness",
@@ -21,6 +22,16 @@
         "IDLE_MODE_RANDOM": "Random Folder Image",
         "IDLE_MODE_SCREENSAVER": "Screensaver",
         "IDLE_MODE_WEATHER": "Current Weather",
+        "IDLE_MODE_MIXED": "Mixed Rotation",
+        "SECTION_ROTATION": "Mixed Rotation",
+        "ROTATION_PHOTOS": "Photos",
+        "ROTATION_SCREENSAVERS": "Screensavers",
+        "ROTATION_WEATHER": "Weather",
+        "ROTATION_ALBUM_ART": "Current Album Art",
+        "ROTATION_SLOT_SECONDS": "Slot Duration (seconds)",
+        "ROTATION_ORDER": "Order",
+        "ROTATION_SEQUENTIAL": "Sequential",
+        "ROTATION_SHUFFLE": "Shuffle",
         "IDLE_FOLDER": "Idle Folder",
         "IDLE_IMAGE": "Idle Image",
         "PHOTO_INTERVAL": "Photo Interval (seconds)",

@@ -140,14 +140,19 @@ journalctl -u vinyltron -n 200 --no-pager
 
 ## Onboard Or HDMI Audio Is Missing After Uninstall
 
-This is expected if Vinyltron configured boot files for matrix PWM. Uninstall intentionally
-does not restore onboard/HDMI audio, because doing so would make GPIO18/PWM unavailable for
-the matrix.
+New installations remove their owned module block and marked boot additions on uninstall;
+reboot afterward. Older releases left audio-disable lines and command-line blacklists
+behind. These legacy settings and administrator-modified rules are preserved. Review the
+[boot cleanup guidance](install.md#boot-configuration) rather than replacing whole boot
+files with old backups.
 
-To restore onboard audio, copy the original boot-file backups back and reboot:
+## Flicker Or Software PWM Warning
 
-```bash
-sudo cp /boot/cmdline.txt.vinyltron-orig /boot/cmdline.txt
-sudo cp /boot/userconfig.txt.vinyltron-orig /boot/userconfig.txt
-sudo reboot
-```
+Refresh plugin settings and inspect **Hardware → PWM Status**. If it reports the onboard
+audio module loaded or a reboot required, select a USB/I2S output if needed, install/update
+Vinyltron's persistent protection, and reboot through Volumio. If an audio conflict is
+reported, select a USB/I2S output and restart the Vinyltron plugin so it can safely check
+and apply the boot settings.
+Do not force hardware timing while `snd_bcm2835` is loaded. A waiting status means the
+matrix is not initialized yet (schedule off or Volumio still starting). A software-mode
+warning on Pi 5 reflects a bundled-driver limitation rather than a missing reboot.

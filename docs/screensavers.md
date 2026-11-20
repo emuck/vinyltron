@@ -23,6 +23,9 @@ stays fixed. With a reset interval of `0`, the initial choices stay until the sc
 next starts. Random choices avoid immediately repeating the previous selection.
 Radar Garden preserves image colors, so changing its palette has no visible effect.
 
+In [Mixed Rotation](mixed-rotation.md), a screensaver slot uses these engine and palette
+choices, but Slot Duration replaces Reset Interval as the scene-change timer.
+
 The screensaver appears anywhere Vinyltron would otherwise show fallback art:
 
 - playback stopped after the normal debounce

@@ -74,10 +74,46 @@ ControllerVinyltron.prototype.getAdditionalConf = function() {
             service_active: !error && stdout && stdout.trim() === 'active',
             config_path: CONFIG_TOML,
             photo_manager_url: self._photoManagerUrl(),
-            photo_manager_error: self.photoManagerError
+            photo_manager_error: self.photoManagerError,
+            pwm_status: self._pwmStatusText()
         });
     });
     return defer.promise;
+};
+
+ControllerVinyltron.prototype._pwmStatusText = function() {
+    var setup = null;
+    var status = null;
+    var moduleLoaded = false;
+    var protectedModule = false;
+    try { setup = JSON.parse(fs.readFileSync('/data/configuration/user_interface/vinyltron/pwm-setup.json', 'utf8')); } catch (e) {}
+    if (setup && setup.conflict) return 'Audio conflict: ' + setup.conflict;
+    try { moduleLoaded = /^snd_bcm2835\s/m.test(fs.readFileSync('/proc/modules', 'utf8')); } catch (e) {}
+    try {
+        var rule = fs.readFileSync('/etc/modprobe.d/vinyltron-matrix.conf', 'utf8');
+        protectedModule = /^blacklist snd_bcm2835$/m.test(rule) && /^install snd_bcm2835 \/bin\/false$/m.test(rule);
+    } catch (e) {}
+    try {
+        var candidate = JSON.parse(fs.readFileSync('/run/vinyltron/pwm.json', 'utf8'));
+        if (!Number.isInteger(candidate.pid) || candidate.pid <= 0) throw new Error('invalid PID');
+        var boot = fs.readFileSync('/proc/sys/kernel/random/boot_id', 'utf8').trim();
+        var stat = fs.readFileSync('/proc/' + candidate.pid + '/stat', 'utf8');
+        var ticks = stat.slice(stat.lastIndexOf(')') + 1).trim().split(/\s+/)[19];
+        if (candidate.boot_id === boot && candidate.start_ticks === ticks) status = candidate;
+    } catch (e) {}
+    if (status && status.mode === 'hardware') {
+        return 'Hardware PWM active.' + (protectedModule ? ' Persistent audio protection installed.' : ' Persistent protection missing; reinstall/update Vinyltron.');
+    }
+    if (status && status.mode === 'software') {
+        return 'Software PWM active (may flicker): ' + status.reason + (protectedModule ? '.' : '. Reinstall/update Vinyltron to restore persistent protection.');
+    }
+    if (moduleLoaded) return protectedModule ? 'Reboot required to enable hardware PWM. Onboard audio is still loaded.' : 'Onboard audio is loaded; reinstall/update Vinyltron, then reboot for hardware PWM.';
+    if (setup && setup.changed) {
+        try {
+            if (setup.boot_id === fs.readFileSync('/proc/sys/kernel/random/boot_id', 'utf8').trim()) return 'Reboot required to apply PWM boot protection.';
+        } catch (e) {}
+    }
+    return status ? 'Waiting for display initialization (schedule off or Volumio starting). Refresh settings afterward to see actual PWM mode.' : 'PWM status unavailable. Start Vinyltron and refresh settings.';
 };
 
 ControllerVinyltron.prototype.getUIConfig = function() {
@@ -170,12 +206,20 @@ ControllerVinyltron.prototype.getUIConfig = function() {
         if (isNaN(limit_refresh_rate_hz)) limit_refresh_rate_hz = 0;
         limit_refresh_rate_hz = self._validRefreshLimit(limit_refresh_rate_hz);
         s[3].content[2].value = limit_refresh_rate_hz.toString();
+        s[3].content[3].value = self._pwmStatusText();
 
         s[4].content[0].value = self.config.get('display_on');
         s[4].content[1].value = self.config.get('schedule_enabled');
         s[4].content[2].value = self.config.get('schedule_on_time') || '08:00';
         s[4].content[3].value = self.config.get('schedule_off_time') || '23:00';
 
+        ['photos', 'screensavers', 'weather', 'album_art'].forEach(function(name, i) {
+            var value = self.config.get('rotation_' + name);
+            s[6].content[i].value = value !== false && value !== 'false';
+        });
+        s[6].content[4].value = self._validRotationSlotSeconds(self.config.get('rotation_slot_seconds')).toString();
+        var rotation_order = self.config.get('rotation_order') === 'sequential' ? 'sequential' : 'shuffle';
+        s[6].content[5].value = {value: rotation_order, label: rotation_order === 'sequential' ? 'Sequential' : 'Shuffle'};
         defer.resolve(uiconf);
     } catch (e) {
         self.logger.error('Vinyltron: getUIConfig failed: ' + e);
@@ -237,6 +281,12 @@ ControllerVinyltron.prototype._syncVConfFromToml = function() {
             ['display', 'display_on', 'display_on', 'boolean'],
             ['volumio', 'artwork_enabled', 'volumio_artwork_enabled', 'boolean'],
             ['fallback', 'mode', 'fallback_mode', 'string'],
+            ['rotation', 'photos', 'rotation_photos', 'boolean'],
+            ['rotation', 'screensavers', 'rotation_screensavers', 'boolean'],
+            ['rotation', 'weather', 'rotation_weather', 'boolean'],
+            ['rotation', 'album_art', 'rotation_album_art', 'boolean'],
+            ['rotation', 'slot_seconds', 'rotation_slot_seconds', 'number'],
+            ['rotation', 'order', 'rotation_order', 'string'],
             ['fallback', 'image_folder', 'fallback_image_folder', 'string'],
             ['fallback', 'selected_image', 'fallback_selected_image', 'string'],
             ['fallback', 'rotate_seconds', 'fallback_rotate_seconds', 'number'],
@@ -332,6 +382,33 @@ ControllerVinyltron.prototype.saveIdle = function(data) {
 
     self._service('reload', 'idle settings save');
 
+    return libQ.resolve();
+};
+
+ControllerVinyltron.prototype._validRotationSlotSeconds = function(value) {
+    value = parseInt(value, 10);
+    return isNaN(value) ? 60 : Math.max(5, value);
+};
+
+ControllerVinyltron.prototype.saveRotation = function(data) {
+    var self = this;
+    data = data || {};
+    var fields = {};
+    ['photos', 'screensavers', 'weather', 'album_art'].forEach(function(name) {
+        var key = 'rotation_' + name;
+        var value = data[key];
+        if (value && value.value !== undefined) value = value.value;
+        fields[key] = value === true || value === 'true';
+    });
+    var seconds = data.rotation_slot_seconds;
+    if (seconds && seconds.value !== undefined) seconds = seconds.value;
+    fields.rotation_slot_seconds = self._validRotationSlotSeconds(seconds);
+    var order = data.rotation_order;
+    if (order && order.value !== undefined) order = order.value;
+    fields.rotation_order = order === 'sequential' ? 'sequential' : 'shuffle';
+    Object.keys(fields).forEach(function(key) { self.config.set(key, fields[key]); });
+    self._patchConfigToml(fields);
+    self._service('reload', 'mixed rotation settings save');
     return libQ.resolve();
 };
 
@@ -919,6 +996,10 @@ ControllerVinyltron.prototype._patchConfigToml = function(fields) {
         var content = fs.readFileSync(CONFIG_TOML, 'utf8');
 
         if (fields.brightness !== undefined) content = this._patchTomlInSection(content, 'display', 'brightness', fields.brightness);
+        ['photos', 'screensavers', 'weather', 'album_art', 'slot_seconds', 'order'].forEach(function(name) {
+            var value = fields['rotation_' + name];
+            if (value !== undefined) content = self._patchTomlInSection(content, 'rotation', name, name === 'order' ? self._tomlString(value) : value);
+        });
         if (fields.gamma !== undefined) content = this._patchTomlInSection(content, 'display', 'gamma', fields.gamma);
         if (fields.volumio_artwork_enabled !== undefined) content = this._patchTomlInSection(content, 'volumio', 'artwork_enabled', fields.volumio_artwork_enabled, 'port');
         if (fields.rotation !== undefined) content = this._patchTomlInSection(content, 'display', 'rotation', parseInt(fields.rotation));
@@ -1062,6 +1143,7 @@ ControllerVinyltron.prototype._sanitizeFilename = function(value) {
 };
 
 ControllerVinyltron.prototype._validFallbackMode = function(value) {
+    if (value === 'mixed') return value;
     if (value === 'screensaver_brians_brain') return 'screensaver';
     if (value === 'selected' || value === 'random_folder' || value === 'screensaver' || value === 'weather') return value;
     return 'single';
@@ -1190,6 +1272,7 @@ ControllerVinyltron.prototype._validTimeOfDay = function(value, fallback) {
 
 ControllerVinyltron.prototype._labelForFallbackMode = function(value) {
     var labels = {
+        'mixed': 'Mixed Rotation',
         'single': 'Built-in Idle Image',
         'selected': 'Selected Folder Image',
         'random_folder': 'Random Folder Image',
