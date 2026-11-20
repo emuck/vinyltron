@@ -7,6 +7,7 @@ var exec = childProcess.exec;
 var execFile = childProcess.execFile;
 var http = require('http');
 var path = require('path');
+var os = require('os');
 
 var CONFIG_TOML = '/data/configuration/user_interface/vinyltron/config.toml';
 var BUNDLED_CONFIG_TOML = __dirname + '/vinyltron/config.toml';
@@ -972,7 +973,13 @@ ControllerVinyltron.prototype._json = function(res, status, data) {
 };
 
 ControllerVinyltron.prototype._photoManagerHostLabel = function() {
-    return 'volumio.local';
+    // Use this device's own mDNS name; Volumio's hostname is not always "volumio".
+    var name = '';
+    try {
+        name = String(os.hostname() || '').split('.')[0].trim();
+    } catch (e) {}
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]*$/.test(name)) return 'volumio.local';
+    return name + '.local';
 };
 
 ControllerVinyltron.prototype._photoManagerUrl = function() {

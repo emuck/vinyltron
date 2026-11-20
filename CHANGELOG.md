@@ -5,6 +5,9 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+- Fixed the Photo Manager URL in plugin settings, which was hardcoded to `volumio.local`.
+  It now uses the device's own hostname, so renamed players show the right address.
+
 ## [0.4.0] - 2026-11-20
 
 - Added persistent onboard-audio module blocking for hardware PWM, with a safe audio
