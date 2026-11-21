@@ -1,5 +1,5 @@
 [volumio]
-host = "volumio.local"
+host = "localhost"
 port = 3000
 artwork_enabled = true
 

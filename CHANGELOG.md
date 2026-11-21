@@ -5,6 +5,13 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-20
+
+- Fixed the default Volumio host, which was `volumio.local`. A fresh install on a second player
+  connected to the first one, so the display never saw its own playback and artwork never showed.
+  The default is now `localhost`. Existing installs that still have `volumio.local` as the host
+  should change it to `localhost` in `config.toml` unless the player really is named `volumio`.
+
 ## [0.4.1] - 2026-11-20
 
 - Fixed the Photo Manager URL in plugin settings, which was hardcoded to `volumio.local`.

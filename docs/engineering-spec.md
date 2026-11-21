@@ -194,7 +194,7 @@ library:
 ### Configuration (`config.toml`)
 ```toml
 [volumio]
-host = "volumio.local"
+host = "localhost"
 port = 3000
 
 [display]
