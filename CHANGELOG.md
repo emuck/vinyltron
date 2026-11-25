@@ -5,6 +5,11 @@ All notable Vinyltron changes are tracked here. Versions should match `VERSION`,
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-11-24
+
+- Fixed the Chaos Game screensaver drawing a squashed triangle. Two of its three corners used
+  the wrong angles; the corners are now evenly spaced, giving the expected Sierpinski shape.
+
 ## [0.4.2] - 2026-11-20
 
 - Fixed the default Volumio host, which was `volumio.local`. A fresh install on a second player

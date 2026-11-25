@@ -502,7 +502,7 @@ class ChaosGame:
                 max(0, min(self.width - 1, int(round(cx + math.cos(angle + offset) * radius)))),
                 max(0, min(self.height - 1, int(round(cy + math.sin(angle + offset) * radius)))),
             )
-            for offset in (-math.pi / 2.0, (math.pi * 7.0) / 6.0, (math.pi * 11.0) / 6.0)
+            for offset in (-math.pi / 2.0, math.pi / 6.0, (math.pi * 5.0) / 6.0)
         )
 
     def _fade(self):
